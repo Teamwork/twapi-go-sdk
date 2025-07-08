@@ -1,6 +1,7 @@
 package session
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
@@ -115,11 +116,21 @@ func (o *OAuth2) Authenticate(ctx context.Context, req *http.Request) error {
 		}
 	}
 
+	if req.URL.Host == "" {
+		serverURL, err := url.Parse(o.server)
+		if err != nil {
+			return fmt.Errorf("failed to parse server URL %q: %w", o.server, err)
+		}
+		req.URL.Scheme = serverURL.Scheme
+		req.URL.Host = serverURL.Host
+	}
+
 	req.Header.Set("Authorization", "Bearer "+o.bearerToken)
 	return nil
 }
 
-// Server returns the server URL for the OAuth2 session.
+// Server returns the server URL for the OAuth2 session. If the authentication
+// did not happen yet this may be empty.
 func (o *OAuth2) Server() string {
 	return o.server
 }
@@ -203,6 +214,7 @@ func (o *OAuth2) retrieveCode(
 				slog.String("error", err.Error()),
 			)
 		}
+		serverResultChannel <- serverResult{code: code}
 	})
 
 	server := &http.Server{Handler: mux}
@@ -268,18 +280,21 @@ func (o *OAuth2) retrieveToken(
 			serverInfo.TokenEndpointAuthMethodsSupported)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, serverInfo.TokenEndpoint, nil)
+	form := url.Values{}
+	form.Add("grant_type", "authorization_code")
+	form.Add("code", code)
+	form.Add("client_id", o.clientID)
+	form.Add("client_secret", o.clientSecret)
+	form.Add("redirect_uri", redirectURL)
+	form.Add("code_verifier", codeChallenge)
+
+	body := bytes.NewBufferString(form.Encode())
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, serverInfo.TokenEndpoint, body)
 	if err != nil {
 		return fmt.Errorf("failed to build request to %q: %w", serverInfo.TokenEndpoint, err)
 	}
-
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Form.Add("grant_type", "authorization_code")
-	req.Form.Add("code", code)
-	req.Form.Add("client_id", o.clientID)
-	req.Form.Add("client_secret", o.clientSecret)
-	req.Form.Add("redirect_uri", redirectURL)
-	req.Form.Add("code_verifier", codeChallenge)
 
 	resp, err := o.client.Do(req)
 	if err != nil {
@@ -321,7 +336,7 @@ func (o *OAuth2) retrieveToken(
 }
 
 func (o *OAuth2) serverInfo(ctx context.Context) (*oauth2ServerInfo, error) {
-	url := o.oauthServer + "/.well-known/oauth-authorization"
+	url := o.oauthServer + "/.well-known/oauth-authorization-server"
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build request to %q: %w", url, err)
