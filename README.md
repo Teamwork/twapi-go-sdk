@@ -1,2 +1,4 @@
-# twapi-go-sdk
-Teamwork.com API - Go SDK
+# Teamwork.com API - Go SDK
+
+This is the official Go SDK for the Teamwork.com API.
+https://apidocs.teamwork.com/
