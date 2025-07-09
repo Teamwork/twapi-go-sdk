@@ -19,6 +19,7 @@ type bearerTokenContextKey struct{}
 // into the context using the WithBearerTokenContext function.
 type BearerTokenContext struct{}
 
+// NewBearerTokenContext creates a new BearerTokenContext instance.
 func NewBearerTokenContext() *BearerTokenContext {
 	return &BearerTokenContext{}
 }
