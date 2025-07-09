@@ -30,7 +30,7 @@ func main() {
 	)
 	engine := twapi.NewEngine(session)
 
-	project, err := projects.CreateProject(context.Background(), engine, projects.CreateProjectRequest{
+	project, err := projects.ProjectCreate(context.Background(), engine, projects.ProjectCreateRequest{
 		Name: fmt.Sprintf("New Project - %d", time.Now().Nanosecond()),
 	})
 	if err != nil {

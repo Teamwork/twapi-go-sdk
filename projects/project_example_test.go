@@ -12,8 +12,8 @@ import (
 	"github.com/teamwork/twapi-go-sdk/session"
 )
 
-func ExampleCreateProject() {
-	address, stop, err := startCreateProjectServer() // mock server for demonstration purposes
+func ExampleProjectCreate() {
+	address, stop, err := startProjectCreateServer() // mock server for demonstration purposes
 	if err != nil {
 		fmt.Printf("failed to start server: %s", err)
 		return
@@ -23,7 +23,7 @@ func ExampleCreateProject() {
 	ctx := context.Background()
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
-	project, err := projects.CreateProject(ctx, engine, projects.CreateProjectRequest{
+	project, err := projects.ProjectCreate(ctx, engine, projects.ProjectCreateRequest{
 		Name:        "New Project",
 		Description: twapi.Ptr("This is a new project created via the API."),
 		StartAt:     twapi.Ptr(projects.LegacyDate(time.Now().AddDate(0, 0, 1))),  // Start tomorrow
@@ -41,7 +41,7 @@ func ExampleCreateProject() {
 	// Output: created project with identifier 12345
 }
 
-func startCreateProjectServer() (string, func(), error) {
+func startProjectCreateServer() (string, func(), error) {
 	ln, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
 		return "", nil, fmt.Errorf("failed to start server: %w", err)

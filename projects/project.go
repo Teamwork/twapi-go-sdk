@@ -12,14 +12,14 @@ import (
 )
 
 var (
-	_ twapi.HTTPRequester = (*CreateProjectRequest)(nil)
-	_ twapi.HTTPResponser = (*CreateProjectResponse)(nil)
+	_ twapi.HTTPRequester = (*ProjectCreateRequest)(nil)
+	_ twapi.HTTPResponser = (*ProjectCreateResponse)(nil)
 )
 
-// CreateProjectRequest represents the request body for creating a new project.
+// ProjectCreateRequest represents the request body for creating a new project.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v1/projects/post-projects-json
-type CreateProjectRequest struct {
+type ProjectCreateRequest struct {
 	// Name is the name of the project.
 	Name string `json:"name"`
 
@@ -47,12 +47,12 @@ type CreateProjectRequest struct {
 	Tags []int64 `json:"tagIds,omitempty"`
 }
 
-// HTTPRequest creates an HTTP request for the CreateProjectRequest.
-func (c CreateProjectRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
+// HTTPRequest creates an HTTP request for the ProjectCreateRequest.
+func (c ProjectCreateRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
 	uri := server + "/projects.json"
 
 	payload := struct {
-		Project CreateProjectRequest `json:"project"`
+		Project ProjectCreateRequest `json:"project"`
 	}{Project: c}
 
 	var body bytes.Buffer
@@ -69,17 +69,17 @@ func (c CreateProjectRequest) HTTPRequest(ctx context.Context, server string) (*
 	return req, nil
 }
 
-// CreateProjectResponse represents the response body for creating a new
+// ProjectCreateResponse represents the response body for creating a new
 // project.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v1/projects/post-projects-json
-type CreateProjectResponse struct {
+type ProjectCreateResponse struct {
 	// ID is the unique identifier of the created project.
 	ID LegacyNumber `json:"id"`
 }
 
-// HandleHTTPResponse handles the HTTP response for the CreateProjectResponse.
-func (c *CreateProjectResponse) HandleHTTPResponse(resp *http.Response) error {
+// HandleHTTPResponse handles the HTTP response for the ProjectCreateResponse.
+func (c *ProjectCreateResponse) HandleHTTPResponse(resp *http.Response) error {
 	if resp.StatusCode != http.StatusCreated {
 		body, _ := io.ReadAll(resp.Body)
 		if len(body) == 0 {
@@ -96,12 +96,12 @@ func (c *CreateProjectResponse) HandleHTTPResponse(resp *http.Response) error {
 	return nil
 }
 
-// CreateProject creates a new project using the provided request and returns
+// ProjectCreate creates a new project using the provided request and returns
 // the response.
-func CreateProject(
+func ProjectCreate(
 	ctx context.Context,
 	engine *twapi.Engine,
-	req CreateProjectRequest,
-) (*CreateProjectResponse, error) {
-	return twapi.Execute[*CreateProjectResponse](ctx, engine, req)
+	req ProjectCreateRequest,
+) (*ProjectCreateResponse, error) {
+	return twapi.Execute[*ProjectCreateResponse](ctx, engine, req)
 }
