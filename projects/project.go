@@ -107,8 +107,8 @@ type ProjectCreateRequest struct {
 	// is the ID of the logged user creating the project.
 	OwnerID *int64 `json:"projectOwnerId,omitempty"`
 
-	// Tags is an optional list of tag IDs associated with the project.
-	Tags []int64 `json:"tagIds,omitempty"`
+	// TagIDs is an optional list of tag IDs associated with the project.
+	TagIDs []int64 `json:"tagIds,omitempty"`
 }
 
 // HTTPRequest creates an HTTP request for the ProjectCreateRequest.
@@ -169,6 +169,8 @@ func ProjectCreate(
 }
 
 // ProjectUpdateRequest represents the request body for updating a project.
+// Besides the identifier, all other fields are optional. When a field is not
+// provided, it will not be modified.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v1/projects/put-projects-id-json
 type ProjectUpdateRequest struct {
@@ -177,7 +179,26 @@ type ProjectUpdateRequest struct {
 		ID int64
 	}
 
-	ProjectCreateRequest
+	// Name is the name of the project.
+	Name *string `json:"name,omitempty"`
+
+	// Description is the project description.
+	Description *string `json:"description,omitempty"`
+
+	// StartAt is the start date for the project.
+	StartAt *LegacyDate `json:"start-date,omitempty"`
+
+	// EndAt is the end date for the project.
+	EndAt *LegacyDate `json:"end-date,omitempty"`
+
+	// CompanyID is the company/client associated with the project.
+	CompanyID *int64 `json:"companyId,omitempty"`
+
+	// OwnerID is the ID of the user who owns the project.
+	OwnerID *int64 `json:"projectOwnerId,omitempty"`
+
+	// TagIDs is the list of tag IDs associated with the project.
+	TagIDs []int64 `json:"tagIds,omitempty"`
 }
 
 // HTTPRequest creates an HTTP request for the ProjectUpdateRequest.

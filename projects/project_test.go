@@ -96,7 +96,7 @@ func TestProjectUpdate(t *testing.T) {
 		input: func() projects.ProjectUpdateRequest {
 			var p projects.ProjectUpdateRequest
 			p.Path.ID = int64(project.ID)
-			p.Name = projectName
+			p.Name = &projectName
 			p.Description = twapi.Ptr("This is a test project")
 			return p
 		}(),
@@ -105,6 +105,7 @@ func TestProjectUpdate(t *testing.T) {
 		input: func() projects.ProjectUpdateRequest {
 			var p projects.ProjectUpdateRequest
 			p.Path.ID = int64(project.ID)
+			p.Name = twapi.Ptr("")
 			return p
 		}(),
 		expectedError: true,

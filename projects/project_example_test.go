@@ -31,7 +31,7 @@ func ExampleProjectCreate() {
 		EndAt:       twapi.Ptr(projects.LegacyDate(time.Now().AddDate(0, 0, 30))), // End in 30 days
 		CompanyID:   12345,                                                        // Replace with your company ID
 		OwnerID:     twapi.Ptr(int64(67890)),                                      // Replace with the owner user ID
-		Tags:        []int64{11111, 22222},                                        // Replace with your tag IDs
+		TagIDs:      []int64{11111, 22222},                                        // Replace with your tag IDs
 	})
 	if err != nil {
 		fmt.Printf("failed to create project: %s", err)
