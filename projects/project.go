@@ -20,10 +20,10 @@ var (
 	_ twapi.HTTPResponser = (*ProjectUpdateResponse)(nil)
 	_ twapi.HTTPRequester = (*ProjectDeleteRequest)(nil)
 	_ twapi.HTTPResponser = (*ProjectDeleteResponse)(nil)
-	_ twapi.HTTPRequester = (*ProjectRetrieveRequest)(nil)
-	_ twapi.HTTPResponser = (*ProjectRetrieveResponse)(nil)
-	_ twapi.HTTPRequester = (*ProjectRetrieveManyRequest)(nil)
-	_ twapi.HTTPResponser = (*ProjectRetrieveManyResponse)(nil)
+	_ twapi.HTTPRequester = (*ProjectGetRequest)(nil)
+	_ twapi.HTTPResponser = (*ProjectGetResponse)(nil)
+	_ twapi.HTTPRequester = (*ProjectListRequest)(nil)
+	_ twapi.HTTPResponser = (*ProjectListResponse)(nil)
 )
 
 // Project represents a project in Teamwork.
@@ -111,6 +111,12 @@ type ProjectCreateRequest struct {
 	TagIDs []int64 `json:"tagIds,omitempty"`
 }
 
+// NewProjectCreateRequest creates a new ProjectCreateRequest with the
+// provided name. The name is required to create a new project.
+func NewProjectCreateRequest(name string) ProjectCreateRequest {
+	return ProjectCreateRequest{Name: name}
+}
+
 // HTTPRequest creates an HTTP request for the ProjectCreateRequest.
 func (c ProjectCreateRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
 	uri := server + "/projects.json"
@@ -168,16 +174,20 @@ func ProjectCreate(
 	return twapi.Execute[*ProjectCreateResponse](ctx, engine, req)
 }
 
+// ProjectUpdateRequestPath contains the path parameters for updating a project.
+type ProjectUpdateRequestPath struct {
+	// ID is the unique identifier of the project to be updated.
+	ID int64
+}
+
 // ProjectUpdateRequest represents the request body for updating a project.
 // Besides the identifier, all other fields are optional. When a field is not
 // provided, it will not be modified.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v1/projects/put-projects-id-json
 type ProjectUpdateRequest struct {
-	Path struct {
-		// ID is the unique identifier of the project to be updated.
-		ID int64
-	}
+	// Path contains the path parameters for the request.
+	Path ProjectUpdateRequestPath
 
 	// Name is the name of the project.
 	Name *string `json:"name,omitempty"`
@@ -199,6 +209,16 @@ type ProjectUpdateRequest struct {
 
 	// TagIDs is the list of tag IDs associated with the project.
 	TagIDs []int64 `json:"tagIds,omitempty"`
+}
+
+// NewProjectUpdateRequest creates a new ProjectUpdateRequest with the
+// provided project ID. The ID is required to update a project.
+func NewProjectUpdateRequest(projectID int64) ProjectUpdateRequest {
+	return ProjectUpdateRequest{
+		Path: ProjectUpdateRequestPath{
+			ID: projectID,
+		},
+	}
 }
 
 // HTTPRequest creates an HTTP request for the ProjectUpdateRequest.
@@ -251,13 +271,27 @@ func ProjectUpdate(
 	return twapi.Execute[*ProjectUpdateResponse](ctx, engine, req)
 }
 
+// ProjectDeleteRequestPath contains the path parameters for deleting a project.
+type ProjectDeleteRequestPath struct {
+	// ID is the unique identifier of the project to be deleted.
+	ID int64
+}
+
 // ProjectDeleteRequest represents the request body for deleting a project.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v1/projects/delete-projects-id-json
 type ProjectDeleteRequest struct {
-	Path struct {
-		// ID is the unique identifier of the project to be deleted.
-		ID int64
+	// Path contains the path parameters for the request.
+	Path ProjectDeleteRequestPath
+}
+
+// NewProjectDeleteRequest creates a new ProjectDeleteRequest with the
+// provided project ID.
+func NewProjectDeleteRequest(projectID int64) ProjectDeleteRequest {
+	return ProjectDeleteRequest{
+		Path: ProjectDeleteRequestPath{
+			ID: projectID,
+		},
 	}
 }
 
@@ -302,19 +336,33 @@ func ProjectDelete(
 	return twapi.Execute[*ProjectDeleteResponse](ctx, engine, req)
 }
 
-// ProjectRetrieveRequest represents the request body for loading a single
+// ProjectGetRequestPath contains the path parameters for loading a single
 // project.
+type ProjectGetRequestPath struct {
+	// ID is the unique identifier of the project to be retrieved.
+	ID int64 `json:"id"`
+}
+
+// ProjectGetRequest represents the request body for loading a single project.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/projects/get-projects-api-v3-projects-project-id-json
-type ProjectRetrieveRequest struct {
-	Path struct {
-		// ID is the unique identifier of the project to be retrieved.
-		ID int64 `json:"id"`
+type ProjectGetRequest struct {
+	// Path contains the path parameters for the request.
+	Path ProjectGetRequestPath
+}
+
+// NewProjectGetRequest creates a new ProjectGetRequest with the provided
+// project ID. The ID is required to load a project.
+func NewProjectGetRequest(projectID int64) ProjectGetRequest {
+	return ProjectGetRequest{
+		Path: ProjectGetRequestPath{
+			ID: projectID,
+		},
 	}
 }
 
-// HTTPRequest creates an HTTP request for the ProjectRetrieveRequest.
-func (p ProjectRetrieveRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
+// HTTPRequest creates an HTTP request for the ProjectGetRequest.
+func (p ProjectGetRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
 	uri := server + "/projects/api/v3/projects/" + strconv.FormatInt(p.Path.ID, 10) + ".json"
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, uri, nil)
@@ -325,17 +373,17 @@ func (p ProjectRetrieveRequest) HTTPRequest(ctx context.Context, server string) 
 	return req, nil
 }
 
-// ProjectRetrieveResponse contains all the information related to a project.
+// ProjectGetResponse contains all the information related to a project.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/projects/get-projects-api-v3-projects-project-id-json
-type ProjectRetrieveResponse struct {
+type ProjectGetResponse struct {
 	Project Project `json:"project"`
 }
 
-// HandleHTTPResponse handles the HTTP response for the ProjectRetrieveResponse.
-// If some unexpected HTTP status code is returned by the API, a twapi.HTTPError
-// is returned.
-func (p *ProjectRetrieveResponse) HandleHTTPResponse(resp *http.Response) error {
+// HandleHTTPResponse handles the HTTP response for the ProjectGetResponse. If
+// some unexpected HTTP status code is returned by the API, a twapi.HTTPError is
+// returned.
+func (p *ProjectGetResponse) HandleHTTPResponse(resp *http.Response) error {
 	if resp.StatusCode != http.StatusOK {
 		return twapi.NewHTTPError(resp, "failed to retrieve project")
 	}
@@ -346,43 +394,56 @@ func (p *ProjectRetrieveResponse) HandleHTTPResponse(resp *http.Response) error 
 	return nil
 }
 
-// ProjectRetrieve retrieves a single project using the provided request and
-// returns the response.
-func ProjectRetrieve(
+// ProjectGet retrieves a single project using the provided request and returns
+// the response.
+func ProjectGet(
 	ctx context.Context,
 	engine *twapi.Engine,
-	req ProjectRetrieveRequest,
-) (*ProjectRetrieveResponse, error) {
-	return twapi.Execute[*ProjectRetrieveResponse](ctx, engine, req)
+	req ProjectGetRequest,
+) (*ProjectGetResponse, error) {
+	return twapi.Execute[*ProjectGetResponse](ctx, engine, req)
 }
 
-// ProjectRetrieveManyRequest represents the request body for loading multiple
-// projects.
+// ProjectListRequestFilters contains the filters for loading multiple projects.
+type ProjectListRequestFilters struct {
+	// SearchTerm is an optional search term to filter projects by name or
+	// description.
+	SearchTerm string
+
+	// TagIDs is an optional list of tag IDs to filter projects by tags.
+	TagIDs []int64
+
+	// MatchAllTags is an optional flag to indicate if all tags must match. If
+	// set to true, only projects matching all specified tags will be returned.
+	MatchAllTags *bool
+
+	// Page is the page number to retrieve. Defaults to 1.
+	Page int64
+
+	// PageSize is the number of projects to retrieve per page. Defaults to 50.
+	PageSize int64
+}
+
+// ProjectListRequest represents the request body for loading multiple projects.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/projects/get-projects-api-v3-projects-json
-type ProjectRetrieveManyRequest struct {
-	Filters struct {
-		// SearchTerm is an optional search term to filter projects by name or
-		// description.
-		SearchTerm string
+type ProjectListRequest struct {
+	// Filters contains the filters for loading multiple projects.
+	Filters ProjectListRequestFilters
+}
 
-		// TagIDs is an optional list of tag IDs to filter projects by tags.
-		TagIDs []int64
-
-		// MatchAllTags is an optional flag to indicate if all tags must match. If
-		// set to true, only projects matching all specified tags will be returned.
-		MatchAllTags *bool
-
-		// Page is the page number to retrieve. Defaults to 1.
-		Page int64
-
-		// PageSize is the number of projects to retrieve per page. Defaults to 50.
-		PageSize int64
+// NewProjectListRequest creates a new ProjectListRequest with default values.
+func NewProjectListRequest() ProjectListRequest {
+	return ProjectListRequest{
+		Filters: ProjectListRequestFilters{
+			Page:     1,
+			PageSize: 50,
+		},
 	}
 }
 
-// HTTPRequest creates an HTTP request for the ProjectRetrieveManyRequest.
-func (p ProjectRetrieveManyRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
+// HTTPRequest creates an HTTP request for the ProjectListRequest.
+func (p ProjectListRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
 	uri := server + "/projects/api/v3/projects.json"
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, uri, nil)
@@ -415,11 +476,11 @@ func (p ProjectRetrieveManyRequest) HTTPRequest(ctx context.Context, server stri
 	return req, nil
 }
 
-// ProjectRetrieveManyResponse contains information by multiple projects
-// matching the request filters.
+// ProjectListResponse contains information by multiple projects matching the
+// request filters.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/projects/get-projects-api-v3-projects-json
-type ProjectRetrieveManyResponse struct {
+type ProjectListResponse struct {
 	Meta struct {
 		Page struct {
 			HasMore bool `json:"hasMore"`
@@ -428,26 +489,26 @@ type ProjectRetrieveManyResponse struct {
 	Projects []Project `json:"projects"`
 }
 
-// HandleHTTPResponse handles the HTTP response for the
-// ProjectRetrieveManyResponse. If some unexpected HTTP status code is returned
-// by the API, a twapi.HTTPError is returned.
-func (p *ProjectRetrieveManyResponse) HandleHTTPResponse(resp *http.Response) error {
+// HandleHTTPResponse handles the HTTP response for the ProjectListResponse. If
+// some unexpected HTTP status code is returned by the API, a twapi.HTTPError is
+// returned.
+func (p *ProjectListResponse) HandleHTTPResponse(resp *http.Response) error {
 	if resp.StatusCode != http.StatusOK {
-		return twapi.NewHTTPError(resp, "failed to retrieve many projects")
+		return twapi.NewHTTPError(resp, "failed to list projects")
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(p); err != nil {
-		return fmt.Errorf("failed to decode retrieve many projects response: %w", err)
+		return fmt.Errorf("failed to decode list projects response: %w", err)
 	}
 	return nil
 }
 
-// ProjectRetrieveMany retrieves multiple projects using the provided request
+// ProjectList retrieves multiple projects using the provided request
 // and returns the response.
-func ProjectRetrieveMany(
+func ProjectList(
 	ctx context.Context,
 	engine *twapi.Engine,
-	req ProjectRetrieveManyRequest,
-) (*ProjectRetrieveManyResponse, error) {
-	return twapi.Execute[*ProjectRetrieveManyResponse](ctx, engine, req)
+	req ProjectListRequest,
+) (*ProjectListResponse, error) {
+	return twapi.Execute[*ProjectListResponse](ctx, engine, req)
 }

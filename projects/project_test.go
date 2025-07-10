@@ -20,10 +20,8 @@ func TestProjectCreate(t *testing.T) {
 		input         projects.ProjectCreateRequest
 		expectedError bool
 	}{{
-		name: "it should create a project with valid input",
-		input: projects.ProjectCreateRequest{
-			Name: fmt.Sprintf("Test Project %d", time.Now().UnixNano()),
-		},
+		name:  "it should create a project with valid input",
+		input: projects.NewProjectCreateRequest(fmt.Sprintf("Test Project %d", time.Now().UnixNano())),
 	}, {
 		name: "it should fail to create a project with missing name",
 		input: projects.ProjectCreateRequest{
@@ -34,7 +32,7 @@ func TestProjectCreate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
 
@@ -43,9 +41,8 @@ func TestProjectCreate(t *testing.T) {
 				if err != nil {
 					return
 				}
-				var deleteRequest projects.ProjectDeleteRequest
-				deleteRequest.Path.ID = int64(project.ID)
-				if _, err := projects.ProjectDelete(context.Background(), engine, deleteRequest); err != nil {
+				_, err := projects.ProjectDelete(ctx, engine, projects.NewProjectDeleteRequest(int64(project.ID)))
+				if err != nil {
 					t.Errorf("failed to delete project after test: %s", err)
 				}
 			}()
@@ -72,17 +69,15 @@ func TestProjectUpdate(t *testing.T) {
 		t.Skip("Skipping test because the engine is not initialized")
 	}
 
-	projectName := fmt.Sprintf("Test Project %d", time.Now().UnixNano())
-	project, err := projects.ProjectCreate(context.Background(), engine, projects.ProjectCreateRequest{
-		Name: projectName,
+	project, err := projects.ProjectCreate(t.Context(), engine, projects.ProjectCreateRequest{
+		Name: fmt.Sprintf("Test Project %d", time.Now().UnixNano()),
 	})
 	if err != nil {
 		t.Fatalf("failed to create a project: %s", err)
 	}
 	defer func() {
-		var deleteRequest projects.ProjectDeleteRequest
-		deleteRequest.Path.ID = int64(project.ID)
-		if _, err := projects.ProjectDelete(context.Background(), engine, deleteRequest); err != nil {
+		_, err := projects.ProjectDelete(t.Context(), engine, projects.NewProjectDeleteRequest(int64(project.ID)))
+		if err != nil {
 			t.Errorf("failed to delete project after test: %s", err)
 		}
 	}()
@@ -93,27 +88,26 @@ func TestProjectUpdate(t *testing.T) {
 		expectedError bool
 	}{{
 		name: "it should update a project with valid input",
-		input: func() projects.ProjectUpdateRequest {
-			var p projects.ProjectUpdateRequest
-			p.Path.ID = int64(project.ID)
-			p.Name = &projectName
-			p.Description = twapi.Ptr("This is a test project")
-			return p
-		}(),
+		input: projects.ProjectUpdateRequest{
+			Path: projects.ProjectUpdateRequestPath{
+				ID: int64(project.ID),
+			},
+			Description: twapi.Ptr("This is a test project"),
+		},
 	}, {
 		name: "it should fail to update a project with missing name",
-		input: func() projects.ProjectUpdateRequest {
-			var p projects.ProjectUpdateRequest
-			p.Path.ID = int64(project.ID)
-			p.Name = twapi.Ptr("")
-			return p
-		}(),
+		input: projects.ProjectUpdateRequest{
+			Path: projects.ProjectUpdateRequestPath{
+				ID: int64(project.ID),
+			},
+			Name: twapi.Ptr(""),
+		},
 		expectedError: true,
 	}}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
 
@@ -137,7 +131,7 @@ func TestProjectDelete(t *testing.T) {
 		t.Skip("Skipping test because the engine is not initialized")
 	}
 
-	project, err := projects.ProjectCreate(context.Background(), engine, projects.ProjectCreateRequest{
+	project, err := projects.ProjectCreate(t.Context(), engine, projects.ProjectCreateRequest{
 		Name: fmt.Sprintf("Test Project %d", time.Now().UnixNano()),
 	})
 	if err != nil {
@@ -149,12 +143,8 @@ func TestProjectDelete(t *testing.T) {
 		input         projects.ProjectDeleteRequest
 		expectedError bool
 	}{{
-		name: "it should delete a project with valid input",
-		input: func() projects.ProjectDeleteRequest {
-			var p projects.ProjectDeleteRequest
-			p.Path.ID = int64(project.ID)
-			return p
-		}(),
+		name:  "it should delete a project with valid input",
+		input: projects.NewProjectDeleteRequest(int64(project.ID)),
 	}, {
 		name:          "it should fail to delete an unknown project",
 		expectedError: true,
@@ -162,7 +152,7 @@ func TestProjectDelete(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
 
@@ -181,36 +171,31 @@ func TestProjectDelete(t *testing.T) {
 	}
 }
 
-func TestProjectRetrieve(t *testing.T) {
+func TestProjectGet(t *testing.T) {
 	if engine == nil {
 		t.Skip("Skipping test because the engine is not initialized")
 	}
 
-	project, err := projects.ProjectCreate(context.Background(), engine, projects.ProjectCreateRequest{
+	project, err := projects.ProjectCreate(t.Context(), engine, projects.ProjectCreateRequest{
 		Name: fmt.Sprintf("Test Project %d", time.Now().UnixNano()),
 	})
 	if err != nil {
 		t.Fatalf("failed to create a project: %s", err)
 	}
 	defer func() {
-		var deleteRequest projects.ProjectDeleteRequest
-		deleteRequest.Path.ID = int64(project.ID)
-		if _, err := projects.ProjectDelete(context.Background(), engine, deleteRequest); err != nil {
+		_, err := projects.ProjectDelete(t.Context(), engine, projects.NewProjectDeleteRequest(int64(project.ID)))
+		if err != nil {
 			t.Errorf("failed to delete project after test: %s", err)
 		}
 	}()
 
 	tests := []struct {
 		name          string
-		input         projects.ProjectRetrieveRequest
+		input         projects.ProjectGetRequest
 		expectedError bool
 	}{{
-		name: "it should retrieve a project with valid input",
-		input: func() projects.ProjectRetrieveRequest {
-			var p projects.ProjectRetrieveRequest
-			p.Path.ID = int64(project.ID)
-			return p
-		}(),
+		name:  "it should retrieve a project with valid input",
+		input: projects.NewProjectGetRequest(int64(project.ID)),
 	}, {
 		name:          "it should fail to retrieve an unknown project",
 		expectedError: true,
@@ -218,11 +203,11 @@ func TestProjectRetrieve(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
 
-			_, err := projects.ProjectRetrieve(ctx, engine, tt.input)
+			_, err := projects.ProjectGet(ctx, engine, tt.input)
 			if tt.expectedError {
 				if err == nil {
 					t.Errorf("expected an error but got none")
@@ -237,40 +222,39 @@ func TestProjectRetrieve(t *testing.T) {
 	}
 }
 
-func TestProjectRetrieveMany(t *testing.T) {
+func TestProjectList(t *testing.T) {
 	if engine == nil {
 		t.Skip("Skipping test because the engine is not initialized")
 	}
 
-	project, err := projects.ProjectCreate(context.Background(), engine, projects.ProjectCreateRequest{
+	project, err := projects.ProjectCreate(t.Context(), engine, projects.ProjectCreateRequest{
 		Name: fmt.Sprintf("Test Project %d", time.Now().UnixNano()),
 	})
 	if err != nil {
 		t.Fatalf("failed to create a project: %s", err)
 	}
 	defer func() {
-		var deleteRequest projects.ProjectDeleteRequest
-		deleteRequest.Path.ID = int64(project.ID)
-		if _, err := projects.ProjectDelete(context.Background(), engine, deleteRequest); err != nil {
+		_, err := projects.ProjectDelete(t.Context(), engine, projects.NewProjectDeleteRequest(int64(project.ID)))
+		if err != nil {
 			t.Errorf("failed to delete project after test: %s", err)
 		}
 	}()
 
 	tests := []struct {
 		name          string
-		input         projects.ProjectRetrieveManyRequest
+		input         projects.ProjectListRequest
 		expectedError bool
 	}{{
-		name: "it should retrieve many projects",
+		name: "it should list projects",
 	}}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
 
-			_, err := projects.ProjectRetrieveMany(ctx, engine, tt.input)
+			_, err := projects.ProjectList(ctx, engine, tt.input)
 			if tt.expectedError {
 				if err == nil {
 					t.Errorf("expected an error but got none")

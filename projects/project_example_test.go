@@ -53,11 +53,12 @@ func ExampleProjectUpdate() {
 	ctx := context.Background()
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
-	var projectRequest projects.ProjectUpdateRequest
-	projectRequest.Path.ID = 12345
-	projectRequest.Description = twapi.Ptr("This is an updated description.")
-
-	_, err = projects.ProjectUpdate(ctx, engine, projectRequest)
+	_, err = projects.ProjectUpdate(ctx, engine, projects.ProjectUpdateRequest{
+		Path: projects.ProjectUpdateRequestPath{
+			ID: 12345,
+		},
+		Description: twapi.Ptr("This is an updated description."),
+	})
 	if err != nil {
 		fmt.Printf("failed to update project: %s", err)
 	} else {
@@ -78,10 +79,11 @@ func ExampleProjectDelete() {
 	ctx := context.Background()
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
-	var projectRequest projects.ProjectDeleteRequest
-	projectRequest.Path.ID = 12345
-
-	_, err = projects.ProjectDelete(ctx, engine, projectRequest)
+	_, err = projects.ProjectDelete(ctx, engine, projects.ProjectDeleteRequest{
+		Path: projects.ProjectDeleteRequestPath{
+			ID: 12345,
+		},
+	})
 	if err != nil {
 		fmt.Printf("failed to delete project: %s", err)
 	} else {
@@ -91,7 +93,7 @@ func ExampleProjectDelete() {
 	// Output: project deleted!
 }
 
-func ExampleProjectRetrieve() {
+func ExampleProjectGet() {
 	address, stop, err := startProjectServer() // mock server for demonstration purposes
 	if err != nil {
 		fmt.Printf("failed to start server: %s", err)
@@ -102,10 +104,11 @@ func ExampleProjectRetrieve() {
 	ctx := context.Background()
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
-	var projectRequest projects.ProjectRetrieveRequest
-	projectRequest.Path.ID = 12345
-
-	projectResponse, err := projects.ProjectRetrieve(ctx, engine, projectRequest)
+	projectResponse, err := projects.ProjectGet(ctx, engine, projects.ProjectGetRequest{
+		Path: projects.ProjectGetRequestPath{
+			ID: 12345,
+		},
+	})
 	if err != nil {
 		fmt.Printf("failed to retrieve project: %s", err)
 	} else {
@@ -115,7 +118,7 @@ func ExampleProjectRetrieve() {
 	// Output: retrieved project with identifier 12345
 }
 
-func ExampleProjectRetrieveMany() {
+func ExampleProjectList() {
 	address, stop, err := startProjectServer() // mock server for demonstration purposes
 	if err != nil {
 		fmt.Printf("failed to start server: %s", err)
@@ -126,12 +129,13 @@ func ExampleProjectRetrieveMany() {
 	ctx := context.Background()
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
-	var projectsRequest projects.ProjectRetrieveManyRequest
-	projectsRequest.Filters.SearchTerm = "Example"
-
-	projectsResponse, err := projects.ProjectRetrieveMany(ctx, engine, projectsRequest)
+	projectsResponse, err := projects.ProjectList(ctx, engine, projects.ProjectListRequest{
+		Filters: projects.ProjectListRequestFilters{
+			SearchTerm: "Example",
+		},
+	})
 	if err != nil {
-		fmt.Printf("failed to retrieve many projects: %s", err)
+		fmt.Printf("failed to list projects: %s", err)
 	} else {
 		for _, project := range projectsResponse.Projects {
 			fmt.Printf("retrieved project with identifier %d\n", project.ID)
