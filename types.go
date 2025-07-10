@@ -2,8 +2,45 @@ package twapi
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
 	"time"
 )
+
+// HTTPError represents an error response from the API.
+type HTTPError struct {
+	StatusCode int
+	Headers    http.Header
+	Message    string
+	Details    string
+}
+
+// NewHTTPError creates a new HTTPError from an http.Response.
+func NewHTTPError(resp *http.Response, message string) *HTTPError {
+	body := "no response body"
+	if b, err := io.ReadAll(resp.Body); err == nil && len(b) > 0 {
+		body = string(b)
+	}
+	return &HTTPError{
+		StatusCode: resp.StatusCode,
+		Headers:    resp.Header,
+		Message:    message,
+		Details:    body,
+	}
+}
+
+// Error implements the error interface.
+func (e *HTTPError) Error() string {
+	return fmt.Sprintf("%s (%d): %s", e.Message, e.StatusCode, e.Details)
+}
+
+// Relationship describes the relation between the main entity and a sideload type.
+type Relationship struct {
+	ID   int64          `json:"id"`
+	Type string         `json:"type"`
+	Meta map[string]any `json:"meta,omitempty"`
+}
 
 // OptionalDateTime is a type alias for time.Time, used to represent date and
 // time values in the API. The difference is that it will accept empty strings
