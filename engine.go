@@ -31,6 +31,9 @@ type Engine struct {
 	client  *http.Client
 	session Session
 	logger  *slog.Logger
+
+	requestMiddlewares  []func(HTTPRequester) HTTPRequester
+	responseMiddlewares []func(HTTPResponser) HTTPResponser
 }
 
 // EngineOption is a function that modifies the Engine configuration.
@@ -49,6 +52,22 @@ func WithHTTPClient(client *http.Client) EngineOption {
 func WithLogger(logger *slog.Logger) EngineOption {
 	return func(e *Engine) {
 		e.logger = logger
+	}
+}
+
+// WithRequestMiddleware adds a request middleware to the Engine. Middlewares
+// are applied in the order they are added.
+func WithRequestMiddleware(middleware func(HTTPRequester) HTTPRequester) EngineOption {
+	return func(e *Engine) {
+		e.requestMiddlewares = append(e.requestMiddlewares, middleware)
+	}
+}
+
+// WithResponseMiddleware adds a response middleware to the Engine. Middlewares
+// are applied in the order they are added.
+func WithResponseMiddleware(middleware func(HTTPResponser) HTTPResponser) EngineOption {
+	return func(e *Engine) {
+		e.responseMiddlewares = append(e.responseMiddlewares, middleware)
 	}
 }
 
@@ -74,6 +93,10 @@ func Execute[T HTTPResponser](ctx context.Context, engine *Engine, requester HTT
 		responser = reflect.New(rt.Elem()).Interface().(T)
 	}
 
+	for i := len(engine.requestMiddlewares) - 1; i >= 0; i-- {
+		middleware := engine.requestMiddlewares[i]
+		requester = middleware(requester)
+	}
 	req, err := requester.HTTPRequest(ctx, engine.session.Server())
 	if err != nil {
 		return responser, fmt.Errorf("failed to create request: %w", err)
@@ -94,6 +117,10 @@ func Execute[T HTTPResponser](ctx context.Context, engine *Engine, requester HTT
 		}
 	}()
 
+	for i := len(engine.responseMiddlewares) - 1; i >= 0; i-- {
+		middleware := engine.responseMiddlewares[i]
+		responser = middleware(responser).(T)
+	}
 	if err := responser.HandleHTTPResponse(resp); err != nil {
 		return responser, fmt.Errorf("failed to handle response: %w", err)
 	}
