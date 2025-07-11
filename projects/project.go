@@ -171,7 +171,7 @@ func ProjectCreate(
 	engine *twapi.Engine,
 	req ProjectCreateRequest,
 ) (*ProjectCreateResponse, error) {
-	return twapi.Execute[*ProjectCreateResponse](ctx, engine, req)
+	return twapi.Execute[ProjectCreateRequest, *ProjectCreateResponse](ctx, engine, req)
 }
 
 // ProjectUpdateRequestPath contains the path parameters for updating a project.
@@ -268,7 +268,7 @@ func ProjectUpdate(
 	engine *twapi.Engine,
 	req ProjectUpdateRequest,
 ) (*ProjectUpdateResponse, error) {
-	return twapi.Execute[*ProjectUpdateResponse](ctx, engine, req)
+	return twapi.Execute[ProjectUpdateRequest, *ProjectUpdateResponse](ctx, engine, req)
 }
 
 // ProjectDeleteRequestPath contains the path parameters for deleting a project.
@@ -333,7 +333,7 @@ func ProjectDelete(
 	engine *twapi.Engine,
 	req ProjectDeleteRequest,
 ) (*ProjectDeleteResponse, error) {
-	return twapi.Execute[*ProjectDeleteResponse](ctx, engine, req)
+	return twapi.Execute[ProjectDeleteRequest, *ProjectDeleteResponse](ctx, engine, req)
 }
 
 // ProjectGetRequestPath contains the path parameters for loading a single
@@ -401,7 +401,7 @@ func ProjectGet(
 	engine *twapi.Engine,
 	req ProjectGetRequest,
 ) (*ProjectGetResponse, error) {
-	return twapi.Execute[*ProjectGetResponse](ctx, engine, req)
+	return twapi.Execute[ProjectGetRequest, *ProjectGetResponse](ctx, engine, req)
 }
 
 // ProjectListRequestFilters contains the filters for loading multiple projects.
@@ -481,6 +481,8 @@ func (p ProjectListRequest) HTTPRequest(ctx context.Context, server string) (*ht
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/projects/get-projects-api-v3-projects-json
 type ProjectListResponse struct {
+	request ProjectListRequest
+
 	Meta struct {
 		Page struct {
 			HasMore bool `json:"hasMore"`
@@ -503,6 +505,23 @@ func (p *ProjectListResponse) HandleHTTPResponse(resp *http.Response) error {
 	return nil
 }
 
+// SetRequest sets the request used to load this response. This is used for
+// pagination purposes, so the Iterate method can return the next page.
+func (p *ProjectListResponse) SetRequest(req ProjectListRequest) {
+	p.request = req
+}
+
+// Iterate returns the request set to the next page, if available. If there
+// are no more pages, a nil request is returned.
+func (p *ProjectListResponse) Iterate() *ProjectListRequest {
+	if !p.Meta.Page.HasMore {
+		return nil
+	}
+	req := p.request
+	req.Filters.Page++
+	return &req
+}
+
 // ProjectList retrieves multiple projects using the provided request
 // and returns the response.
 func ProjectList(
@@ -510,5 +529,5 @@ func ProjectList(
 	engine *twapi.Engine,
 	req ProjectListRequest,
 ) (*ProjectListResponse, error) {
-	return twapi.Execute[*ProjectListResponse](ctx, engine, req)
+	return twapi.Execute[ProjectListRequest, *ProjectListResponse](ctx, engine, req)
 }

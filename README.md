@@ -322,6 +322,63 @@ engine := twapi.NewEngine(session,
 )
 ```
 
+### Iterator for Paginated Results
+
+The SDK provides an iterator function to easily handle paginated API responses:
+
+```go
+import (
+  "context"
+  "fmt"
+
+  twapi "github.com/teamwork/twapi-go-sdk"
+  "github.com/teamwork/twapi-go-sdk/projects"
+  "github.com/teamwork/twapi-go-sdk/session"
+)
+
+func main() {
+  ctx := context.Background()
+  engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://yourdomain.teamwork.com"))
+
+  // Create an iterator for paginated project results
+  next, err := twapi.Iterate[projects.ProjectListRequest, *projects.ProjectListResponse](
+    ctx,
+    engine,
+    projects.NewProjectListRequest(),
+  )
+  if err != nil {
+    fmt.Printf("Failed to create iterator: %v\n", err)
+    return
+  }
+
+  // Iterate through all pages
+  var iteration int
+  for {
+    iteration++
+    fmt.Printf("📄 Page %d\n", iteration)
+
+    response, hasNext, err := next()
+    if err != nil {
+      fmt.Printf("Error fetching page: %v\n", err)
+      break
+    }
+    if response == nil {
+      break
+    }
+
+    // Process projects from current page
+    for _, project := range response.Projects {
+      fmt.Printf("  ➢ %s (ID: %d)\n", project.Name, project.ID)
+    }
+
+    // Check if there are more pages
+    if !hasNext {
+      break
+    }
+  }
+}
+```
+
 ## 🐛 Error Handling
 
 The SDK provides structured error handling:

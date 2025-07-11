@@ -8,6 +8,12 @@ import (
 	"reflect"
 )
 
+// HTTPClient is an interface that defines the methods required for an HTTP
+// client. This allows for adding middlewares and easier testing.
+type HTTPClient interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
 // HTTPRequester knows how to create an HTTP request for a specific entity.
 type HTTPRequester interface {
 	HTTPRequest(ctx context.Context, server string) (*http.Request, error)
@@ -15,33 +21,43 @@ type HTTPRequester interface {
 
 // HTTPResponser knows how to handle an HTTP response for a specific entity.
 type HTTPResponser interface {
-	HandleHTTPResponse(resp *http.Response) error
+	HandleHTTPResponse(*http.Response) error
 }
 
 // Session is an interface that defines the methods required for a session to
 // authenticate requests to the Teamwork Engine.
 type Session interface {
-	Authenticate(ctx context.Context, req *http.Request) error
+	Authenticate(context.Context, *http.Request) error
 	Server() string
+}
+
+// httpClientMiddleware is a wrapper around an HTTP client that applies a
+// middleware function to the client.
+type httpClientMiddleware struct {
+	client     HTTPClient
+	middleware func(HTTPClient) HTTPClient
+}
+
+// Do executes the HTTP request with the middleware applied.
+func (m *httpClientMiddleware) Do(req *http.Request) (*http.Response, error) {
+	return m.middleware(m.client).Do(req)
 }
 
 // Engine is the main structure that handles communication with the Teamwork
 // API.
 type Engine struct {
-	client  *http.Client
+	client  HTTPClient
 	session Session
 	logger  *slog.Logger
-
-	requestMiddlewares  []func(HTTPRequester) HTTPRequester
-	responseMiddlewares []func(HTTPResponser) HTTPResponser
 }
 
 // EngineOption is a function that modifies the Engine configuration.
 type EngineOption func(*Engine)
 
 // WithHTTPClient sets the HTTP client for the Engine. By default, it uses
-// http.DefaultClient.
-func WithHTTPClient(client *http.Client) EngineOption {
+// http.DefaultClient. When setting the HTTP client, any middlewares that were
+// added using WithMiddleware before this call will be ignored.
+func WithHTTPClient(client HTTPClient) EngineOption {
 	return func(e *Engine) {
 		e.client = client
 	}
@@ -55,19 +71,14 @@ func WithLogger(logger *slog.Logger) EngineOption {
 	}
 }
 
-// WithRequestMiddleware adds a request middleware to the Engine. Middlewares
-// are applied in the order they are added.
-func WithRequestMiddleware(middleware func(HTTPRequester) HTTPRequester) EngineOption {
+// WithMiddleware adds a middleware to the Engine. Middlewares are applied in
+// the order they are added.
+func WithMiddleware(middleware func(HTTPClient) HTTPClient) EngineOption {
 	return func(e *Engine) {
-		e.requestMiddlewares = append(e.requestMiddlewares, middleware)
-	}
-}
-
-// WithResponseMiddleware adds a response middleware to the Engine. Middlewares
-// are applied in the order they are added.
-func WithResponseMiddleware(middleware func(HTTPResponser) HTTPResponser) EngineOption {
-	return func(e *Engine) {
-		e.responseMiddlewares = append(e.responseMiddlewares, middleware)
+		e.client = &httpClientMiddleware{
+			client:     e.client,
+			middleware: middleware,
+		}
 	}
 }
 
@@ -87,16 +98,12 @@ func NewEngine(session Session, opts ...EngineOption) *Engine {
 
 // Execute sends an HTTP request using the provided requester and handles the
 // response using the provided responser.
-func Execute[T HTTPResponser](ctx context.Context, engine *Engine, requester HTTPRequester) (T, error) {
+func Execute[R HTTPRequester, T HTTPResponser](ctx context.Context, engine *Engine, requester R) (T, error) {
 	var responser T
 	if rt := reflect.TypeOf(responser); rt.Kind() == reflect.Ptr {
 		responser = reflect.New(rt.Elem()).Interface().(T)
 	}
 
-	for i := len(engine.requestMiddlewares) - 1; i >= 0; i-- {
-		middleware := engine.requestMiddlewares[i]
-		requester = middleware(requester)
-	}
 	req, err := requester.HTTPRequest(ctx, engine.session.Server())
 	if err != nil {
 		return responser, fmt.Errorf("failed to create request: %w", err)
@@ -117,12 +124,13 @@ func Execute[T HTTPResponser](ctx context.Context, engine *Engine, requester HTT
 		}
 	}()
 
-	for i := len(engine.responseMiddlewares) - 1; i >= 0; i-- {
-		middleware := engine.responseMiddlewares[i]
-		responser = middleware(responser).(T)
-	}
 	if err := responser.HandleHTTPResponse(resp); err != nil {
 		return responser, fmt.Errorf("failed to handle response: %w", err)
 	}
+
+	if paginated, ok := any(responser).(interface{ SetRequest(req R) }); ok {
+		paginated.SetRequest(requester)
+	}
+
 	return responser, nil
 }
