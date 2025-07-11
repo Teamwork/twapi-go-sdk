@@ -322,6 +322,75 @@ engine := twapi.NewEngine(session,
 )
 ```
 
+### Middleware
+
+You can add custom middleware to intercept and modify HTTP requests/responses. Middlewares are executed in the order they are added:
+
+```go
+import (
+  "fmt"
+  "net/http"
+  "time"
+
+  twapi "github.com/teamwork/twapi-go-sdk"
+  "github.com/teamwork/twapi-go-sdk/session"
+)
+
+// Logging middleware
+func loggingMiddleware(next twapi.HTTPClient) twapi.HTTPClient {
+  return twapi.HTTPClientFunc(func(req *http.Request) (*http.Response, error) {
+    start := time.Now()
+    fmt.Printf("➡️  %s %s", req.Method, req.URL)
+
+    resp, err := next.Do(req)
+    duration := time.Since(start)
+
+    switch {
+    case err != nil:
+      fmt.Printf(" ❌ %s (took %v)\n", err.Error(), duration)
+    case resp.StatusCode >= 400:
+      fmt.Printf(" ❌ %s (took %v)\n", resp.Status, duration)
+    default:
+      fmt.Printf(" ✅ %s (took %v)\n", resp.Status, duration)
+    }
+    return resp, err
+  })
+}
+
+// Rate limiting middleware
+func rateLimitingMiddleware(next twapi.HTTPClient) twapi.HTTPClient {
+  return twapi.HTTPClientFunc(func(req *http.Request) (*http.Response, error) {
+    // Add rate limiting logic here
+    time.Sleep(100 * time.Millisecond) // Simple delay example
+    return next.Do(req)
+  })
+}
+
+// Authentication header middleware
+func authHeaderMiddleware(apiKey string) func(twapi.HTTPClient) twapi.HTTPClient {
+  return func(next twapi.HTTPClient) twapi.HTTPClient {
+    return twapi.HTTPClientFunc(func(req *http.Request) (*http.Response, error) {
+      req.Header.Set("X-Custom-Auth", apiKey)
+      return next.Do(req)
+    })
+  }
+}
+
+func main() {
+  session := session.NewBearerToken("your_token", "https://yourdomain.teamwork.com")
+
+  // Chain multiple middlewares
+  engine := twapi.NewEngine(session,
+    twapi.WithMiddleware(loggingMiddleware),
+    twapi.WithMiddleware(rateLimitingMiddleware),
+    twapi.WithMiddleware(authHeaderMiddleware("custom-key")),
+  )
+
+  // Now all requests will go through the middleware chain
+  // ...use engine for API calls...
+}
+```
+
 ### Iterator for Paginated Results
 
 The SDK provides an iterator function to easily handle paginated API responses:

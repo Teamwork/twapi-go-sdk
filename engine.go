@@ -14,6 +14,14 @@ type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
+// HTTPClientFunc is a function type that implements the HTTPClient interface.
+type HTTPClientFunc func(req *http.Request) (*http.Response, error)
+
+// Do executes the HTTP request and returns the response.
+func (f HTTPClientFunc) Do(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
+
 // HTTPRequester knows how to create an HTTP request for a specific entity.
 type HTTPRequester interface {
 	HTTPRequest(ctx context.Context, server string) (*http.Request, error)
