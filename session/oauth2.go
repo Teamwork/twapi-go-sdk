@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"strings"
 	"sync"
 
 	twapi "github.com/teamwork/twapi-go-sdk"
@@ -59,6 +60,7 @@ func WithOAuth2Client(client *http.Client) OAuth2Option {
 // uses "https://teamwork.com".
 func WithOAuth2Server(server string) OAuth2Option {
 	return func(o *OAuth2) {
+		server = strings.TrimSuffix(server, "/")
 		if u, err := url.Parse(server); err == nil {
 			if u.Scheme == "" {
 				u.Scheme = "https"
