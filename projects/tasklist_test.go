@@ -10,22 +10,28 @@ import (
 	"github.com/teamwork/twapi-go-sdk/projects"
 )
 
-func TestProjectCreate(t *testing.T) {
+func TestTasklistCreate(t *testing.T) {
 	if engine == nil {
 		t.Skip("Skipping test because the engine is not initialized")
 	}
 
+	projectID, projectCleanup, err := createProject(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer projectCleanup()
+
 	tests := []struct {
 		name          string
-		input         projects.ProjectCreateRequest
+		input         projects.TasklistCreateRequest
 		expectedError bool
 	}{{
-		name:  "it should create a project with valid input",
-		input: projects.NewProjectCreateRequest(fmt.Sprintf("Test Project %d", time.Now().UnixNano())),
+		name:  "it should create a tasklist with valid input",
+		input: projects.NewTasklistCreateRequest(projectID, fmt.Sprintf("Test Tasklist %d", time.Now().UnixNano())),
 	}, {
-		name: "it should fail to create a project with missing name",
-		input: projects.ProjectCreateRequest{
-			Description: twapi.Ptr("This project has no name"),
+		name: "it should fail to create a tasklist with missing name",
+		input: projects.TasklistCreateRequest{
+			Description: twapi.Ptr("This tasklist has no name"),
 		},
 		expectedError: true,
 	}}
@@ -36,14 +42,14 @@ func TestProjectCreate(t *testing.T) {
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
 
-			project, err := projects.ProjectCreate(ctx, engine, tt.input)
+			project, err := projects.TasklistCreate(ctx, engine, tt.input)
 			defer func() {
 				if err != nil {
 					return
 				}
-				_, err := projects.ProjectDelete(ctx, engine, projects.NewProjectDeleteRequest(int64(project.ID)))
+				_, err := projects.TasklistDelete(ctx, engine, projects.NewTasklistDeleteRequest(int64(project.ID)))
 				if err != nil {
-					t.Errorf("failed to delete project after test: %s", err)
+					t.Errorf("failed to delete tasklist after test: %s", err)
 				}
 			}()
 
@@ -58,13 +64,13 @@ func TestProjectCreate(t *testing.T) {
 				return
 			}
 			if project.ID == 0 {
-				t.Error("expected a valid project ID but got 0")
+				t.Error("expected a valid tasklist ID but got 0")
 			}
 		})
 	}
 }
 
-func TestProjectUpdate(t *testing.T) {
+func TestTasklistUpdate(t *testing.T) {
 	if engine == nil {
 		t.Skip("Skipping test because the engine is not initialized")
 	}
@@ -75,70 +81,24 @@ func TestProjectUpdate(t *testing.T) {
 	}
 	defer projectCleanup()
 
-	tests := []struct {
-		name          string
-		input         projects.ProjectUpdateRequest
-		expectedError bool
-	}{{
-		name: "it should update a project with valid input",
-		input: projects.ProjectUpdateRequest{
-			Path: projects.ProjectUpdateRequestPath{
-				ID: projectID,
-			},
-			Description: twapi.Ptr("This is a test project"),
-		},
-	}, {
-		name: "it should fail to update a project with missing name",
-		input: projects.ProjectUpdateRequest{
-			Path: projects.ProjectUpdateRequestPath{
-				ID: projectID,
-			},
-			Name: twapi.Ptr(""),
-		},
-		expectedError: true,
-	}}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			defer cancel()
-
-			_, err := projects.ProjectUpdate(ctx, engine, tt.input)
-			if tt.expectedError {
-				if err == nil {
-					t.Errorf("expected an error but got none")
-				}
-				return
-			}
-			if err != nil {
-				t.Errorf("unexpected error: %s", err)
-				return
-			}
-		})
-	}
-}
-
-func TestProjectDelete(t *testing.T) {
-	if engine == nil {
-		t.Skip("Skipping test because the engine is not initialized")
-	}
-
-	projectID, _, err := createProject(t)
+	tasklistID, tasklistCleanup, err := createTasklist(t, projectID)
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer tasklistCleanup()
 
 	tests := []struct {
 		name          string
-		input         projects.ProjectDeleteRequest
+		input         projects.TasklistUpdateRequest
 		expectedError bool
 	}{{
-		name:  "it should delete a project with valid input",
-		input: projects.NewProjectDeleteRequest(projectID),
-	}, {
-		name:          "it should fail to delete an unknown project",
-		expectedError: true,
+		name: "it should update a tasklist with valid input",
+		input: projects.TasklistUpdateRequest{
+			Path: projects.TasklistUpdateRequestPath{
+				ID: tasklistID,
+			},
+			Description: twapi.Ptr("This is a test tasklist"),
+		},
 	}}
 
 	for _, tt := range tests {
@@ -147,7 +107,7 @@ func TestProjectDelete(t *testing.T) {
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
 
-			_, err := projects.ProjectDelete(ctx, engine, tt.input)
+			_, err := projects.TasklistUpdate(ctx, engine, tt.input)
 			if tt.expectedError {
 				if err == nil {
 					t.Errorf("expected an error but got none")
@@ -162,7 +122,7 @@ func TestProjectDelete(t *testing.T) {
 	}
 }
 
-func TestProjectGet(t *testing.T) {
+func TestTasklistDelete(t *testing.T) {
 	if engine == nil {
 		t.Skip("Skipping test because the engine is not initialized")
 	}
@@ -173,15 +133,20 @@ func TestProjectGet(t *testing.T) {
 	}
 	defer projectCleanup()
 
+	tasklistID, _, err := createTasklist(t, projectID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	tests := []struct {
 		name          string
-		input         projects.ProjectGetRequest
+		input         projects.TasklistDeleteRequest
 		expectedError bool
 	}{{
-		name:  "it should retrieve a project with valid input",
-		input: projects.NewProjectGetRequest(projectID),
+		name:  "it should delete a tasklist with valid input",
+		input: projects.NewTasklistDeleteRequest(tasklistID),
 	}, {
-		name:          "it should fail to retrieve an unknown project",
+		name:          "it should fail to delete an unknown tasklist",
 		expectedError: true,
 	}}
 
@@ -191,7 +156,7 @@ func TestProjectGet(t *testing.T) {
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
 
-			_, err := projects.ProjectGet(ctx, engine, tt.input)
+			_, err := projects.TasklistDelete(ctx, engine, tt.input)
 			if tt.expectedError {
 				if err == nil {
 					t.Errorf("expected an error but got none")
@@ -206,23 +171,33 @@ func TestProjectGet(t *testing.T) {
 	}
 }
 
-func TestProjectList(t *testing.T) {
+func TestTasklistGet(t *testing.T) {
 	if engine == nil {
 		t.Skip("Skipping test because the engine is not initialized")
 	}
 
-	_, projectCleanup, err := createProject(t)
+	projectID, projectCleanup, err := createProject(t)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer projectCleanup()
 
+	tasklistID, tasklistCleanup, err := createTasklist(t, projectID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tasklistCleanup()
+
 	tests := []struct {
 		name          string
-		input         projects.ProjectListRequest
+		input         projects.TasklistGetRequest
 		expectedError bool
 	}{{
-		name: "it should list projects",
+		name:  "it should retrieve a tasklist with valid input",
+		input: projects.NewTasklistGetRequest(tasklistID),
+	}, {
+		name:          "it should fail to retrieve an unknown tasklist",
+		expectedError: true,
 	}}
 
 	for _, tt := range tests {
@@ -231,7 +206,53 @@ func TestProjectList(t *testing.T) {
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
 
-			_, err := projects.ProjectList(ctx, engine, tt.input)
+			_, err := projects.TasklistGet(ctx, engine, tt.input)
+			if tt.expectedError {
+				if err == nil {
+					t.Errorf("expected an error but got none")
+				}
+				return
+			}
+			if err != nil {
+				t.Errorf("unexpected error: %s", err)
+				return
+			}
+		})
+	}
+}
+
+func TestTasklistList(t *testing.T) {
+	if engine == nil {
+		t.Skip("Skipping test because the engine is not initialized")
+	}
+
+	projectID, projectCleanup, err := createProject(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer projectCleanup()
+
+	_, tasklistCleanup, err := createTasklist(t, projectID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tasklistCleanup()
+
+	tests := []struct {
+		name          string
+		input         projects.TasklistListRequest
+		expectedError bool
+	}{{
+		name: "it should list tasklists",
+	}}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := t.Context()
+			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			defer cancel()
+
+			_, err := projects.TasklistList(ctx, engine, tt.input)
 			if tt.expectedError {
 				if err == nil {
 					t.Errorf("expected an error but got none")

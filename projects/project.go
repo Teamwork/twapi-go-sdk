@@ -118,12 +118,12 @@ func NewProjectCreateRequest(name string) ProjectCreateRequest {
 }
 
 // HTTPRequest creates an HTTP request for the ProjectCreateRequest.
-func (c ProjectCreateRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
+func (p ProjectCreateRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
 	uri := server + "/projects.json"
 
 	payload := struct {
 		Project ProjectCreateRequest `json:"project"`
-	}{Project: c}
+	}{Project: p}
 
 	var body bytes.Buffer
 	if err := json.NewEncoder(&body).Encode(payload); err != nil {
@@ -151,14 +151,14 @@ type ProjectCreateResponse struct {
 // HandleHTTPResponse handles the HTTP response for the ProjectCreateResponse.
 // If some unexpected HTTP status code is returned by the API, a twapi.HTTPError
 // is returned.
-func (c *ProjectCreateResponse) HandleHTTPResponse(resp *http.Response) error {
+func (p *ProjectCreateResponse) HandleHTTPResponse(resp *http.Response) error {
 	if resp.StatusCode != http.StatusCreated {
 		return twapi.NewHTTPError(resp, "failed to create project")
 	}
-	if err := json.NewDecoder(resp.Body).Decode(c); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(p); err != nil {
 		return fmt.Errorf("failed to decode create project response: %w", err)
 	}
-	if c.ID == 0 {
+	if p.ID == 0 {
 		return fmt.Errorf("create project response does not contain a valid identifier")
 	}
 	return nil
@@ -222,12 +222,12 @@ func NewProjectUpdateRequest(projectID int64) ProjectUpdateRequest {
 }
 
 // HTTPRequest creates an HTTP request for the ProjectUpdateRequest.
-func (c ProjectUpdateRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
-	uri := server + "/projects/" + strconv.FormatInt(c.Path.ID, 10) + ".json"
+func (p ProjectUpdateRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
+	uri := server + "/projects/" + strconv.FormatInt(p.Path.ID, 10) + ".json"
 
 	payload := struct {
 		Project ProjectUpdateRequest `json:"project"`
-	}{Project: c}
+	}{Project: p}
 
 	var body bytes.Buffer
 	if err := json.NewEncoder(&body).Encode(payload); err != nil {
@@ -251,11 +251,11 @@ type ProjectUpdateResponse struct{}
 // HandleHTTPResponse handles the HTTP response for the ProjectUpdateResponse.
 // If some unexpected HTTP status code is returned by the API, a twapi.HTTPError
 // is returned.
-func (c *ProjectUpdateResponse) HandleHTTPResponse(resp *http.Response) error {
+func (p *ProjectUpdateResponse) HandleHTTPResponse(resp *http.Response) error {
 	if resp.StatusCode != http.StatusOK {
 		return twapi.NewHTTPError(resp, "failed to update project")
 	}
-	if err := json.NewDecoder(resp.Body).Decode(c); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(p); err != nil {
 		return fmt.Errorf("failed to decode update project response: %w", err)
 	}
 	return nil
@@ -296,8 +296,8 @@ func NewProjectDeleteRequest(projectID int64) ProjectDeleteRequest {
 }
 
 // HTTPRequest creates an HTTP request for the ProjectDeleteRequest.
-func (c ProjectDeleteRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
-	uri := server + "/projects/" + strconv.FormatInt(c.Path.ID, 10) + ".json"
+func (p ProjectDeleteRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
+	uri := server + "/projects/" + strconv.FormatInt(p.Path.ID, 10) + ".json"
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, uri, nil)
 	if err != nil {
@@ -316,11 +316,11 @@ type ProjectDeleteResponse struct{}
 // HandleHTTPResponse handles the HTTP response for the ProjectDeleteResponse.
 // If some unexpected HTTP status code is returned by the API, a twapi.HTTPError
 // is returned.
-func (c *ProjectDeleteResponse) HandleHTTPResponse(resp *http.Response) error {
+func (p *ProjectDeleteResponse) HandleHTTPResponse(resp *http.Response) error {
 	if resp.StatusCode != http.StatusOK {
 		return twapi.NewHTTPError(resp, "failed to delete project")
 	}
-	if err := json.NewDecoder(resp.Body).Decode(c); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(p); err != nil {
 		return fmt.Errorf("failed to decode delete project response: %w", err)
 	}
 	return nil

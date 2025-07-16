@@ -79,11 +79,7 @@ func ExampleProjectDelete() {
 	ctx := context.Background()
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
-	_, err = projects.ProjectDelete(ctx, engine, projects.ProjectDeleteRequest{
-		Path: projects.ProjectDeleteRequestPath{
-			ID: 12345,
-		},
-	})
+	_, err = projects.ProjectDelete(ctx, engine, projects.NewProjectDeleteRequest(12345))
 	if err != nil {
 		fmt.Printf("failed to delete project: %s", err)
 	} else {
@@ -104,11 +100,7 @@ func ExampleProjectGet() {
 	ctx := context.Background()
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
-	projectResponse, err := projects.ProjectGet(ctx, engine, projects.ProjectGetRequest{
-		Path: projects.ProjectGetRequestPath{
-			ID: 12345,
-		},
-	})
+	projectResponse, err := projects.ProjectGet(ctx, engine, projects.NewProjectGetRequest(12345))
 	if err != nil {
 		fmt.Printf("failed to retrieve project: %s", err)
 	} else {
