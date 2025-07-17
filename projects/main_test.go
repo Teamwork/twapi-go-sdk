@@ -92,3 +92,51 @@ func createTask(t *testing.T, tasklistID int64) (int64, func(), error) {
 		}
 	}, nil
 }
+
+func createUser(t *testing.T) (int64, func(), error) {
+	epoch := time.Now().UnixNano()
+	user, err := projects.UserCreate(t.Context(), engine, projects.NewUserCreateRequest(
+		fmt.Sprintf("Test User %d", epoch),
+		"LastName",
+		fmt.Sprintf("testuser%d@example.com", epoch),
+	))
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to create user for test: %w", err)
+	}
+	id := int64(user.ID)
+	return id, func() {
+		_, err := projects.UserDelete(t.Context(), engine, projects.NewUserDeleteRequest(id))
+		if err != nil {
+			t.Errorf("failed to delete user after test: %s", err)
+		}
+	}, nil
+}
+
+func addProjectMember(t *testing.T, projectID, userID int64) error {
+	_, err := projects.ProjectMemberAdd(t.Context(), engine, projects.NewProjectMemberAddRequest(projectID, userID))
+	if err != nil {
+		return fmt.Errorf("failed to add user %d to project %d: %w", userID, projectID, err)
+	}
+	return nil
+}
+
+func createMilestone(t *testing.T, projectID int64, assignees projects.LegacyUserGroups) (int64, func(), error) {
+	milestone, err := projects.MilestoneCreate(t.Context(), engine, projects.MilestoneCreateRequest{
+		Path: projects.MilestoneCreateRequestPath{
+			ProjectID: projectID,
+		},
+		Name:      fmt.Sprintf("Test Milestone %d", time.Now().UnixNano()),
+		DueAt:     projects.NewLegacyDate(time.Now().Add(24 * time.Hour)), // Due tomorrow
+		Assignees: assignees,
+	})
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to create milestone for test: %w", err)
+	}
+	id := int64(milestone.ID)
+	return id, func() {
+		_, err := projects.MilestoneDelete(t.Context(), engine, projects.NewMilestoneDeleteRequest(id))
+		if err != nil {
+			t.Errorf("failed to delete milestone after test: %s", err)
+		}
+	}, nil
+}
