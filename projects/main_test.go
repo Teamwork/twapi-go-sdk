@@ -73,3 +73,22 @@ func createTasklist(t *testing.T, projectID int64) (int64, func(), error) {
 		}
 	}, nil
 }
+
+func createTask(t *testing.T, tasklistID int64) (int64, func(), error) {
+	task, err := projects.TaskCreate(t.Context(), engine, projects.TaskCreateRequest{
+		Path: projects.TaskCreateRequestPath{
+			TasklistID: tasklistID,
+		},
+		Name: fmt.Sprintf("Test Task %d", time.Now().UnixNano()),
+	})
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to create task for test: %w", err)
+	}
+	id := task.Task.ID
+	return id, func() {
+		_, err := projects.TaskDelete(t.Context(), engine, projects.NewTaskDeleteRequest(id))
+		if err != nil {
+			t.Errorf("failed to delete task after test: %s", err)
+		}
+	}, nil
+}

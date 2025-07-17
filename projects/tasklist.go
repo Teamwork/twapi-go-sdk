@@ -67,7 +67,7 @@ type TasklistCreateRequestPath struct {
 // https://apidocs.teamwork.com/docs/teamwork/v1/task-lists/post-projects-id-tasklists-json
 type TasklistCreateRequest struct {
 	// Path contains the path parameters for the request.
-	Path TasklistCreateRequestPath
+	Path TasklistCreateRequestPath `json:"-"`
 
 	// Name is the name of the tasklist
 	Name string `json:"name"`
