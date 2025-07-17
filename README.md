@@ -287,6 +287,7 @@ Currently supported Teamwork.com API endpoints:
 |--------|-------------|--------|
 | `projects` | Create, read, update, and delete projects | ✅ Stable |
 | `tasklists` | Create, read, update, and delete tasklists | ✅ Stable |
+| `tasks` | Create, read, update, and delete tasks | ✅ Stable |
 | More modules coming soon... | | 🚧 In Development |
 
 ## 🔧 Configuration

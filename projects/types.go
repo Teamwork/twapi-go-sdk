@@ -51,3 +51,10 @@ func (n *LegacyNumber) UnmarshalJSON(data []byte) error {
 	*n = LegacyNumber(parsedInt)
 	return nil
 }
+
+// UserGroups represents a collection of users, companies, and teams.
+type UserGroups struct {
+	UserIDs    []int64 `json:"userIds"`
+	CompanyIDs []int64 `json:"companyIds"`
+	TeamIDs    []int64 `json:"teamIds"`
+}

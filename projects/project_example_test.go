@@ -159,11 +159,19 @@ func startProjectServer() (string, func(), error) {
 			http.Error(w, "Unsupported Media Type", http.StatusUnsupportedMediaType)
 			return
 		}
+		if r.PathValue("id") != "12345" {
+			http.Error(w, "Not Found", http.StatusNotFound)
+			return
+		}
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = fmt.Fprintln(w, `{"STATUS":"OK"}`)
 	})
-	mux.HandleFunc("DELETE /projects/{id}", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("DELETE /projects/{id}", func(w http.ResponseWriter, r *http.Request) {
+		if r.PathValue("id") != "12345" {
+			http.Error(w, "Not Found", http.StatusNotFound)
+			return
+		}
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = fmt.Fprintln(w, `{"STATUS":"OK"}`)

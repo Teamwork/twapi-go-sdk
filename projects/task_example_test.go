@@ -12,8 +12,8 @@ import (
 	"github.com/teamwork/twapi-go-sdk/session"
 )
 
-func ExampleTasklistCreate() {
-	address, stop, err := startTasklistServer() // mock server for demonstration purposes
+func ExampleTaskCreate() {
+	address, stop, err := startTaskServer() // mock server for demonstration purposes
 	if err != nil {
 		fmt.Printf("failed to start server: %s", err)
 		return
@@ -23,24 +23,24 @@ func ExampleTasklistCreate() {
 	ctx := context.Background()
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
-	tasklist, err := projects.TasklistCreate(ctx, engine, projects.TasklistCreateRequest{
-		Path: projects.TasklistCreateRequestPath{
-			ProjectID: 777,
+	task, err := projects.TaskCreate(ctx, engine, projects.TaskCreateRequest{
+		Path: projects.TaskCreateRequestPath{
+			TasklistID: 777,
 		},
-		Name:        "New Tasklist",
-		Description: twapi.Ptr("This is a new tasklist created via the API."),
+		Name:        "New Task",
+		Description: twapi.Ptr("This is a new task created via the API."),
 	})
 	if err != nil {
-		fmt.Printf("failed to create tasklist: %s", err)
+		fmt.Printf("failed to create task: %s", err)
 	} else {
-		fmt.Printf("created tasklist with identifier %d\n", tasklist.ID)
+		fmt.Printf("created task with identifier %d\n", task.Task.ID)
 	}
 
-	// Output: created tasklist with identifier 12345
+	// Output: created task with identifier 12345
 }
 
-func ExampleTasklistUpdate() {
-	address, stop, err := startTasklistServer() // mock server for demonstration purposes
+func ExampleTaskUpdate() {
+	address, stop, err := startTaskServer() // mock server for demonstration purposes
 	if err != nil {
 		fmt.Printf("failed to start server: %s", err)
 		return
@@ -50,23 +50,23 @@ func ExampleTasklistUpdate() {
 	ctx := context.Background()
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
-	_, err = projects.TasklistUpdate(ctx, engine, projects.TasklistUpdateRequest{
-		Path: projects.TasklistUpdateRequestPath{
+	_, err = projects.TaskUpdate(ctx, engine, projects.TaskUpdateRequest{
+		Path: projects.TaskUpdateRequestPath{
 			ID: 12345,
 		},
 		Description: twapi.Ptr("This is an updated description."),
 	})
 	if err != nil {
-		fmt.Printf("failed to update tasklist: %s", err)
+		fmt.Printf("failed to update task: %s", err)
 	} else {
-		fmt.Println("tasklist updated!")
+		fmt.Println("task updated!")
 	}
 
-	// Output: tasklist updated!
+	// Output: task updated!
 }
 
-func ExampleTasklistDelete() {
-	address, stop, err := startTasklistServer() // mock server for demonstration purposes
+func ExampleTaskDelete() {
+	address, stop, err := startTaskServer() // mock server for demonstration purposes
 	if err != nil {
 		fmt.Printf("failed to start server: %s", err)
 		return
@@ -76,18 +76,18 @@ func ExampleTasklistDelete() {
 	ctx := context.Background()
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
-	_, err = projects.TasklistDelete(ctx, engine, projects.NewTasklistDeleteRequest(12345))
+	_, err = projects.TaskDelete(ctx, engine, projects.NewTaskDeleteRequest(12345))
 	if err != nil {
-		fmt.Printf("failed to delete tasklist: %s", err)
+		fmt.Printf("failed to delete task: %s", err)
 	} else {
-		fmt.Println("tasklist deleted!")
+		fmt.Println("task deleted!")
 	}
 
-	// Output: tasklist deleted!
+	// Output: task deleted!
 }
 
-func ExampleTasklistGet() {
-	address, stop, err := startTasklistServer() // mock server for demonstration purposes
+func ExampleTaskGet() {
+	address, stop, err := startTaskServer() // mock server for demonstration purposes
 	if err != nil {
 		fmt.Printf("failed to start server: %s", err)
 		return
@@ -97,18 +97,18 @@ func ExampleTasklistGet() {
 	ctx := context.Background()
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
-	tasklistResponse, err := projects.TasklistGet(ctx, engine, projects.NewTasklistGetRequest(12345))
+	taskResponse, err := projects.TaskGet(ctx, engine, projects.NewTaskGetRequest(12345))
 	if err != nil {
-		fmt.Printf("failed to retrieve tasklist: %s", err)
+		fmt.Printf("failed to retrieve task: %s", err)
 	} else {
-		fmt.Printf("retrieved tasklist with identifier %d\n", tasklistResponse.Tasklist.ID)
+		fmt.Printf("retrieved task with identifier %d\n", taskResponse.Task.ID)
 	}
 
-	// Output: retrieved tasklist with identifier 12345
+	// Output: retrieved task with identifier 12345
 }
 
-func ExampleTasklistList() {
-	address, stop, err := startTasklistServer() // mock server for demonstration purposes
+func ExampleTaskList() {
+	address, stop, err := startTaskServer() // mock server for demonstration purposes
 	if err != nil {
 		fmt.Printf("failed to start server: %s", err)
 		return
@@ -118,31 +118,31 @@ func ExampleTasklistList() {
 	ctx := context.Background()
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
-	tasklistsResponse, err := projects.TasklistList(ctx, engine, projects.TasklistListRequest{
-		Filters: projects.TasklistListRequestFilters{
+	tasksResponse, err := projects.TaskList(ctx, engine, projects.TaskListRequest{
+		Filters: projects.TaskListRequestFilters{
 			SearchTerm: "Example",
 		},
 	})
 	if err != nil {
-		fmt.Printf("failed to list tasklists: %s", err)
+		fmt.Printf("failed to list tasks: %s", err)
 	} else {
-		for _, tasklist := range tasklistsResponse.Tasklists {
-			fmt.Printf("retrieved tasklist with identifier %d\n", tasklist.ID)
+		for _, task := range tasksResponse.Tasks {
+			fmt.Printf("retrieved task with identifier %d\n", task.ID)
 		}
 	}
 
-	// Output: retrieved tasklist with identifier 12345
-	// retrieved tasklist with identifier 12346
+	// Output: retrieved task with identifier 12345
+	// retrieved task with identifier 12346
 }
 
-func startTasklistServer() (string, func(), error) {
+func startTaskServer() (string, func(), error) {
 	ln, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
 		return "", nil, fmt.Errorf("failed to start server: %w", err)
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("POST /projects/{id}/tasklists", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("POST /projects/api/v3/tasklists/{id}/tasks", func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Content-Type") != "application/json" {
 			http.Error(w, "Unsupported Media Type", http.StatusUnsupportedMediaType)
 			return
@@ -153,9 +153,9 @@ func startTasklistServer() (string, func(), error) {
 		}
 		w.WriteHeader(http.StatusCreated)
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = fmt.Fprintln(w, `{"STATUS":"OK","tasklistId":"12345"}`)
+		_, _ = fmt.Fprintln(w, `{"task":{"id":12345}}`)
 	})
-	mux.HandleFunc("PUT /tasklists/{id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("PUT /projects/api/v3/tasks/{id}", func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Content-Type") != "application/json" {
 			http.Error(w, "Unsupported Media Type", http.StatusUnsupportedMediaType)
 			return
@@ -166,30 +166,30 @@ func startTasklistServer() (string, func(), error) {
 		}
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = fmt.Fprintln(w, `{"STATUS":"OK"}`)
+		_, _ = fmt.Fprintln(w, `{"task":{"id":12345}}`)
 	})
-	mux.HandleFunc("DELETE /tasklists/{id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("DELETE /projects/api/v3/tasks/{id}", func(w http.ResponseWriter, r *http.Request) {
 		if r.PathValue("id") != "12345" {
 			http.Error(w, "Not Found", http.StatusNotFound)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = fmt.Fprintln(w, `{"STATUS":"OK"}`)
+		_, _ = fmt.Fprintln(w, `{"affected":{"taskIds":[12345]}}`)
 	})
-	mux.HandleFunc("GET /projects/api/v3/tasklists/{id}", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /projects/api/v3/tasks/{id}", func(w http.ResponseWriter, r *http.Request) {
 		if r.PathValue("id") != "12345" {
 			http.Error(w, "Not Found", http.StatusNotFound)
 			return
 		}
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = fmt.Fprintln(w, `{"tasklist":{"id":12345}}`)
+		_, _ = fmt.Fprintln(w, `{"task":{"id":12345}}`)
 	})
-	mux.HandleFunc("GET /projects/api/v3/tasklists", func(w http.ResponseWriter, _ *http.Request) {
+	mux.HandleFunc("GET /projects/api/v3/tasks", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = fmt.Fprintln(w, `{"tasklists":[{"id":12345},{"id":12346}]}`)
+		_, _ = fmt.Fprintln(w, `{"tasks":[{"id":12345},{"id":12346}]}`)
 	})
 
 	server := &http.Server{
