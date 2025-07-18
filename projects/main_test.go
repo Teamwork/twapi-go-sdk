@@ -3,6 +3,7 @@ package projects_test
 import (
 	"fmt"
 	"log/slog"
+	"math/rand"
 	"os"
 	"strings"
 	"testing"
@@ -75,7 +76,7 @@ func createTasklist(t *testing.T, projectID int64) (int64, func(), error) {
 }
 
 func createTask(t *testing.T, tasklistID int64) (int64, func(), error) {
-	task, err := projects.TaskCreate(t.Context(), engine, projects.TaskCreateRequest{
+	taskResponse, err := projects.TaskCreate(t.Context(), engine, projects.TaskCreateRequest{
 		Path: projects.TaskCreateRequestPath{
 			TasklistID: tasklistID,
 		},
@@ -84,7 +85,7 @@ func createTask(t *testing.T, tasklistID int64) (int64, func(), error) {
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed to create task for test: %w", err)
 	}
-	id := task.Task.ID
+	id := taskResponse.Task.ID
 	return id, func() {
 		_, err := projects.TaskDelete(t.Context(), engine, projects.NewTaskDeleteRequest(id))
 		if err != nil {
@@ -137,6 +138,38 @@ func createMilestone(t *testing.T, projectID int64, assignees projects.LegacyUse
 		_, err := projects.MilestoneDelete(t.Context(), engine, projects.NewMilestoneDeleteRequest(id))
 		if err != nil {
 			t.Errorf("failed to delete milestone after test: %s", err)
+		}
+	}, nil
+}
+
+func createCompany(t *testing.T) (int64, func(), error) {
+	companyResponse, err := projects.CompanyCreate(t.Context(), engine, projects.CompanyCreateRequest{
+		Name: fmt.Sprintf("Test Company %d", time.Now().UnixNano()),
+	})
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to create company for test: %w", err)
+	}
+	id := companyResponse.Company.ID
+	return id, func() {
+		_, err := projects.CompanyDelete(t.Context(), engine, projects.NewCompanyDeleteRequest(id))
+		if err != nil {
+			t.Errorf("failed to delete company after test: %s", err)
+		}
+	}, nil
+}
+
+func createTag(t *testing.T) (int64, func(), error) {
+	tagResponse, err := projects.TagCreate(t.Context(), engine, projects.TagCreateRequest{
+		Name: fmt.Sprintf("Test Tag %d%d", time.Now().UnixNano(), rand.Intn(100)),
+	})
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to create tag for test: %w", err)
+	}
+	id := tagResponse.Tag.ID
+	return id, func() {
+		_, err := projects.TagDelete(t.Context(), engine, projects.NewTagDeleteRequest(id))
+		if err != nil {
+			t.Errorf("failed to delete tag after test: %s", err)
 		}
 	}, nil
 }
