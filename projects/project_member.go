@@ -11,6 +11,11 @@ import (
 	twapi "github.com/teamwork/twapi-go-sdk"
 )
 
+var (
+	_ twapi.HTTPRequester = (*ProjectMemberAddRequest)(nil)
+	_ twapi.HTTPResponser = (*ProjectMemberAddResponse)(nil)
+)
+
 // ProjectMemberAddRequestPath contains the path parameters for adding users as
 // project members.
 type ProjectMemberAddRequestPath struct {

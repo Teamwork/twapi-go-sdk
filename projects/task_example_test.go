@@ -23,7 +23,7 @@ func ExampleTaskCreate() {
 	ctx := context.Background()
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
-	task, err := projects.TaskCreate(ctx, engine, projects.TaskCreateRequest{
+	taskResponse, err := projects.TaskCreate(ctx, engine, projects.TaskCreateRequest{
 		Path: projects.TaskCreateRequestPath{
 			TasklistID: 777,
 		},
@@ -33,7 +33,7 @@ func ExampleTaskCreate() {
 	if err != nil {
 		fmt.Printf("failed to create task: %s", err)
 	} else {
-		fmt.Printf("created task with identifier %d\n", task.Task.ID)
+		fmt.Printf("created task with identifier %d\n", taskResponse.Task.ID)
 	}
 
 	// Output: created task with identifier 12345

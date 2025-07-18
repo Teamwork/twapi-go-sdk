@@ -224,8 +224,8 @@ func (t *TasklistUpdateResponse) HandleHTTPResponse(resp *http.Response) error {
 	return nil
 }
 
-// TasklistUpdate creates a new tasklist using the provided request and returns
-// the response.
+// TasklistUpdate updates a tasklist using the provided request and returns the
+// response.
 func TasklistUpdate(
 	ctx context.Context,
 	engine *twapi.Engine,

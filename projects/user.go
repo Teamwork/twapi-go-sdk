@@ -21,6 +21,8 @@ var (
 	_ twapi.HTTPResponser = (*UserDeleteResponse)(nil)
 	_ twapi.HTTPRequester = (*UserGetRequest)(nil)
 	_ twapi.HTTPResponser = (*UserGetResponse)(nil)
+	_ twapi.HTTPRequester = (*UserGetMeRequest)(nil)
+	_ twapi.HTTPResponser = (*UserGetMeResponse)(nil)
 	_ twapi.HTTPRequester = (*UserListRequest)(nil)
 	_ twapi.HTTPResponser = (*UserListResponse)(nil)
 )
@@ -267,7 +269,7 @@ func (u *UserUpdateResponse) HandleHTTPResponse(resp *http.Response) error {
 	return nil
 }
 
-// UserUpdate creates a new user using the provided request and returns the
+// UserUpdate updates a user using the provided request and returns the
 // response.
 func UserUpdate(
 	ctx context.Context,

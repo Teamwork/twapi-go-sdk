@@ -314,7 +314,7 @@ func (t *TaskUpdateResponse) HandleHTTPResponse(resp *http.Response) error {
 	return nil
 }
 
-// TaskUpdate creates a new task using the provided request and returns the
+// TaskUpdate updates a task using the provided request and returns the
 // response.
 func TaskUpdate(
 	ctx context.Context,

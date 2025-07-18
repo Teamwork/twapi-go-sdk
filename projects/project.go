@@ -261,8 +261,8 @@ func (p *ProjectUpdateResponse) HandleHTTPResponse(resp *http.Response) error {
 	return nil
 }
 
-// ProjectUpdate creates a new project using the provided request and returns
-// the response.
+// ProjectUpdate updates a project using the provided request and returns the
+// response.
 func ProjectUpdate(
 	ctx context.Context,
 	engine *twapi.Engine,

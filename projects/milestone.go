@@ -278,7 +278,7 @@ func (m *MilestoneUpdateResponse) HandleHTTPResponse(resp *http.Response) error 
 	return nil
 }
 
-// MilestoneUpdate creates a new milestone using the provided request and returns
+// MilestoneUpdate updates a milestone using the provided request and returns
 // the response.
 func MilestoneUpdate(
 	ctx context.Context,
