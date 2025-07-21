@@ -41,10 +41,12 @@ type Tag struct {
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/tags/post-projects-api-v3-tags-json
 type TagCreateRequest struct {
-	// Name is the name of the tag. This field is required.
+	// Name is the name of the tag. This field is required. It must be less than
+	// 50 characters.
 	Name string `json:"name"`
 
-	// ProjectID is the unique identifier of the project the tag belongs to.
+	// ProjectID is the unique identifier of the project the tag belongs to. This
+	// is for project-scoped tags.
 	ProjectID *int64 `json:"projectId,omitempty"`
 }
 
@@ -126,10 +128,12 @@ type TagUpdateRequest struct {
 	// Path contains the path parameters for the request.
 	Path TagUpdateRequestPath `json:"-"`
 
-	// Name is the name of the tag.
+	// Name is the name of the tag. It must be less than 50 characters when
+	// provided.
 	Name *string `json:"name,omitempty"`
 
-	// ProjectID is the unique identifier of the project the tag belongs to.
+	// ProjectID is the unique identifier of the project the tag belongs to. This
+	// is for project-scoped tags.
 	ProjectID *int64 `json:"projectId,omitempty"`
 }
 
@@ -329,6 +333,11 @@ type TagListRequestFilters struct {
 	// SearchTerm is an optional search term to filter tags by name.
 	SearchTerm string
 
+	// ItemType is the type of item the tag is associated with. Valid values are
+	// 'project', 'task', 'tasklist', 'milestone', 'message', 'timelog',
+	// 'notebook', 'file', 'company' and 'link'.
+	ItemType string
+
 	// ProjectIDs is an optional list of project IDs to filter tags by
 	// belonging to specific projects.
 	ProjectIDs []int64
@@ -370,6 +379,9 @@ func (t TagListRequest) HTTPRequest(ctx context.Context, server string) (*http.R
 	query := req.URL.Query()
 	if t.Filters.SearchTerm != "" {
 		query.Set("searchTerm", t.Filters.SearchTerm)
+	}
+	if t.Filters.ItemType != "" {
+		query.Set("itemType", t.Filters.ItemType)
 	}
 	if len(t.Filters.ProjectIDs) > 0 {
 		projectIDs := make([]string, len(t.Filters.ProjectIDs))
