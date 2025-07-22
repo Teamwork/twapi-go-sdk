@@ -187,11 +187,10 @@ func createTask(t testEngine, tasklistID int64) (int64, func(), error) {
 }
 
 func createUser(t testEngine) (int64, func(), error) {
-	epoch := time.Now().UnixNano()
 	user, err := projects.UserCreate(t.Context(), engine, projects.NewUserCreateRequest(
 		fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
 		fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
-		fmt.Sprintf("testuser%d@example.com", epoch),
+		fmt.Sprintf("testuser%d%d@example.com", time.Now().UnixNano(), rand.Intn(100)),
 	))
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed to create user for test: %w", err)
@@ -266,6 +265,23 @@ func createTag(t testEngine) (int64, func(), error) {
 		_, err := projects.TagDelete(ctx, engine, projects.NewTagDeleteRequest(id))
 		if err != nil {
 			t.Errorf("failed to delete tag after test: %s", err)
+		}
+	}, nil
+}
+
+func createTeam(t testEngine) (int64, func(), error) {
+	team, err := projects.TeamCreate(t.Context(), engine, projects.NewTeamCreateRequest(
+		fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
+	))
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to create team for test: %w", err)
+	}
+	id := int64(team.ID)
+	return id, func() {
+		ctx := context.Background() // t.Context is always canceled in cleanup
+		_, err := projects.TeamDelete(ctx, engine, projects.NewTeamDeleteRequest(id))
+		if err != nil {
+			t.Errorf("failed to delete team after test: %s", err)
 		}
 	}, nil
 }
