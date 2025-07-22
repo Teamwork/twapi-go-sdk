@@ -356,7 +356,6 @@ func (t TaskDeleteRequest) HTTPRequest(ctx context.Context, server string) (*htt
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Content-Type", "application/json")
 
 	return req, nil
 }

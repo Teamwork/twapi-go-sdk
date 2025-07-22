@@ -230,7 +230,6 @@ func (t TagDeleteRequest) HTTPRequest(ctx context.Context, server string) (*http
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Content-Type", "application/json")
 
 	return req, nil
 }

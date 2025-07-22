@@ -267,7 +267,6 @@ func (t TasklistDeleteRequest) HTTPRequest(ctx context.Context, server string) (
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Content-Type", "application/json")
 
 	return req, nil
 }

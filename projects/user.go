@@ -311,7 +311,6 @@ func (u UserDeleteRequest) HTTPRequest(ctx context.Context, server string) (*htt
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Content-Type", "application/json")
 
 	return req, nil
 }
@@ -413,7 +412,7 @@ func UserGet(
 
 // UserGetMeRequest represents the request body for loading the logged user.
 //
-// Not documented yet.
+// https://apidocs.teamwork.com/docs/teamwork/v3/people/get-projects-api-v3-me-json
 type UserGetMeRequest struct {
 }
 
@@ -436,7 +435,7 @@ func (u UserGetMeRequest) HTTPRequest(ctx context.Context, server string) (*http
 
 // UserGetMeResponse contains all the information related to the logged user.
 //
-// Not documented yet.
+// https://apidocs.teamwork.com/docs/teamwork/v3/people/get-projects-api-v3-me-json
 type UserGetMeResponse struct {
 	User User `json:"person"`
 }
