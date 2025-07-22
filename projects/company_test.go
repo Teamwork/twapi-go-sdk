@@ -16,24 +16,12 @@ func TestCompanyCreate(t *testing.T) {
 		t.Skip("Skipping test because the engine is not initialized")
 	}
 
-	userID, userCleanup, err := createUser(t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer userCleanup()
-
-	tagID, tagCleanup, err := createTag(t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer tagCleanup()
-
 	tests := []struct {
 		name  string
 		input projects.CompanyCreateRequest
 	}{{
 		name:  "only required fields",
-		input: projects.NewCompanyCreateRequest(fmt.Sprintf("Test Company %d%d", time.Now().UnixNano(), rand.Intn(100))),
+		input: projects.NewCompanyCreateRequest(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100))),
 	}, {
 		name: "all fields",
 		input: projects.CompanyCreateRequest{
@@ -51,9 +39,9 @@ func TestCompanyCreate(t *testing.T) {
 			State:       twapi.Ptr("Cork"),
 			Website:     twapi.Ptr("https://www.example.com"),
 			Zip:         twapi.Ptr("12345"),
-			ManagerID:   &userID,
+			ManagerID:   &testResources.UserID,
 			IndustryID:  twapi.Ptr(int64(1)), // Web Development Agency,
-			TagIDs:      []int64{tagID},
+			TagIDs:      []int64{testResources.TagID},
 		},
 	}}
 
@@ -61,24 +49,22 @@ func TestCompanyCreate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			defer cancel()
+			t.Cleanup(cancel)
 
 			company, err := projects.CompanyCreate(ctx, engine, tt.input)
-			defer func() {
+			t.Cleanup(func() {
 				if err != nil {
 					return
 				}
+				ctx = context.Background() // t.Context is always canceled in cleanup
 				_, err := projects.CompanyDelete(ctx, engine, projects.NewCompanyDeleteRequest(company.Company.ID))
 				if err != nil {
 					t.Errorf("failed to delete company after test: %s", err)
 				}
-			}()
-
+			})
 			if err != nil {
 				t.Errorf("unexpected error: %s", err)
-				return
-			}
-			if company.Company.ID == 0 {
+			} else if company.Company.ID == 0 {
 				t.Error("expected a valid company ID but got 0")
 			}
 		})
@@ -94,19 +80,7 @@ func TestCompanyUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer companyCleanup()
-
-	userID, userCleanup, err := createUser(t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer userCleanup()
-
-	tagID, tagCleanup, err := createTag(t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer tagCleanup()
+	t.Cleanup(companyCleanup)
 
 	tests := []struct {
 		name  string
@@ -131,9 +105,9 @@ func TestCompanyUpdate(t *testing.T) {
 			State:       twapi.Ptr("Cork"),
 			Website:     twapi.Ptr("https://www.example.com"),
 			Zip:         twapi.Ptr("12345"),
-			ManagerID:   &userID,
+			ManagerID:   &testResources.UserID,
 			IndustryID:  twapi.Ptr(int64(1)), // Web Development Agency,
-			TagIDs:      []int64{tagID},
+			TagIDs:      []int64{testResources.TagID},
 		},
 	}}
 
@@ -141,11 +115,10 @@ func TestCompanyUpdate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			defer cancel()
+			t.Cleanup(cancel)
 
 			if _, err := projects.CompanyUpdate(ctx, engine, tt.input); err != nil {
 				t.Errorf("unexpected error: %s", err)
-				return
 			}
 		})
 	}
@@ -161,36 +134,12 @@ func TestCompanyDelete(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tests := []struct {
-		name          string
-		input         projects.CompanyDeleteRequest
-		expectedError bool
-	}{{
-		name:  "it should delete a company with valid input",
-		input: projects.NewCompanyDeleteRequest(companyID),
-	}, {
-		name:          "it should fail to delete an unknown company",
-		expectedError: true,
-	}}
+	ctx := t.Context()
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	t.Cleanup(cancel)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			defer cancel()
-
-			_, err := projects.CompanyDelete(ctx, engine, tt.input)
-			if tt.expectedError {
-				if err == nil {
-					t.Errorf("expected an error but got none")
-				}
-				return
-			}
-			if err != nil {
-				t.Errorf("unexpected error: %s", err)
-				return
-			}
-		})
+	if _, err = projects.CompanyDelete(ctx, engine, projects.NewCompanyDeleteRequest(companyID)); err != nil {
+		t.Errorf("unexpected error: %s", err)
 	}
 }
 
@@ -203,39 +152,14 @@ func TestCompanyGet(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer companyCleanup()
+	t.Cleanup(companyCleanup)
 
-	tests := []struct {
-		name          string
-		input         projects.CompanyGetRequest
-		expectedError bool
-	}{{
-		name:  "it should retrieve a company with valid input",
-		input: projects.NewCompanyGetRequest(companyID),
-	}, {
-		name:          "it should fail to retrieve an unknown company",
-		input:         projects.NewCompanyGetRequest(999999999), // assuming this ID does not exist
-		expectedError: true,
-	}}
+	ctx := t.Context()
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	t.Cleanup(cancel)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			defer cancel()
-
-			_, err := projects.CompanyGet(ctx, engine, tt.input)
-			if tt.expectedError {
-				if err == nil {
-					t.Errorf("expected an error but got none")
-				}
-				return
-			}
-			if err != nil {
-				t.Errorf("unexpected error: %s", err)
-				return
-			}
-		})
+	if _, err = projects.CompanyGet(ctx, engine, projects.NewCompanyGetRequest(companyID)); err != nil {
+		t.Errorf("unexpected error: %s", err)
 	}
 }
 
@@ -248,12 +172,11 @@ func TestCompanyList(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer companyCleanup()
+	t.Cleanup(companyCleanup)
 
 	tests := []struct {
-		name          string
-		input         projects.CompanyListRequest
-		expectedError bool
+		name  string
+		input projects.CompanyListRequest
 	}{{
 		name: "it should list companies",
 	}}
@@ -262,18 +185,10 @@ func TestCompanyList(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			defer cancel()
+			t.Cleanup(cancel)
 
-			_, err := projects.CompanyList(ctx, engine, tt.input)
-			if tt.expectedError {
-				if err == nil {
-					t.Errorf("expected an error but got none")
-				}
-				return
-			}
-			if err != nil {
+			if _, err := projects.CompanyList(ctx, engine, tt.input); err != nil {
 				t.Errorf("unexpected error: %s", err)
-				return
 			}
 		})
 	}

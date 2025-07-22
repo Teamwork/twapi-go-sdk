@@ -23,17 +23,14 @@ func ExampleTasklistCreate() {
 	ctx := context.Background()
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
-	tasklist, err := projects.TasklistCreate(ctx, engine, projects.TasklistCreateRequest{
-		Path: projects.TasklistCreateRequestPath{
-			ProjectID: 777,
-		},
-		Name:        "New Tasklist",
-		Description: twapi.Ptr("This is a new tasklist created via the API."),
-	})
+	tasklistRequest := projects.NewTasklistCreateRequest(777, "New Tasklist")
+	tasklistRequest.Description = twapi.Ptr("This is a new tasklist created via the API.")
+
+	tasklistResponse, err := projects.TasklistCreate(ctx, engine, tasklistRequest)
 	if err != nil {
 		fmt.Printf("failed to create tasklist: %s", err)
 	} else {
-		fmt.Printf("created tasklist with identifier %d\n", tasklist.ID)
+		fmt.Printf("created tasklist with identifier %d\n", tasklistResponse.ID)
 	}
 
 	// Output: created tasklist with identifier 12345
@@ -50,12 +47,10 @@ func ExampleTasklistUpdate() {
 	ctx := context.Background()
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
-	_, err = projects.TasklistUpdate(ctx, engine, projects.TasklistUpdateRequest{
-		Path: projects.TasklistUpdateRequestPath{
-			ID: 12345,
-		},
-		Description: twapi.Ptr("This is an updated description."),
-	})
+	tasklistRequest := projects.NewTasklistUpdateRequest(12345)
+	tasklistRequest.Description = twapi.Ptr("This is an updated description.")
+
+	_, err = projects.TasklistUpdate(ctx, engine, tasklistRequest)
 	if err != nil {
 		fmt.Printf("failed to update tasklist: %s", err)
 	} else {
@@ -118,11 +113,10 @@ func ExampleTasklistList() {
 	ctx := context.Background()
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
-	tasklistsResponse, err := projects.TasklistList(ctx, engine, projects.TasklistListRequest{
-		Filters: projects.TasklistListRequestFilters{
-			SearchTerm: "Example",
-		},
-	})
+	tasklistsRequest := projects.NewTasklistListRequest()
+	tasklistsRequest.Filters.SearchTerm = "Example"
+
+	tasklistsResponse, err := projects.TasklistList(ctx, engine, tasklistsRequest)
 	if err != nil {
 		fmt.Printf("failed to list tasklists: %s", err)
 	} else {

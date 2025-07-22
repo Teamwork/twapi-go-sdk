@@ -23,10 +23,10 @@ func ExampleCompanyCreate() {
 	ctx := context.Background()
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
-	companyResponse, err := projects.CompanyCreate(ctx, engine, projects.CompanyCreateRequest{
-		Name:    "Test Company",
-		Profile: twapi.Ptr("A company created via the API."),
-	})
+	companyRequest := projects.NewCompanyCreateRequest("Test Company")
+	companyRequest.Profile = twapi.Ptr("A company created via the API.")
+
+	companyResponse, err := projects.CompanyCreate(ctx, engine, companyRequest)
 	if err != nil {
 		fmt.Printf("failed to create company: %s", err)
 	} else {
@@ -47,12 +47,10 @@ func ExampleCompanyUpdate() {
 	ctx := context.Background()
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
-	_, err = projects.CompanyUpdate(ctx, engine, projects.CompanyUpdateRequest{
-		Path: projects.CompanyUpdateRequestPath{
-			ID: 12345,
-		},
-		Profile: twapi.Ptr("Updated profile"),
-	})
+	companyRequest := projects.NewCompanyUpdateRequest(12345)
+	companyRequest.Profile = twapi.Ptr("Updated profile")
+
+	_, err = projects.CompanyUpdate(ctx, engine, companyRequest)
 	if err != nil {
 		fmt.Printf("failed to update company: %s", err)
 	} else {
@@ -115,11 +113,10 @@ func ExampleCompanyList() {
 	ctx := context.Background()
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
-	companiesResponse, err := projects.CompanyList(ctx, engine, projects.CompanyListRequest{
-		Filters: projects.CompanyListRequestFilters{
-			SearchTerm: "John",
-		},
-	})
+	companiesRequest := projects.NewCompanyListRequest()
+	companiesRequest.Filters.SearchTerm = "John"
+
+	companiesResponse, err := projects.CompanyList(ctx, engine, companiesRequest)
 	if err != nil {
 		fmt.Printf("failed to list companies: %s", err)
 	} else {

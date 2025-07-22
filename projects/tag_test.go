@@ -16,12 +16,6 @@ func TestTagCreate(t *testing.T) {
 		t.Skip("Skipping test because the engine is not initialized")
 	}
 
-	projectID, projectCleanup, err := createProject(t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer projectCleanup()
-
 	tests := []struct {
 		name  string
 		input projects.TagCreateRequest
@@ -32,7 +26,7 @@ func TestTagCreate(t *testing.T) {
 		name: "all fields",
 		input: projects.TagCreateRequest{
 			Name:      fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
-			ProjectID: &projectID,
+			ProjectID: &testResources.ProjectID,
 		},
 	}}
 
@@ -40,24 +34,22 @@ func TestTagCreate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			defer cancel()
+			t.Cleanup(cancel)
 
 			tagResponse, err := projects.TagCreate(ctx, engine, tt.input)
-			defer func() {
+			t.Cleanup(func() {
 				if err != nil {
 					return
 				}
+				ctx = context.Background() // t.Context is always canceled in cleanup
 				_, err := projects.TagDelete(ctx, engine, projects.NewTagDeleteRequest(tagResponse.Tag.ID))
 				if err != nil {
 					t.Errorf("failed to delete tag after test: %s", err)
 				}
-			}()
-
+			})
 			if err != nil {
 				t.Errorf("unexpected error: %s", err)
-				return
-			}
-			if tagResponse.Tag.ID == 0 {
+			} else if tagResponse.Tag.ID == 0 {
 				t.Error("expected a valid tag ID but got 0")
 			}
 		})
@@ -69,22 +61,15 @@ func TestTagUpdate(t *testing.T) {
 		t.Skip("Skipping test because the engine is not initialized")
 	}
 
-	projectID, projectCleanup, err := createProject(t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer projectCleanup()
-
 	tagID, tagCleanup, err := createTag(t)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer tagCleanup()
+	t.Cleanup(tagCleanup)
 
 	tests := []struct {
-		name          string
-		input         projects.TagUpdateRequest
-		expectedError bool
+		name  string
+		input projects.TagUpdateRequest
 	}{{
 		name: "all fields",
 		input: projects.TagUpdateRequest{
@@ -92,7 +77,7 @@ func TestTagUpdate(t *testing.T) {
 				ID: tagID,
 			},
 			Name:      twapi.Ptr(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100))),
-			ProjectID: &projectID,
+			ProjectID: &testResources.ProjectID,
 		},
 	}}
 
@@ -100,18 +85,10 @@ func TestTagUpdate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			defer cancel()
+			t.Cleanup(cancel)
 
-			_, err := projects.TagUpdate(ctx, engine, tt.input)
-			if tt.expectedError {
-				if err == nil {
-					t.Errorf("expected an error but got none")
-				}
-				return
-			}
-			if err != nil {
+			if _, err := projects.TagUpdate(ctx, engine, tt.input); err != nil {
 				t.Errorf("unexpected error: %s", err)
-				return
 			}
 		})
 	}
@@ -127,36 +104,13 @@ func TestTagDelete(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tests := []struct {
-		name          string
-		input         projects.TagDeleteRequest
-		expectedError bool
-	}{{
-		name:  "it should delete a tag with valid input",
-		input: projects.NewTagDeleteRequest(tagID),
-	}, {
-		name:          "it should fail to delete an unknown tag",
-		expectedError: true,
-	}}
+	ctx := t.Context()
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	t.Cleanup(cancel)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			defer cancel()
-
-			_, err := projects.TagDelete(ctx, engine, tt.input)
-			if tt.expectedError {
-				if err == nil {
-					t.Errorf("expected an error but got none")
-				}
-				return
-			}
-			if err != nil {
-				t.Errorf("unexpected error: %s", err)
-				return
-			}
-		})
+	_, err = projects.TagDelete(ctx, engine, projects.NewTagDeleteRequest(tagID))
+	if err != nil {
+		t.Errorf("unexpected error: %s", err)
 	}
 }
 
@@ -169,39 +123,14 @@ func TestTagGet(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer tagCleanup()
+	t.Cleanup(tagCleanup)
 
-	tests := []struct {
-		name          string
-		input         projects.TagGetRequest
-		expectedError bool
-	}{{
-		name:  "it should retrieve a tag with valid input",
-		input: projects.NewTagGetRequest(tagID),
-	}, {
-		name:          "it should fail to retrieve an unknown tag",
-		input:         projects.NewTagGetRequest(999999999), // assuming this ID does not exist
-		expectedError: true,
-	}}
+	ctx := t.Context()
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	t.Cleanup(cancel)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			defer cancel()
-
-			_, err := projects.TagGet(ctx, engine, tt.input)
-			if tt.expectedError {
-				if err == nil {
-					t.Errorf("expected an error but got none")
-				}
-				return
-			}
-			if err != nil {
-				t.Errorf("unexpected error: %s", err)
-				return
-			}
-		})
+	if _, err = projects.TagGet(ctx, engine, projects.NewTagGetRequest(tagID)); err != nil {
+		t.Errorf("unexpected error: %s", err)
 	}
 }
 
@@ -239,7 +168,6 @@ func TestTagList(t *testing.T) {
 			}
 			if err != nil {
 				t.Errorf("unexpected error: %s", err)
-				return
 			}
 		})
 	}

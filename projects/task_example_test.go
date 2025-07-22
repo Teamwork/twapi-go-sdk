@@ -23,13 +23,10 @@ func ExampleTaskCreate() {
 	ctx := context.Background()
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
-	taskResponse, err := projects.TaskCreate(ctx, engine, projects.TaskCreateRequest{
-		Path: projects.TaskCreateRequestPath{
-			TasklistID: 777,
-		},
-		Name:        "New Task",
-		Description: twapi.Ptr("This is a new task created via the API."),
-	})
+	taskRequest := projects.NewTaskCreateRequest(777, "New Task")
+	taskRequest.Description = twapi.Ptr("This is a new task created via the API.")
+
+	taskResponse, err := projects.TaskCreate(ctx, engine, taskRequest)
 	if err != nil {
 		fmt.Printf("failed to create task: %s", err)
 	} else {
@@ -50,12 +47,10 @@ func ExampleTaskUpdate() {
 	ctx := context.Background()
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
-	_, err = projects.TaskUpdate(ctx, engine, projects.TaskUpdateRequest{
-		Path: projects.TaskUpdateRequestPath{
-			ID: 12345,
-		},
-		Description: twapi.Ptr("This is an updated description."),
-	})
+	taskRequest := projects.NewTaskUpdateRequest(12345)
+	taskRequest.Description = twapi.Ptr("This is an updated description.")
+
+	_, err = projects.TaskUpdate(ctx, engine, taskRequest)
 	if err != nil {
 		fmt.Printf("failed to update task: %s", err)
 	} else {
@@ -118,11 +113,10 @@ func ExampleTaskList() {
 	ctx := context.Background()
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
-	tasksResponse, err := projects.TaskList(ctx, engine, projects.TaskListRequest{
-		Filters: projects.TaskListRequestFilters{
-			SearchTerm: "Example",
-		},
-	})
+	tasksRequest := projects.NewTaskListRequest()
+	tasksRequest.Filters.SearchTerm = "Example"
+
+	tasksResponse, err := projects.TaskList(ctx, engine, tasksRequest)
 	if err != nil {
 		fmt.Printf("failed to list tasks: %s", err)
 	} else {
