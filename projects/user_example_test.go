@@ -23,15 +23,13 @@ func ExampleUserCreate() {
 	ctx := context.Background()
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
-	user, err := projects.UserCreate(ctx, engine, projects.UserCreateRequest{
-		FirstName: "John",
-		LastName:  "Doe",
-		Email:     "johndoe@example.com",
-	})
+	userRequest := projects.NewUserCreateRequest("John", "Doe", "johndoe@example.com")
+
+	userResponse, err := projects.UserCreate(ctx, engine, userRequest)
 	if err != nil {
 		fmt.Printf("failed to create user: %s", err)
 	} else {
-		fmt.Printf("created user with identifier %d\n", user.ID)
+		fmt.Printf("created user with identifier %d\n", userResponse.ID)
 	}
 
 	// Output: created user with identifier 12345
@@ -48,12 +46,10 @@ func ExampleUserUpdate() {
 	ctx := context.Background()
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
-	_, err = projects.UserUpdate(ctx, engine, projects.UserUpdateRequest{
-		Path: projects.UserUpdateRequestPath{
-			ID: 12345,
-		},
-		Title: twapi.Ptr("Software Engineer"),
-	})
+	userRequest := projects.NewUserUpdateRequest(12345)
+	userRequest.Title = twapi.Ptr("Software Engineer")
+
+	_, err = projects.UserUpdate(ctx, engine, userRequest)
 	if err != nil {
 		fmt.Printf("failed to update user: %s", err)
 	} else {
@@ -137,11 +133,10 @@ func ExampleUserList() {
 	ctx := context.Background()
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
-	usersResponse, err := projects.UserList(ctx, engine, projects.UserListRequest{
-		Filters: projects.UserListRequestFilters{
-			SearchTerm: "John",
-		},
-	})
+	usersRequest := projects.NewUserListRequest()
+	usersRequest.Filters.SearchTerm = "John"
+
+	usersResponse, err := projects.UserList(ctx, engine, usersRequest)
 	if err != nil {
 		fmt.Printf("failed to list users: %s", err)
 	} else {

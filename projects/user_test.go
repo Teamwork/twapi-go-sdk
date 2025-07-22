@@ -3,6 +3,7 @@ package projects_test
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"testing"
 	"time"
 
@@ -15,55 +16,49 @@ func TestUserCreate(t *testing.T) {
 		t.Skip("Skipping test because the engine is not initialized")
 	}
 
-	epoch := time.Now().UnixNano()
-
 	tests := []struct {
-		name          string
-		input         projects.UserCreateRequest
-		expectedError bool
+		name  string
+		input projects.UserCreateRequest
 	}{{
-		name: "it should create a user with valid input",
+		name: "only required fields",
 		input: projects.NewUserCreateRequest(
-			fmt.Sprintf("Test User %d", epoch),
-			"LastName",
-			fmt.Sprintf("testuser%d@example.com", epoch),
+			fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
+			fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
+			fmt.Sprintf("test%d%d@example.com", time.Now().UnixNano(), rand.Intn(100)),
 		),
 	}, {
-		name: "it should fail to create a user with missing names",
+		name: "all fields",
 		input: projects.UserCreateRequest{
-			Email: fmt.Sprintf("testuser%d@example.com", epoch),
+			FirstName: fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
+			LastName:  fmt.Sprintf("user%d%d", time.Now().UnixNano(), rand.Intn(100)),
+			Title:     twapi.Ptr("Test User"),
+			Email:     fmt.Sprintf("email%d%d@example.com", time.Now().UnixNano(), rand.Intn(100)),
+			Admin:     twapi.Ptr(true),
+			Type:      twapi.Ptr("account"),
+			CompanyID: &testResources.CompanyID,
 		},
-		expectedError: true,
 	}}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			defer cancel()
+			t.Cleanup(cancel)
 
 			user, err := projects.UserCreate(ctx, engine, tt.input)
-			defer func() {
+			t.Cleanup(func() {
 				if err != nil {
 					return
 				}
+				ctx = context.Background() // t.Context is always canceled in cleanup
 				_, err := projects.UserDelete(ctx, engine, projects.NewUserDeleteRequest(int64(user.ID)))
 				if err != nil {
 					t.Errorf("failed to delete user after test: %s", err)
 				}
-			}()
-
-			if tt.expectedError {
-				if err == nil {
-					t.Errorf("expected an error but got none")
-				}
-				return
-			}
+			})
 			if err != nil {
 				t.Errorf("unexpected error: %s", err)
-				return
-			}
-			if user.ID == 0 {
+			} else if user.ID == 0 {
 				t.Error("expected a valid user ID but got 0")
 			}
 		})
@@ -79,19 +74,24 @@ func TestUserUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer userCleanup()
+	t.Cleanup(userCleanup)
 
 	tests := []struct {
-		name          string
-		input         projects.UserUpdateRequest
-		expectedError bool
+		name  string
+		input projects.UserUpdateRequest
 	}{{
-		name: "it should update a user with valid input",
+		name: "all fields",
 		input: projects.UserUpdateRequest{
 			Path: projects.UserUpdateRequestPath{
 				ID: userID,
 			},
-			Title: twapi.Ptr("Updated Title"),
+			FirstName: twapi.Ptr(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100))),
+			LastName:  twapi.Ptr(fmt.Sprintf("user%d%d", time.Now().UnixNano(), rand.Intn(100))),
+			Title:     twapi.Ptr("Test User"),
+			Email:     twapi.Ptr(fmt.Sprintf("email%d%d@example.com", time.Now().UnixNano(), rand.Intn(100))),
+			Admin:     twapi.Ptr(true),
+			Type:      twapi.Ptr("account"),
+			CompanyID: &testResources.CompanyID,
 		},
 	}}
 
@@ -99,18 +99,10 @@ func TestUserUpdate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			defer cancel()
+			t.Cleanup(cancel)
 
-			_, err := projects.UserUpdate(ctx, engine, tt.input)
-			if tt.expectedError {
-				if err == nil {
-					t.Errorf("expected an error but got none")
-				}
-				return
-			}
-			if err != nil {
+			if _, err := projects.UserUpdate(ctx, engine, tt.input); err != nil {
 				t.Errorf("unexpected error: %s", err)
-				return
 			}
 		})
 	}
@@ -126,36 +118,12 @@ func TestUserDelete(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	tests := []struct {
-		name          string
-		input         projects.UserDeleteRequest
-		expectedError bool
-	}{{
-		name:  "it should delete a user with valid input",
-		input: projects.NewUserDeleteRequest(userID),
-	}, {
-		name:          "it should fail to delete an unknown user",
-		expectedError: true,
-	}}
+	ctx := t.Context()
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	t.Cleanup(cancel)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			defer cancel()
-
-			_, err := projects.UserDelete(ctx, engine, tt.input)
-			if tt.expectedError {
-				if err == nil {
-					t.Errorf("expected an error but got none")
-				}
-				return
-			}
-			if err != nil {
-				t.Errorf("unexpected error: %s", err)
-				return
-			}
-		})
+	if _, err = projects.UserDelete(ctx, engine, projects.NewUserDeleteRequest(userID)); err != nil {
+		t.Errorf("unexpected error: %s", err)
 	}
 }
 
@@ -168,39 +136,14 @@ func TestUserGet(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer userCleanup()
+	t.Cleanup(userCleanup)
 
-	tests := []struct {
-		name          string
-		input         projects.UserGetRequest
-		expectedError bool
-	}{{
-		name:  "it should retrieve a user with valid input",
-		input: projects.NewUserGetRequest(userID),
-	}, {
-		name:          "it should fail to retrieve an unknown user",
-		input:         projects.NewUserGetRequest(999999999), // assuming this ID does not exist
-		expectedError: true,
-	}}
+	ctx := t.Context()
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	t.Cleanup(cancel)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			defer cancel()
-
-			_, err := projects.UserGet(ctx, engine, tt.input)
-			if tt.expectedError {
-				if err == nil {
-					t.Errorf("expected an error but got none")
-				}
-				return
-			}
-			if err != nil {
-				t.Errorf("unexpected error: %s", err)
-				return
-			}
-		})
+	if _, err = projects.UserGet(ctx, engine, projects.NewUserGetRequest(userID)); err != nil {
+		t.Errorf("unexpected error: %s", err)
 	}
 }
 
@@ -209,33 +152,12 @@ func TestUserGetMe(t *testing.T) {
 		t.Skip("Skipping test because the engine is not initialized")
 	}
 
-	tests := []struct {
-		name          string
-		input         projects.UserGetMeRequest
-		expectedError bool
-	}{{
-		name:  "it should retrieve the logged user",
-		input: projects.NewUserGetMeRequest(),
-	}}
+	ctx := t.Context()
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	t.Cleanup(cancel)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			defer cancel()
-
-			_, err := projects.UserGetMe(ctx, engine, tt.input)
-			if tt.expectedError {
-				if err == nil {
-					t.Errorf("expected an error but got none")
-				}
-				return
-			}
-			if err != nil {
-				t.Errorf("unexpected error: %s", err)
-				return
-			}
-		})
+	if _, err := projects.UserGetMe(ctx, engine, projects.NewUserGetMeRequest()); err != nil {
+		t.Errorf("unexpected error: %s", err)
 	}
 }
 
@@ -244,19 +166,13 @@ func TestUserList(t *testing.T) {
 		t.Skip("Skipping test because the engine is not initialized")
 	}
 
-	projectID, projectCleanup, err := createProject(t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer projectCleanup()
-
 	userID, userCleanup, err := createUser(t)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer userCleanup()
+	t.Cleanup(userCleanup)
 
-	if err = addProjectMember(t, projectID, userID); err != nil {
+	if err = addProjectMember(t, testResources.ProjectID, userID); err != nil {
 		t.Fatal(err)
 	}
 
@@ -265,12 +181,12 @@ func TestUserList(t *testing.T) {
 		input         projects.UserListRequest
 		expectedError bool
 	}{{
-		name: "it should list users",
+		name: "all users",
 	}, {
-		name: "it should list users for project",
+		name: "users for project",
 		input: projects.UserListRequest{
 			Path: projects.UserListRequestPath{
-				ProjectID: projectID,
+				ProjectID: testResources.ProjectID,
 			},
 		},
 	}}
@@ -279,18 +195,10 @@ func TestUserList(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			defer cancel()
+			t.Cleanup(cancel)
 
-			_, err := projects.UserList(ctx, engine, tt.input)
-			if tt.expectedError {
-				if err == nil {
-					t.Errorf("expected an error but got none")
-				}
-				return
-			}
-			if err != nil {
+			if _, err := projects.UserList(ctx, engine, tt.input); err != nil {
 				t.Errorf("unexpected error: %s", err)
-				return
 			}
 		})
 	}

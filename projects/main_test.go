@@ -1,6 +1,7 @@
 package projects_test
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"math/rand"
@@ -16,6 +17,15 @@ import (
 
 var engine *twapi.Engine
 
+var testResources struct {
+	CompanyID   int64
+	ProjectID   int64
+	TasklistID  int64
+	UserID      int64
+	MilestoneID int64
+	TagID       int64
+}
+
 func TestMain(m *testing.M) {
 	var exitCode int
 	defer func() {
@@ -29,6 +39,85 @@ func TestMain(m *testing.M) {
 		return
 	}
 
+	// initialize some resources that can be shared across tests
+	testEngine := newMainTestEngine(context.Background(), logger)
+
+	companyID, companyCleanup, err := createCompany(testEngine)
+	if err != nil {
+		logger.Error("Failed to create company for tests",
+			slog.String("error", err.Error()),
+		)
+		exitCode = 1
+		return
+	}
+	defer companyCleanup()
+	testResources.CompanyID = companyID
+
+	projectID, projectCleanup, err := createProject(testEngine)
+	if err != nil {
+		logger.Error("Failed to create project for tests",
+			slog.String("error", err.Error()),
+		)
+		exitCode = 1
+		return
+	}
+	defer projectCleanup()
+	testResources.ProjectID = projectID
+
+	tasklistID, tasklistCleanup, err := createTasklist(testEngine, projectID)
+	if err != nil {
+		logger.Error("Failed to create tasklist for tests",
+			slog.String("error", err.Error()),
+		)
+		exitCode = 1
+		return
+	}
+	defer tasklistCleanup()
+	testResources.TasklistID = tasklistID
+
+	userID, userCleanup, err := createUser(testEngine)
+	if err != nil {
+		logger.Error("Failed to create user for tests",
+			slog.String("error", err.Error()),
+		)
+		exitCode = 1
+		return
+	}
+	defer userCleanup()
+	testResources.UserID = userID
+
+	if err := addProjectMember(testEngine, projectID, userID); err != nil {
+		logger.Error("Failed to add user to project for tests",
+			slog.String("error", err.Error()),
+		)
+		exitCode = 1
+		return
+	}
+
+	milestoneID, milestoneCleanup, err := createMilestone(testEngine, projectID, projects.LegacyUserGroups{
+		UserIDs: []int64{testResources.UserID},
+	})
+	if err != nil {
+		logger.Error("Failed to create milestone for tests",
+			slog.String("error", err.Error()),
+		)
+		exitCode = 1
+		return
+	}
+	defer milestoneCleanup()
+	testResources.MilestoneID = milestoneID
+
+	tagID, tagCleanup, err := createTag(testEngine)
+	if err != nil {
+		logger.Error("Failed to create tag for tests",
+			slog.String("error", err.Error()),
+		)
+		exitCode = 1
+		return
+	}
+	defer tagCleanup()
+	testResources.TagID = tagID
+
 	exitCode = m.Run()
 }
 
@@ -40,65 +129,68 @@ func startEngine() *twapi.Engine {
 	return twapi.NewEngine(session.NewBearerToken(token, server))
 }
 
-func createProject(t *testing.T) (int64, func(), error) {
+func createProject(t testEngine) (int64, func(), error) {
 	project, err := projects.ProjectCreate(t.Context(), engine, projects.ProjectCreateRequest{
-		Name: fmt.Sprintf("Test Project %d", time.Now().UnixNano()),
+		Name: fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
 	})
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed to create project for test: %w", err)
 	}
 	id := int64(project.ID)
 	return id, func() {
-		_, err := projects.ProjectDelete(t.Context(), engine, projects.NewProjectDeleteRequest(id))
+		ctx := context.Background() // t.Context is always canceled in cleanup
+		_, err := projects.ProjectDelete(ctx, engine, projects.NewProjectDeleteRequest(id))
 		if err != nil {
 			t.Errorf("failed to delete project after test: %s", err)
 		}
 	}, nil
 }
 
-func createTasklist(t *testing.T, projectID int64) (int64, func(), error) {
+func createTasklist(t testEngine, projectID int64) (int64, func(), error) {
 	tasklist, err := projects.TasklistCreate(t.Context(), engine, projects.TasklistCreateRequest{
 		Path: projects.TasklistCreateRequestPath{
 			ProjectID: projectID,
 		},
-		Name: fmt.Sprintf("Test Tasklist %d", time.Now().UnixNano()),
+		Name: fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
 	})
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed to create tasklist for test: %w", err)
 	}
 	id := int64(tasklist.ID)
 	return id, func() {
-		_, err := projects.TasklistDelete(t.Context(), engine, projects.NewTasklistDeleteRequest(id))
+		ctx := context.Background() // t.Context is always canceled in cleanup
+		_, err := projects.TasklistDelete(ctx, engine, projects.NewTasklistDeleteRequest(id))
 		if err != nil {
 			t.Errorf("failed to delete tasklist after test: %s", err)
 		}
 	}, nil
 }
 
-func createTask(t *testing.T, tasklistID int64) (int64, func(), error) {
+func createTask(t testEngine, tasklistID int64) (int64, func(), error) {
 	taskResponse, err := projects.TaskCreate(t.Context(), engine, projects.TaskCreateRequest{
 		Path: projects.TaskCreateRequestPath{
 			TasklistID: tasklistID,
 		},
-		Name: fmt.Sprintf("Test Task %d", time.Now().UnixNano()),
+		Name: fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
 	})
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed to create task for test: %w", err)
 	}
 	id := taskResponse.Task.ID
 	return id, func() {
-		_, err := projects.TaskDelete(t.Context(), engine, projects.NewTaskDeleteRequest(id))
+		ctx := context.Background() // t.Context is always canceled in cleanup
+		_, err := projects.TaskDelete(ctx, engine, projects.NewTaskDeleteRequest(id))
 		if err != nil {
 			t.Errorf("failed to delete task after test: %s", err)
 		}
 	}, nil
 }
 
-func createUser(t *testing.T) (int64, func(), error) {
+func createUser(t testEngine) (int64, func(), error) {
 	epoch := time.Now().UnixNano()
 	user, err := projects.UserCreate(t.Context(), engine, projects.NewUserCreateRequest(
-		fmt.Sprintf("Test User %d", epoch),
-		"LastName",
+		fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
+		fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
 		fmt.Sprintf("testuser%d@example.com", epoch),
 	))
 	if err != nil {
@@ -106,14 +198,15 @@ func createUser(t *testing.T) (int64, func(), error) {
 	}
 	id := int64(user.ID)
 	return id, func() {
-		_, err := projects.UserDelete(t.Context(), engine, projects.NewUserDeleteRequest(id))
+		ctx := context.Background() // t.Context is always canceled in cleanup
+		_, err := projects.UserDelete(ctx, engine, projects.NewUserDeleteRequest(id))
 		if err != nil {
 			t.Errorf("failed to delete user after test: %s", err)
 		}
 	}, nil
 }
 
-func addProjectMember(t *testing.T, projectID, userID int64) error {
+func addProjectMember(t testEngine, projectID, userID int64) error {
 	_, err := projects.ProjectMemberAdd(t.Context(), engine, projects.NewProjectMemberAddRequest(projectID, userID))
 	if err != nil {
 		return fmt.Errorf("failed to add user %d to project %d: %w", userID, projectID, err)
@@ -121,12 +214,12 @@ func addProjectMember(t *testing.T, projectID, userID int64) error {
 	return nil
 }
 
-func createMilestone(t *testing.T, projectID int64, assignees projects.LegacyUserGroups) (int64, func(), error) {
+func createMilestone(t testEngine, projectID int64, assignees projects.LegacyUserGroups) (int64, func(), error) {
 	milestone, err := projects.MilestoneCreate(t.Context(), engine, projects.MilestoneCreateRequest{
 		Path: projects.MilestoneCreateRequestPath{
 			ProjectID: projectID,
 		},
-		Name:      fmt.Sprintf("Test Milestone %d", time.Now().UnixNano()),
+		Name:      fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
 		DueAt:     projects.NewLegacyDate(time.Now().Add(24 * time.Hour)), // Due tomorrow
 		Assignees: assignees,
 	})
@@ -135,41 +228,69 @@ func createMilestone(t *testing.T, projectID int64, assignees projects.LegacyUse
 	}
 	id := int64(milestone.ID)
 	return id, func() {
-		_, err := projects.MilestoneDelete(t.Context(), engine, projects.NewMilestoneDeleteRequest(id))
+		ctx := context.Background() // t.Context is always canceled in cleanup
+		_, err := projects.MilestoneDelete(ctx, engine, projects.NewMilestoneDeleteRequest(id))
 		if err != nil {
 			t.Errorf("failed to delete milestone after test: %s", err)
 		}
 	}, nil
 }
 
-func createCompany(t *testing.T) (int64, func(), error) {
+func createCompany(t testEngine) (int64, func(), error) {
 	companyResponse, err := projects.CompanyCreate(t.Context(), engine, projects.CompanyCreateRequest{
-		Name: fmt.Sprintf("Test Company %d", time.Now().UnixNano()),
+		Name: fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
 	})
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed to create company for test: %w", err)
 	}
 	id := companyResponse.Company.ID
 	return id, func() {
-		_, err := projects.CompanyDelete(t.Context(), engine, projects.NewCompanyDeleteRequest(id))
+		ctx := context.Background() // t.Context is always canceled in cleanup
+		_, err := projects.CompanyDelete(ctx, engine, projects.NewCompanyDeleteRequest(id))
 		if err != nil {
 			t.Errorf("failed to delete company after test: %s", err)
 		}
 	}, nil
 }
 
-func createTag(t *testing.T) (int64, func(), error) {
+func createTag(t testEngine) (int64, func(), error) {
 	tagResponse, err := projects.TagCreate(t.Context(), engine, projects.TagCreateRequest{
-		Name: fmt.Sprintf("Test Tag %d%d", time.Now().UnixNano(), rand.Intn(100)),
+		Name: fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
 	})
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed to create tag for test: %w", err)
 	}
 	id := tagResponse.Tag.ID
 	return id, func() {
-		_, err := projects.TagDelete(t.Context(), engine, projects.NewTagDeleteRequest(id))
+		ctx := context.Background() // t.Context is always canceled in cleanup
+		_, err := projects.TagDelete(ctx, engine, projects.NewTagDeleteRequest(id))
 		if err != nil {
 			t.Errorf("failed to delete tag after test: %s", err)
 		}
 	}, nil
+}
+
+type testEngine interface {
+	Context() context.Context
+	Errorf(string, ...any)
+}
+
+type mainTestEngine struct {
+	ctx    context.Context
+	logger *slog.Logger
+}
+
+func newMainTestEngine(ctx context.Context, logger *slog.Logger) *mainTestEngine {
+	return &mainTestEngine{
+		ctx:    ctx,
+		logger: logger,
+	}
+}
+
+func (m *mainTestEngine) Context() context.Context {
+	return m.ctx
+}
+
+func (m *mainTestEngine) Errorf(format string, args ...any) {
+	m.logger.Error(fmt.Sprintf(format, args...))
 }

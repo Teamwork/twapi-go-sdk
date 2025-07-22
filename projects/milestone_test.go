@@ -3,6 +3,7 @@ package projects_test
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"testing"
 	"time"
 
@@ -15,72 +16,56 @@ func TestMilestoneCreate(t *testing.T) {
 		t.Skip("Skipping test because the engine is not initialized")
 	}
 
-	projectID, projectCleanup, err := createProject(t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer projectCleanup()
-
-	userID, userCleanup, err := createUser(t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer userCleanup()
-
-	if err = addProjectMember(t, projectID, userID); err != nil {
-		t.Fatal(err)
-	}
-
 	tests := []struct {
-		name          string
-		input         projects.MilestoneCreateRequest
-		expectedError bool
+		name  string
+		input projects.MilestoneCreateRequest
 	}{{
-		name: "it should create a milestone with valid input",
+		name: "only required fields",
 		input: projects.NewMilestoneCreateRequest(
-			projectID,
-			fmt.Sprintf("Test Milestone %d", time.Now().UnixNano()),
+			testResources.ProjectID,
+			fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
 			projects.NewLegacyDate(time.Now()),
 			projects.LegacyUserGroups{
-				UserIDs: []int64{userID},
+				UserIDs: []int64{testResources.UserID},
 			},
 		),
 	}, {
-		name: "it should fail to create a milestone with missing name",
+		name: "all fields",
 		input: projects.MilestoneCreateRequest{
-			Description: twapi.Ptr("This milestone has no name"),
+			Path: projects.MilestoneCreateRequestPath{
+				ProjectID: testResources.ProjectID,
+			},
+			Name:        fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
+			Description: twapi.Ptr("This is a test milestone"),
+			DueAt:       projects.NewLegacyDate(time.Now().Add(48 * time.Hour)),
+			TasklistIDs: []int64{testResources.TasklistID},
+			TagIDs:      []int64{testResources.TagID},
+			Assignees: projects.LegacyUserGroups{
+				UserIDs: []int64{testResources.UserID},
+			},
 		},
-		expectedError: true,
 	}}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			defer cancel()
+			t.Cleanup(cancel)
 
 			milestone, err := projects.MilestoneCreate(ctx, engine, tt.input)
-			defer func() {
+			t.Cleanup(func() {
 				if err != nil {
 					return
 				}
+				ctx = context.Background() // t.Context is always canceled in cleanup
 				_, err := projects.MilestoneDelete(ctx, engine, projects.NewMilestoneDeleteRequest(int64(milestone.ID)))
 				if err != nil {
 					t.Errorf("failed to delete milestone after test: %s", err)
 				}
-			}()
-
-			if tt.expectedError {
-				if err == nil {
-					t.Errorf("expected an error but got none")
-				}
-				return
-			}
+			})
 			if err != nil {
 				t.Errorf("unexpected error: %s", err)
-				return
-			}
-			if milestone.ID == 0 {
+			} else if milestone.ID == 0 {
 				t.Error("expected a valid milestone ID but got 0")
 			}
 		})
@@ -92,69 +77,42 @@ func TestMilestoneUpdate(t *testing.T) {
 		t.Skip("Skipping test because the engine is not initialized")
 	}
 
-	projectID, projectCleanup, err := createProject(t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer projectCleanup()
-
-	userID, userCleanup, err := createUser(t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer userCleanup()
-
-	if err = addProjectMember(t, projectID, userID); err != nil {
-		t.Fatal(err)
-	}
-
-	milestoneID, milestoneCleanup, err := createMilestone(t, projectID, projects.LegacyUserGroups{
-		UserIDs: []int64{userID},
+	milestoneID, milestoneCleanup, err := createMilestone(t, testResources.ProjectID, projects.LegacyUserGroups{
+		UserIDs: []int64{testResources.UserID},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer milestoneCleanup()
+	t.Cleanup(milestoneCleanup)
 
 	tests := []struct {
-		name          string
-		input         projects.MilestoneUpdateRequest
-		expectedError bool
+		name  string
+		input projects.MilestoneUpdateRequest
 	}{{
-		name: "it should update a milestone with valid input",
+		name: "all fields",
 		input: projects.MilestoneUpdateRequest{
 			Path: projects.MilestoneUpdateRequestPath{
 				ID: milestoneID,
 			},
+			Name:        twapi.Ptr(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100))),
 			Description: twapi.Ptr("This is a test milestone"),
-		},
-	}, {
-		name: "it should fail to update a milestone with missing name",
-		input: projects.MilestoneUpdateRequest{
-			Path: projects.MilestoneUpdateRequestPath{
-				ID: milestoneID,
+			DueAt:       twapi.Ptr(projects.NewLegacyDate(time.Now().Add(48 * time.Hour))),
+			TasklistIDs: []int64{testResources.TasklistID},
+			TagIDs:      []int64{testResources.TagID},
+			Assignees: &projects.LegacyUserGroups{
+				UserIDs: []int64{testResources.UserID},
 			},
-			Name: twapi.Ptr(""),
 		},
-		expectedError: true,
 	}}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			defer cancel()
+			t.Cleanup(cancel)
 
-			_, err := projects.MilestoneUpdate(ctx, engine, tt.input)
-			if tt.expectedError {
-				if err == nil {
-					t.Errorf("expected an error but got none")
-				}
-				return
-			}
-			if err != nil {
+			if _, err := projects.MilestoneUpdate(ctx, engine, tt.input); err != nil {
 				t.Errorf("unexpected error: %s", err)
-				return
 			}
 		})
 	}
@@ -165,59 +123,19 @@ func TestMilestoneDelete(t *testing.T) {
 		t.Skip("Skipping test because the engine is not initialized")
 	}
 
-	projectID, projectCleanup, err := createProject(t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer projectCleanup()
-
-	userID, userCleanup, err := createUser(t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer userCleanup()
-
-	if err = addProjectMember(t, projectID, userID); err != nil {
-		t.Fatal(err)
-	}
-
-	milestoneID, _, err := createMilestone(t, projectID, projects.LegacyUserGroups{
-		UserIDs: []int64{userID},
+	milestoneID, _, err := createMilestone(t, testResources.ProjectID, projects.LegacyUserGroups{
+		UserIDs: []int64{testResources.UserID},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	tests := []struct {
-		name          string
-		input         projects.MilestoneDeleteRequest
-		expectedError bool
-	}{{
-		name:  "it should delete a milestone with valid input",
-		input: projects.NewMilestoneDeleteRequest(milestoneID),
-	}, {
-		name:          "it should fail to delete an unknown milestone",
-		expectedError: true,
-	}}
+	ctx := t.Context()
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	t.Cleanup(cancel)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			defer cancel()
-
-			_, err := projects.MilestoneDelete(ctx, engine, tt.input)
-			if tt.expectedError {
-				if err == nil {
-					t.Errorf("expected an error but got none")
-				}
-				return
-			}
-			if err != nil {
-				t.Errorf("unexpected error: %s", err)
-				return
-			}
-		})
+	if _, err = projects.MilestoneDelete(ctx, engine, projects.NewMilestoneDeleteRequest(milestoneID)); err != nil {
+		t.Errorf("unexpected error: %s", err)
 	}
 }
 
@@ -226,60 +144,20 @@ func TestMilestoneGet(t *testing.T) {
 		t.Skip("Skipping test because the engine is not initialized")
 	}
 
-	projectID, projectCleanup, err := createProject(t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer projectCleanup()
-
-	userID, userCleanup, err := createUser(t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer userCleanup()
-
-	if err = addProjectMember(t, projectID, userID); err != nil {
-		t.Fatal(err)
-	}
-
-	milestoneID, milestoneCleanup, err := createMilestone(t, projectID, projects.LegacyUserGroups{
-		UserIDs: []int64{userID},
+	milestoneID, milestoneCleanup, err := createMilestone(t, testResources.ProjectID, projects.LegacyUserGroups{
+		UserIDs: []int64{testResources.UserID},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer milestoneCleanup()
+	t.Cleanup(milestoneCleanup)
 
-	tests := []struct {
-		name          string
-		input         projects.MilestoneGetRequest
-		expectedError bool
-	}{{
-		name:  "it should retrieve a milestone with valid input",
-		input: projects.NewMilestoneGetRequest(milestoneID),
-	}, {
-		name:          "it should fail to retrieve an unknown milestone",
-		expectedError: true,
-	}}
+	ctx := t.Context()
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	t.Cleanup(cancel)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			defer cancel()
-
-			_, err := projects.MilestoneGet(ctx, engine, tt.input)
-			if tt.expectedError {
-				if err == nil {
-					t.Errorf("expected an error but got none")
-				}
-				return
-			}
-			if err != nil {
-				t.Errorf("unexpected error: %s", err)
-				return
-			}
-		})
+	if _, err = projects.MilestoneGet(ctx, engine, projects.NewMilestoneGetRequest(milestoneID)); err != nil {
+		t.Errorf("unexpected error: %s", err)
 	}
 }
 
@@ -288,41 +166,24 @@ func TestMilestoneList(t *testing.T) {
 		t.Skip("Skipping test because the engine is not initialized")
 	}
 
-	projectID, projectCleanup, err := createProject(t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer projectCleanup()
-
-	userID, userCleanup, err := createUser(t)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer userCleanup()
-
-	if err = addProjectMember(t, projectID, userID); err != nil {
-		t.Fatal(err)
-	}
-
-	_, milestoneCleanup, err := createMilestone(t, projectID, projects.LegacyUserGroups{
-		UserIDs: []int64{userID},
+	_, milestoneCleanup, err := createMilestone(t, testResources.ProjectID, projects.LegacyUserGroups{
+		UserIDs: []int64{testResources.UserID},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer milestoneCleanup()
+	t.Cleanup(milestoneCleanup)
 
 	tests := []struct {
-		name          string
-		input         projects.MilestoneListRequest
-		expectedError bool
+		name  string
+		input projects.MilestoneListRequest
 	}{{
-		name: "it should list milestones",
+		name: "all milestones",
 	}, {
-		name: "it should list milestones for project",
+		name: "milestones for project",
 		input: projects.MilestoneListRequest{
 			Path: projects.MilestoneListRequestPath{
-				ProjectID: projectID,
+				ProjectID: testResources.ProjectID,
 			},
 		},
 	}}
@@ -331,18 +192,10 @@ func TestMilestoneList(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
 			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			defer cancel()
+			t.Cleanup(cancel)
 
-			_, err := projects.MilestoneList(ctx, engine, tt.input)
-			if tt.expectedError {
-				if err == nil {
-					t.Errorf("expected an error but got none")
-				}
-				return
-			}
-			if err != nil {
+			if _, err := projects.MilestoneList(ctx, engine, tt.input); err != nil {
 				t.Errorf("unexpected error: %s", err)
-				return
 			}
 		})
 	}

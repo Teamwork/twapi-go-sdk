@@ -24,21 +24,18 @@ func ExampleMilestoneCreate() {
 	ctx := context.Background()
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
-	milestone, err := projects.MilestoneCreate(ctx, engine, projects.MilestoneCreateRequest{
-		Path: projects.MilestoneCreateRequestPath{
-			ProjectID: 777,
-		},
-		Name:        "New Milestone",
-		Description: twapi.Ptr("This is a new milestone created via the API."),
-		DueAt:       projects.NewLegacyDate(time.Now()),
-		Assignees: projects.LegacyUserGroups{
+	milestoneRequest := projects.NewMilestoneCreateRequest(777, "New Milestone", projects.NewLegacyDate(time.Now()),
+		projects.LegacyUserGroups{
 			UserIDs: []int64{456, 789},
 		},
-	})
+	)
+	milestoneRequest.Description = twapi.Ptr("This is a new milestone created via the API.")
+
+	milestoneResponse, err := projects.MilestoneCreate(ctx, engine, milestoneRequest)
 	if err != nil {
 		fmt.Printf("failed to create milestone: %s", err)
 	} else {
-		fmt.Printf("created milestone with identifier %d\n", milestone.ID)
+		fmt.Printf("created milestone with identifier %d\n", milestoneResponse.ID)
 	}
 
 	// Output: created milestone with identifier 12345
@@ -55,12 +52,10 @@ func ExampleMilestoneUpdate() {
 	ctx := context.Background()
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
-	_, err = projects.MilestoneUpdate(ctx, engine, projects.MilestoneUpdateRequest{
-		Path: projects.MilestoneUpdateRequestPath{
-			ID: 12345,
-		},
-		Description: twapi.Ptr("This is an updated description."),
-	})
+	milestoneRequest := projects.NewMilestoneUpdateRequest(12345)
+	milestoneRequest.Description = twapi.Ptr("This is an updated description.")
+
+	_, err = projects.MilestoneUpdate(ctx, engine, milestoneRequest)
 	if err != nil {
 		fmt.Printf("failed to update milestone: %s", err)
 	} else {
@@ -123,11 +118,10 @@ func ExampleMilestoneList() {
 	ctx := context.Background()
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
-	milestonesResponse, err := projects.MilestoneList(ctx, engine, projects.MilestoneListRequest{
-		Filters: projects.MilestoneListRequestFilters{
-			SearchTerm: "Example",
-		},
-	})
+	milestonesRequest := projects.NewMilestoneListRequest()
+	milestonesRequest.Filters.SearchTerm = "Example"
+
+	milestonesResponse, err := projects.MilestoneList(ctx, engine, milestonesRequest)
 	if err != nil {
 		fmt.Printf("failed to list milestones: %s", err)
 	} else {

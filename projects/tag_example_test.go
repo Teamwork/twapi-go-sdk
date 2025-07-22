@@ -44,12 +44,10 @@ func ExampleTagUpdate() {
 	ctx := context.Background()
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
-	_, err = projects.TagUpdate(ctx, engine, projects.TagUpdateRequest{
-		Path: projects.TagUpdateRequestPath{
-			ID: 12345,
-		},
-		Name: twapi.Ptr("Updated tag"),
-	})
+	tagRequest := projects.NewTagUpdateRequest(12345)
+	tagRequest.Name = twapi.Ptr("Updated tag")
+
+	_, err = projects.TagUpdate(ctx, engine, tagRequest)
 	if err != nil {
 		fmt.Printf("failed to update tag: %s", err)
 	} else {
@@ -112,11 +110,10 @@ func ExampleTagList() {
 	ctx := context.Background()
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
-	tagsResponse, err := projects.TagList(ctx, engine, projects.TagListRequest{
-		Filters: projects.TagListRequestFilters{
-			SearchTerm: "Q&A",
-		},
-	})
+	tagsRequest := projects.NewTagListRequest()
+	tagsRequest.Filters.SearchTerm = "Q&A"
+
+	tagsResponse, err := projects.TagList(ctx, engine, tagsRequest)
 	if err != nil {
 		fmt.Printf("failed to list tags: %s", err)
 	} else {

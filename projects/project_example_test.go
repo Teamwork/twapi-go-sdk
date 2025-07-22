@@ -24,19 +24,19 @@ func ExampleProjectCreate() {
 	ctx := context.Background()
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
-	project, err := projects.ProjectCreate(ctx, engine, projects.ProjectCreateRequest{
-		Name:        "New Project",
-		Description: twapi.Ptr("This is a new project created via the API."),
-		StartAt:     twapi.Ptr(projects.LegacyDate(time.Now().AddDate(0, 0, 1))),  // Start tomorrow
-		EndAt:       twapi.Ptr(projects.LegacyDate(time.Now().AddDate(0, 0, 30))), // End in 30 days
-		CompanyID:   12345,                                                        // Replace with your company ID
-		OwnerID:     twapi.Ptr(int64(67890)),                                      // Replace with the owner user ID
-		TagIDs:      []int64{11111, 22222},                                        // Replace with your tag IDs
-	})
+	projectRequest := projects.NewProjectCreateRequest("New Project")
+	projectRequest.Description = twapi.Ptr("This is a new project created via the API.")
+	projectRequest.StartAt = twapi.Ptr(projects.LegacyDate(time.Now().AddDate(0, 0, 1)))
+	projectRequest.EndAt = twapi.Ptr(projects.LegacyDate(time.Now().AddDate(0, 0, 30)))
+	projectRequest.CompanyID = 12345
+	projectRequest.OwnerID = twapi.Ptr(int64(67890))
+	projectRequest.TagIDs = []int64{11111, 22222}
+
+	projectResponse, err := projects.ProjectCreate(ctx, engine, projectRequest)
 	if err != nil {
 		fmt.Printf("failed to create project: %s", err)
 	} else {
-		fmt.Printf("created project with identifier %d\n", project.ID)
+		fmt.Printf("created project with identifier %d\n", projectResponse.ID)
 	}
 
 	// Output: created project with identifier 12345
@@ -53,12 +53,10 @@ func ExampleProjectUpdate() {
 	ctx := context.Background()
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
-	_, err = projects.ProjectUpdate(ctx, engine, projects.ProjectUpdateRequest{
-		Path: projects.ProjectUpdateRequestPath{
-			ID: 12345,
-		},
-		Description: twapi.Ptr("This is an updated description."),
-	})
+	projectRequest := projects.NewProjectUpdateRequest(12345)
+	projectRequest.Description = twapi.Ptr("This is an updated description.")
+
+	_, err = projects.ProjectUpdate(ctx, engine, projectRequest)
 	if err != nil {
 		fmt.Printf("failed to update project: %s", err)
 	} else {
@@ -121,11 +119,10 @@ func ExampleProjectList() {
 	ctx := context.Background()
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
-	projectsResponse, err := projects.ProjectList(ctx, engine, projects.ProjectListRequest{
-		Filters: projects.ProjectListRequestFilters{
-			SearchTerm: "Example",
-		},
-	})
+	projectsRequest := projects.NewProjectListRequest()
+	projectsRequest.Filters.SearchTerm = "Example"
+
+	projectsResponse, err := projects.ProjectList(ctx, engine, projectsRequest)
 	if err != nil {
 		fmt.Printf("failed to list projects: %s", err)
 	} else {
