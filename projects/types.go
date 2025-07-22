@@ -64,6 +64,24 @@ func (n *LegacyNumber) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// LegacyNumericList is a type alias for a slice of int64, used to represent a
+// list of numeric values in the API.
+type LegacyNumericList []int64
+
+// MarshalJSON encodes the LegacyNumericList as a JSON array of strings.
+func (l LegacyNumericList) MarshalJSON() ([]byte, error) {
+	var result []string
+	for _, id := range l {
+		result = append(result, strconv.FormatInt(id, 10))
+	}
+	return fmt.Appendf(nil, `"%s"`, strings.Join(result, ",")), nil
+}
+
+// Add adds a numeric value to the LegacyNumericList.
+func (l *LegacyNumericList) Add(n float64) {
+	*l = append(*l, int64(n))
+}
+
 // UserGroups represents a collection of users, companies, and teams.
 type UserGroups struct {
 	UserIDs    []int64 `json:"userIds"`
@@ -149,4 +167,11 @@ func (m *LegacyUserGroups) UnmarshalJSON(data []byte) error {
 // IsEmpty checks if the LegacyUserGroups contains no IDs.
 func (m LegacyUserGroups) IsEmpty() bool {
 	return len(m.UserIDs) == 0 && len(m.CompanyIDs) == 0 && len(m.TeamIDs) == 0
+}
+
+// LegacyRelationship describes the relation between the main entity and a
+// sideload type.
+type LegacyRelationship struct {
+	ID   LegacyNumber `json:"id"`
+	Type string       `json:"type"`
 }
