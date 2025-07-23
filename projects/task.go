@@ -26,7 +26,14 @@ var (
 	_ twapi.HTTPResponser = (*TaskListResponse)(nil)
 )
 
-// Task represents a task in Teamwork.
+// Task represents an individual unit of work assigned to one or more team
+// members within a project. Each task can include details such as a title,
+// description, priority, estimated time, assignees, and due date, along with
+// the ability to attach files, leave comments, track time, and set dependencies
+// on other tasks. Tasks are organized within task lists, helping structure and
+// sequence work logically. They serve as the building blocks of project
+// management in Teamwork, allowing teams to collaborate, monitor progress, and
+// ensure accountability throughout the project's lifecycle.
 type Task struct {
 	// ID is the unique identifier of the task.
 	ID int64 `json:"id"`

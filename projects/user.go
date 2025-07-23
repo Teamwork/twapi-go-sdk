@@ -27,7 +27,14 @@ var (
 	_ twapi.HTTPResponser = (*UserListResponse)(nil)
 )
 
-// User represents a user in Teamwork.
+// User is an individual who has access to one or more projects within a
+// Teamwork site, typically as a team member, collaborator, or administrator.
+// Users can be assigned tasks, participate in discussions, log time, share
+// files, and interact with other members depending on their permission levels.
+// Each user has a unique profile that defines their role, visibility, and
+// access to features and project data. Users can belong to clients/companies or
+// teams within the system, and their permissions can be customized to control
+// what actions they can perform or what information they can see.
 type User struct {
 	// ID is the unique identifier of the user.
 	ID int64 `json:"id"`

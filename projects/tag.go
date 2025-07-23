@@ -25,7 +25,13 @@ var (
 	_ twapi.HTTPResponser = (*TagListResponse)(nil)
 )
 
-// Tag represents a tag in Teamwork.
+// Tag is a customizable label that can be applied to various items such as
+// tasks, projects, milestones, messages, and more, to help categorize and
+// organize work efficiently. Tags provide a flexible way to filter, search, and
+// group related items across the platform, making it easier for teams to manage
+// complex workflows, highlight priorities, or track themes and statuses. Since
+// tags are user-defined, they adapt to each team’s specific needs and can be
+// color-coded for better visual clarity.
 type Tag struct {
 	// ID is the unique identifier of the tag.
 	ID int64 `json:"id"`

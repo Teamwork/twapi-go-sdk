@@ -25,7 +25,14 @@ var (
 	_ twapi.HTTPResponser = (*TasklistListResponse)(nil)
 )
 
-// Tasklist represents a tasklist in Teamwork.
+// Tasklist is a way to group related tasks within a project, helping teams
+// organize their work into meaningful sections such as phases, categories, or
+// deliverables. Each task list belongs to a specific project and can include
+// multiple tasks that are typically aligned with a common goal. Task lists can
+// be associated with milestones, and they support privacy settings that control
+// who can view or interact with the tasks they contain. This structure helps
+// teams manage progress, assign responsibilities, and maintain clarity across
+// complex projects.
 type Tasklist struct {
 	// ID is the unique identifier of the tasklist.
 	ID int64 `json:"id"`

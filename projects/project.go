@@ -26,7 +26,15 @@ var (
 	_ twapi.HTTPResponser = (*ProjectListResponse)(nil)
 )
 
-// Project represents a project in Teamwork.
+// Project serves as the central workspace for organizing and managing a
+// specific piece of work or initiative. Each project provides a dedicated area
+// where teams can plan tasks, assign responsibilities, set deadlines, and track
+// progress toward shared goals. Projects include tools for communication, file
+// sharing, milestones, and time tracking, allowing teams to stay aligned and
+// informed throughout the entire lifecycle of the work. Whether it's a product
+// launch, client engagement, or internal initiative, projects in Teamwork.com
+// help teams structure their efforts, collaborate more effectively, and deliver
+// results with greater visibility and accountability.
 type Project struct {
 	// ID is the unique identifier of the project.
 	ID int64 `json:"id"`

@@ -26,7 +26,15 @@ var (
 	_ twapi.HTTPResponser = (*CompanyListResponse)(nil)
 )
 
-// Company represents a client/company in Teamwork.
+// Company represents an organization or business entity that can be associated
+// with users, projects, and tasks within the platform, and it is often referred
+// to as a “client.” It serves as a way to group related users and projects
+// under a single organizational umbrella, making it easier to manage
+// permissions, assign responsibilities, and organize work. Companies (or
+// clients) are frequently used to distinguish between internal teams and
+// external collaborators, enabling teams to work efficiently while maintaining
+// clear boundaries around ownership, visibility, and access levels across
+// different projects.
 type Company struct {
 	// ID is the unique identifier of the company.
 	ID int64 `json:"id"`

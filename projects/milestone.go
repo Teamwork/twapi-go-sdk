@@ -26,7 +26,14 @@ var (
 	_ twapi.HTTPResponser = (*MilestoneListResponse)(nil)
 )
 
-// Milestone represents a milestone in Teamwork.
+// Milestone represents a significant point or goal within a project that marks
+// the completion of a major phase or a key deliverable. It acts as a high-level
+// indicator of progress, helping teams track whether work is advancing
+// according to plan. Milestones are typically used to coordinate efforts across
+// different tasks and task lists, providing a clear deadline or objective that
+// multiple team members or departments can align around. They don't contain
+// individual tasks themselves but serve as checkpoints to ensure the project is
+// moving in the right direction.
 type Milestone struct {
 	// ID is the unique identifier of the milestone.
 	ID int64 `json:"id"`

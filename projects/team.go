@@ -25,7 +25,13 @@ var (
 	_ twapi.HTTPResponser = (*TeamListResponse)(nil)
 )
 
-// Team represents a team in Teamwork.
+// Team is a group of users who are organized together to collaborate more
+// efficiently on projects and tasks. Teams help structure work by grouping
+// individuals with similar roles, responsibilities, or departmental functions,
+// making it easier to assign work, track progress, and manage communication. By
+// using teams, organizations can streamline project planning and ensure the
+// right people are involved in the right parts of a project, enhancing clarity
+// and accountability across the platform.
 type Team struct {
 	// ID is the unique identifier of the team.
 	ID LegacyNumber `json:"id"`
