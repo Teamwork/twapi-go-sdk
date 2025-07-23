@@ -1,0 +1,61 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+env:
+  GO_VERSION: "1.24.x"
+
+jobs:
+  release-binaries:
+    runs-on: [self-hosted, staging, default]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-tags: true
+          fetch-depth: 0
+          ref: ${{ github.ref }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Version
+        id: version
+        run: |
+          version="${GITHUB_REF#refs/tags/}"
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+      - name: Previous Tag
+        id: previous-tag
+        run: |
+          tag=$(git describe --tags --abbrev=0 "${GITHUB_REF}^")
+          echo "tag=$tag" >> $GITHUB_OUTPUT
+
+      # https://github.com/cli/cli/blob/trunk/docs/install_linux.md#debian-ubuntu-linux-raspberry-pi-os-apt
+      - name: Install GitHub CLI
+        run: |
+          (type -p wget >/dev/null || (sudo apt update && sudo apt install wget -y)) \
+            && sudo mkdir -p -m 755 /etc/apt/keyrings \
+            && out=$(mktemp) && wget -nv -O$out https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+            && cat $out | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
+            && sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+            && sudo mkdir -p -m 755 /etc/apt/sources.list.d \
+            && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+            && sudo apt update \
+            && sudo apt install gh -y
+
+      - name: Create Release
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          gh release create $version \
+            --fail-on-no-commits \
+            --generate-notes \
+            --notes-start-tag ${{ steps.previous-tag.outputs.tag }} \
+            --verify-tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_ADMIN_TOKEN }}
