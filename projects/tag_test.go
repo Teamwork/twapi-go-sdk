@@ -150,7 +150,7 @@ func TestTagList(t *testing.T) {
 		input         projects.TagListRequest
 		expectedError bool
 	}{{
-		name: "it should list tags",
+		name: "all tags",
 	}}
 
 	for _, tt := range tests {

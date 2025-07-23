@@ -178,7 +178,7 @@ func TestCompanyList(t *testing.T) {
 		name  string
 		input projects.CompanyListRequest
 	}{{
-		name: "it should list companies",
+		name: "all companies",
 	}}
 
 	for _, tt := range tests {

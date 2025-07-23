@@ -20,7 +20,7 @@ func TestTasklistCreate(t *testing.T) {
 		name  string
 		input projects.TasklistCreateRequest
 	}{{
-		name: "it should create a tasklist with valid input",
+		name: "only required fields",
 		input: projects.NewTasklistCreateRequest(
 			testResources.ProjectID,
 			fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
