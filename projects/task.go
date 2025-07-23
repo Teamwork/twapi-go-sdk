@@ -34,6 +34,9 @@ var (
 // sequence work logically. They serve as the building blocks of project
 // management in Teamwork, allowing teams to collaborate, monitor progress, and
 // ensure accountability throughout the project's lifecycle.
+//
+// More information can be found at:
+// https://support.teamwork.com/projects/getting-started/tasks-overview
 type Task struct {
 	// ID is the unique identifier of the task.
 	ID int64 `json:"id"`

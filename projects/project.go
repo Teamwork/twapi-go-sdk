@@ -35,6 +35,9 @@ var (
 // launch, client engagement, or internal initiative, projects in Teamwork.com
 // help teams structure their efforts, collaborate more effectively, and deliver
 // results with greater visibility and accountability.
+//
+// More information can be found at:
+// https://support.teamwork.com/projects/getting-started/projects-overview
 type Project struct {
 	// ID is the unique identifier of the project.
 	ID int64 `json:"id"`

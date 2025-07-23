@@ -35,6 +35,9 @@ var (
 // access to features and project data. Users can belong to clients/companies or
 // teams within the system, and their permissions can be customized to control
 // what actions they can perform or what information they can see.
+//
+// More information can be found at:
+// https://support.teamwork.com/projects/getting-started/people-overview
 type User struct {
 	// ID is the unique identifier of the user.
 	ID int64 `json:"id"`

@@ -33,6 +33,9 @@ var (
 // who can view or interact with the tasks they contain. This structure helps
 // teams manage progress, assign responsibilities, and maintain clarity across
 // complex projects.
+//
+// More information can be found at:
+// https://support.teamwork.com/projects/getting-started/task-lists-overview
 type Tasklist struct {
 	// ID is the unique identifier of the tasklist.
 	ID int64 `json:"id"`

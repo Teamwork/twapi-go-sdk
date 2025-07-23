@@ -35,6 +35,9 @@ var (
 // external collaborators, enabling teams to work efficiently while maintaining
 // clear boundaries around ownership, visibility, and access levels across
 // different projects.
+//
+// More information can be found at:
+// https://support.teamwork.com/projects/getting-started/companies-owner-and-external
 type Company struct {
 	// ID is the unique identifier of the company.
 	ID int64 `json:"id"`

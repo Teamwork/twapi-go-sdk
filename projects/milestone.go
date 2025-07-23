@@ -34,6 +34,9 @@ var (
 // multiple team members or departments can align around. They don't contain
 // individual tasks themselves but serve as checkpoints to ensure the project is
 // moving in the right direction.
+//
+// More information can be found at:
+// https://support.teamwork.com/projects/getting-started/milestones-overview
 type Milestone struct {
 	// ID is the unique identifier of the milestone.
 	ID int64 `json:"id"`
