@@ -97,7 +97,8 @@ func TestCommentUpdate(t *testing.T) {
 			Path: projects.CommentUpdateRequestPath{
 				ID: commentID,
 			},
-			Body: "<h1>Updated comment</h1>",
+			Body:        "<h1>Updated comment</h1>",
+			ContentType: twapi.Ptr("HTML"),
 		},
 	}}
 
