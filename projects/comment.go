@@ -87,7 +87,8 @@ type Comment struct {
 // comment.
 type CommentCreateRequestPath struct {
 	// FileVersionID is the unique identifier of the file version where the
-	// comment will be created.
+	// comment will be created. Each file can have multiple versions, and the
+	// comments are associated with a specific version.
 	FileVersionID int64
 
 	// MilestoneID is the unique identifier of the milestone where the comment
@@ -101,10 +102,6 @@ type CommentCreateRequestPath struct {
 	// TaskID is the unique identifier of the task where the comment will be
 	// created.
 	TaskID int64
-
-	// MessageID is the unique identifier of the message where the comment will be
-	// created.
-	MessageID int64
 
 	// LinkID is the unique identifier of the link where the comment will be
 	// created.
@@ -171,17 +168,6 @@ func NewCommentCreateRequestInTask(taskID int64, body string) CommentCreateReque
 	}
 }
 
-// NewCommentCreateRequestInMessagePost creates a new CommentCreateRequest with
-// the provided message post ID.
-func NewCommentCreateRequestInMessagePost(messagePostID int64, body string) CommentCreateRequest {
-	return CommentCreateRequest{
-		Path: CommentCreateRequestPath{
-			MessageID: messagePostID,
-		},
-		Body: body,
-	}
-}
-
 // NewCommentCreateRequestInLink creates a new CommentCreateRequest with the
 // provided link ID.
 func NewCommentCreateRequestInLink(linkID int64, body string) CommentCreateRequest {
@@ -205,8 +191,6 @@ func (t CommentCreateRequest) HTTPRequest(ctx context.Context, server string) (*
 		uri = fmt.Sprintf("%s/notebooks/%d/comments.json", server, t.Path.NotebookID)
 	case t.Path.TaskID > 0:
 		uri = fmt.Sprintf("%s/tasks/%d/comments.json", server, t.Path.TaskID)
-	case t.Path.MessageID > 0:
-		uri = fmt.Sprintf("%s/messages/%d/comments.json", server, t.Path.MessageID)
 	case t.Path.LinkID > 0:
 		uri = fmt.Sprintf("%s/links/%d/comments.json", server, t.Path.LinkID)
 	default:
@@ -484,12 +468,9 @@ func CommentGet(
 // CommentListRequestPath contains the path parameters for loading multiple
 // comments.
 type CommentListRequestPath struct {
-	// FileID is the unique identifier of the file whose comments are to be
-	// retrieved.
-	FileID int64
-
 	// FileVersionID is the unique identifier of the file version whose comments
-	// are to be retrieved.
+	// are to be retrieved. Each file can have multiple versions, and the comments
+	// are associated with a specific version.
 	FileVersionID int64
 
 	// MilestoneID is the unique identifier of the milestone whose comments are to
@@ -523,7 +504,6 @@ type CommentListRequestFilters struct {
 
 // CommentListRequest represents the request body for loading multiple comments.
 //
-// https://apidocs.teamwork.com/docs/teamwork/v3/file-comments/get-projects-api-v3-files-file-id-comments-json
 // https://apidocs.teamwork.com/docs/teamwork/v3/file-version-comments/get-projects-api-v3-fileversions-id-comments-json
 // https://apidocs.teamwork.com/docs/teamwork/v3/milestone-comments/get-projects-api-v3-milestones-milestone-id-comments-json
 // https://apidocs.teamwork.com/docs/teamwork/v3/notebook-comments/get-projects-api-v3-notebooks-notebook-id-comments-json
@@ -552,8 +532,6 @@ func NewCommentListRequest() CommentListRequest {
 func (t CommentListRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
 	var uri string
 	switch {
-	case t.Path.FileID > 0:
-		uri = fmt.Sprintf("%s/projects/api/v3/files/%d/comments.json", server, t.Path.FileID)
 	case t.Path.FileVersionID > 0:
 		uri = fmt.Sprintf("%s/projects/api/v3/fileversions/%d/comments.json", server, t.Path.FileVersionID)
 	case t.Path.MilestoneID > 0:
@@ -596,7 +574,6 @@ func (t CommentListRequest) HTTPRequest(ctx context.Context, server string) (*ht
 // CommentListResponse contains information by multiple comments matching the request
 // filters.
 //
-// https://apidocs.teamwork.com/docs/teamwork/v3/file-comments/get-projects-api-v3-files-file-id-comments-json
 // https://apidocs.teamwork.com/docs/teamwork/v3/file-version-comments/get-projects-api-v3-fileversions-id-comments-json
 // https://apidocs.teamwork.com/docs/teamwork/v3/milestone-comments/get-projects-api-v3-milestones-milestone-id-comments-json
 // https://apidocs.teamwork.com/docs/teamwork/v3/notebook-comments/get-projects-api-v3-notebooks-notebook-id-comments-json
