@@ -50,7 +50,7 @@ linters:
       # max line length, lines longer will be reported. Default is 120. '\t' is
       # counted as 1 character by default, and can be changed with the tab-width
       # option
-      line-length: 125
+      line-length: 120
 
       # Tab width in spaces.
       tab-width: 2

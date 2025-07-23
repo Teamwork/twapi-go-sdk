@@ -21,6 +21,7 @@ var testResources struct {
 	CompanyID   int64
 	ProjectID   int64
 	TasklistID  int64
+	TaskID      int64
 	UserID      int64
 	MilestoneID int64
 	TagID       int64
@@ -74,6 +75,17 @@ func TestMain(m *testing.M) {
 	}
 	defer tasklistCleanup()
 	testResources.TasklistID = tasklistID
+
+	taskID, taskCleanup, err := createTask(testEngine, tasklistID)
+	if err != nil {
+		logger.Error("Failed to create task for tests",
+			slog.String("error", err.Error()),
+		)
+		exitCode = 1
+		return
+	}
+	defer taskCleanup()
+	testResources.TaskID = taskID
 
 	userID, userCleanup, err := createUser(testEngine)
 	if err != nil {
@@ -282,6 +294,48 @@ func createTeam(t testEngine) (int64, func(), error) {
 		_, err := projects.TeamDelete(ctx, engine, projects.NewTeamDeleteRequest(id))
 		if err != nil {
 			t.Errorf("failed to delete team after test: %s", err)
+		}
+	}, nil
+}
+
+func createCommentInTask(t testEngine, taskID int64) (int64, func(), error) {
+	comment, err := projects.CommentCreate(t.Context(), engine, projects.CommentCreateRequest{
+		Path: projects.CommentCreateRequestPath{
+			TaskID: taskID,
+		},
+		Body:        "<h1>This is a test comment</h1>",
+		ContentType: twapi.Ptr("HTML"),
+	})
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to create comment for test: %w", err)
+	}
+	id := int64(comment.ID)
+	return id, func() {
+		ctx := context.Background() // t.Context is always canceled in cleanup
+		_, err := projects.CommentDelete(ctx, engine, projects.NewCommentDeleteRequest(id))
+		if err != nil {
+			t.Errorf("failed to delete comment after test: %s", err)
+		}
+	}, nil
+}
+
+func createCommentInMilestone(t testEngine, milestoneID int64) (int64, func(), error) {
+	comment, err := projects.CommentCreate(t.Context(), engine, projects.CommentCreateRequest{
+		Path: projects.CommentCreateRequestPath{
+			MilestoneID: milestoneID,
+		},
+		Body:        "<h1>This is a test comment</h1>",
+		ContentType: twapi.Ptr("HTML"),
+	})
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to create comment for test: %w", err)
+	}
+	id := int64(comment.ID)
+	return id, func() {
+		ctx := context.Background() // t.Context is always canceled in cleanup
+		_, err := projects.CommentDelete(ctx, engine, projects.NewCommentDeleteRequest(id))
+		if err != nil {
+			t.Errorf("failed to delete comment after test: %s", err)
 		}
 	}, nil
 }
