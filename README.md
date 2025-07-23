@@ -3,6 +3,7 @@
 # 🚀 Teamwork.com API - Go SDK
 
 [![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?style=for-the-badge&logo=go)](https://golang.org/)
+[![Go Reference](https://img.shields.io/badge/Go-Reference-00ADD8?style=for-the-badge&logo=go)](https://pkg.go.dev/github.com/Teamwork/twapi-go-sdk)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/teamwork/twapi-go-sdk?style=for-the-badge)](https://goreportcard.com/report/github.com/teamwork/twapi-go-sdk)
 
