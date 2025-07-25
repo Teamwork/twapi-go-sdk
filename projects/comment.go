@@ -406,7 +406,7 @@ type CommentGetRequestPath struct {
 
 // CommentGetRequest represents the request body for loading a single comment.
 //
-// No public documentation available yet.
+// https://apidocs.teamwork.com/docs/teamwork/v3/comments/get-projects-api-v3-comments-id-json
 type CommentGetRequest struct {
 	// Path contains the path parameters for the request.
 	Path CommentGetRequestPath
@@ -436,9 +436,9 @@ func (t CommentGetRequest) HTTPRequest(ctx context.Context, server string) (*htt
 
 // CommentGetResponse contains all the information related to a comment.
 //
-// No public documentation available yet.
+// https://apidocs.teamwork.com/docs/teamwork/v3/comments/get-projects-api-v3-comments-id-json
 type CommentGetResponse struct {
-	Comment Comment `json:"comment"`
+	Comment Comment `json:"comments"`
 }
 
 // HandleHTTPResponse handles the HTTP response for the CommentGetResponse. If
@@ -504,6 +504,7 @@ type CommentListRequestFilters struct {
 
 // CommentListRequest represents the request body for loading multiple comments.
 //
+// https://apidocs.teamwork.com/docs/teamwork/v3/comments/get-projects-api-v3-comments-json
 // https://apidocs.teamwork.com/docs/teamwork/v3/file-version-comments/get-projects-api-v3-fileversions-id-comments-json
 // https://apidocs.teamwork.com/docs/teamwork/v3/milestone-comments/get-projects-api-v3-milestones-milestone-id-comments-json
 // https://apidocs.teamwork.com/docs/teamwork/v3/notebook-comments/get-projects-api-v3-notebooks-notebook-id-comments-json
