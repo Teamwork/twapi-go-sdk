@@ -178,7 +178,7 @@ func startCommentServer() (string, func(), error) {
 		}
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = fmt.Fprintln(w, `{"comment":{"id":12345}}`)
+		_, _ = fmt.Fprintln(w, `{"comments":{"id":12345}}`)
 	})
 	mux.HandleFunc("GET /projects/api/v3/comments", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
