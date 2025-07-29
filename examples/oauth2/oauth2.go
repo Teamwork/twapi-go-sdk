@@ -38,5 +38,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Printf("Project created successfully (%d)\n", project.ID)
+	fmt.Printf("🔐 Bearer token: %s\n", session.BearerToken())
+	fmt.Printf("✅ Project created successfully (%d)\n", project.ID)
 }

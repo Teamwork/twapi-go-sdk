@@ -137,6 +137,12 @@ func (o *OAuth2) Server() string {
 	return o.server
 }
 
+// BearerToken returns the bearer token for the OAuth2 session. If the
+// authentication did not happen yet this may be empty.
+func (o *OAuth2) BearerToken() string {
+	return o.bearerToken
+}
+
 func (o *OAuth2) handshake(ctx context.Context) error {
 	o.oauthMutex.Lock()
 	defer o.oauthMutex.Unlock()
