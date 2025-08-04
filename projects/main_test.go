@@ -340,6 +340,52 @@ func createCommentInMilestone(t testEngine, milestoneID int64) (int64, func(), e
 	}, nil
 }
 
+func createTimelogInTask(t testEngine, taskID int64) (int64, func(), error) {
+	timelogResponse, err := projects.TimelogCreate(t.Context(), engine, projects.TimelogCreateRequest{
+		Path: projects.TimelogCreateRequestPath{
+			TaskID: taskID,
+		},
+		Date:    twapi.Date(time.Now().UTC()),
+		Time:    twapi.Time(time.Now().UTC()),
+		IsUTC:   true,
+		Minutes: 30,
+	})
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to create timelog for test: %w", err)
+	}
+	id := timelogResponse.Timelog.ID
+	return id, func() {
+		ctx := context.Background() // t.Context is always canceled in cleanup
+		_, err := projects.TimelogDelete(ctx, engine, projects.NewTimelogDeleteRequest(id))
+		if err != nil {
+			t.Errorf("failed to delete timelog after test: %s", err)
+		}
+	}, nil
+}
+
+func createTimelogInProject(t testEngine, projectID int64) (int64, func(), error) {
+	timelogResponse, err := projects.TimelogCreate(t.Context(), engine, projects.TimelogCreateRequest{
+		Path: projects.TimelogCreateRequestPath{
+			ProjectID: projectID,
+		},
+		Date:    twapi.Date(time.Now().UTC()),
+		Time:    twapi.Time(time.Now().UTC()),
+		IsUTC:   true,
+		Minutes: 30,
+	})
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to create timelog for test: %w", err)
+	}
+	id := timelogResponse.Timelog.ID
+	return id, func() {
+		ctx := context.Background() // t.Context is always canceled in cleanup
+		_, err := projects.TimelogDelete(ctx, engine, projects.NewTimelogDeleteRequest(id))
+		if err != nil {
+			t.Errorf("failed to delete timelog after test: %s", err)
+		}
+	}, nil
+}
+
 type testEngine interface {
 	Context() context.Context
 	Errorf(string, ...any)
