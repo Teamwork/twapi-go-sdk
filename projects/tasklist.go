@@ -299,8 +299,8 @@ func (t *TasklistDeleteResponse) HandleHTTPResponse(resp *http.Response) error {
 	return nil
 }
 
-// TasklistDelete creates a new tasklist using the provided request and returns
-// the response.
+// TasklistDelete deletes a tasklist using the provided request and returns the
+// response.
 func TasklistDelete(
 	ctx context.Context,
 	engine *twapi.Engine,

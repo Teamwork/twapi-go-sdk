@@ -387,8 +387,8 @@ func (t *CommentDeleteResponse) HandleHTTPResponse(resp *http.Response) error {
 	return nil
 }
 
-// CommentDelete creates a new comment using the provided request and returns
-// the response.
+// CommentDelete deletes a comment using the provided request and returns the
+// response.
 func CommentDelete(
 	ctx context.Context,
 	engine *twapi.Engine,

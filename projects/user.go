@@ -343,7 +343,7 @@ func (u *UserDeleteResponse) HandleHTTPResponse(resp *http.Response) error {
 	return nil
 }
 
-// UserDelete creates a new user using the provided request and returns the
+// UserDelete deletes a user using the provided request and returns the
 // response.
 func UserDelete(
 	ctx context.Context,

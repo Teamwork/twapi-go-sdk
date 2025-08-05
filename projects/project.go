@@ -336,8 +336,8 @@ func (p *ProjectDeleteResponse) HandleHTTPResponse(resp *http.Response) error {
 	return nil
 }
 
-// ProjectDelete creates a new project using the provided request and returns
-// the response.
+// ProjectDelete deletes a project using the provided request and returns the
+// response.
 func ProjectDelete(
 	ctx context.Context,
 	engine *twapi.Engine,
