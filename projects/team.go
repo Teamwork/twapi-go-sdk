@@ -342,7 +342,7 @@ func (u *TeamDeleteResponse) HandleHTTPResponse(resp *http.Response) error {
 	return nil
 }
 
-// TeamDelete creates a new team using the provided request and returns the
+// TeamDelete deletes a team using the provided request and returns the
 // response.
 func TeamDelete(
 	ctx context.Context,

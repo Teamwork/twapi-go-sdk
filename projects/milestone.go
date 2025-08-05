@@ -353,7 +353,7 @@ func (m *MilestoneDeleteResponse) HandleHTTPResponse(resp *http.Response) error 
 	return nil
 }
 
-// MilestoneDelete creates a new milestone using the provided request and returns
+// MilestoneDelete deletes a milestone using the provided request and returns
 // the response.
 func MilestoneDelete(
 	ctx context.Context,

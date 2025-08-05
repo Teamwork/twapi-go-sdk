@@ -258,8 +258,7 @@ func (t *TagDeleteResponse) HandleHTTPResponse(resp *http.Response) error {
 	return nil
 }
 
-// TagDelete creates a new tag using the provided request and returns the
-// response.
+// TagDelete deletes a tag using the provided request and returns the response.
 func TagDelete(
 	ctx context.Context,
 	engine *twapi.Engine,

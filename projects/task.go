@@ -388,7 +388,7 @@ func (t *TaskDeleteResponse) HandleHTTPResponse(resp *http.Response) error {
 	return nil
 }
 
-// TaskDelete creates a new task using the provided request and returns the
+// TaskDelete deletes a task using the provided request and returns the
 // response.
 func TaskDelete(
 	ctx context.Context,

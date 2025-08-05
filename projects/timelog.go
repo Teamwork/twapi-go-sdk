@@ -98,7 +98,7 @@ type TimelogCreateRequestPath struct {
 	// will be associated with the task.
 	TaskID int64
 	// ProjectID is the unique identifier of the project where the timelog will be
-	// created.  At least one of TaskID or ProjectID must be provided. If both are
+	// created. At least one of TaskID or ProjectID must be provided. If both are
 	// provided, the timelog will be associated with the task.
 	ProjectID int64
 }
@@ -410,8 +410,8 @@ func (t *TimelogDeleteResponse) HandleHTTPResponse(resp *http.Response) error {
 	return nil
 }
 
-// TimelogDelete creates a new timelog using the provided request and returns
-// the response.
+// TimelogDelete deletes a timelog using the provided request and returns the
+// response.
 func TimelogDelete(
 	ctx context.Context,
 	engine *twapi.Engine,
@@ -524,8 +524,8 @@ type TimelogListRequestFilters struct {
 // TimelogListRequest represents the request body for loading multiple timelogs.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/time-tracking/get-projects-api-v3-time-json
-// https://apidocs.teamwork.com/docs/teamwork/v3/time-tracking/post-projects-api-v3-projects-project-id-time-json
 // https://apidocs.teamwork.com/docs/teamwork/v3/time-tracking/get-projects-api-v3-tasks-task-id-time-json
+// https://apidocs.teamwork.com/docs/teamwork/v3/time-tracking/get-projects-api-v3-projects-project-id-time-json
 type TimelogListRequest struct {
 	// Path contains the path parameters for the request.
 	Path TimelogListRequestPath
@@ -587,8 +587,8 @@ func (t TimelogListRequest) HTTPRequest(ctx context.Context, server string) (*ht
 // request filters.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/time-tracking/get-projects-api-v3-time-json
-// https://apidocs.teamwork.com/docs/teamwork/v3/time-tracking/post-projects-api-v3-projects-project-id-time-json
 // https://apidocs.teamwork.com/docs/teamwork/v3/time-tracking/get-projects-api-v3-tasks-task-id-time-json
+// https://apidocs.teamwork.com/docs/teamwork/v3/time-tracking/get-projects-api-v3-projects-project-id-time-json
 type TimelogListResponse struct {
 	request TimelogListRequest
 

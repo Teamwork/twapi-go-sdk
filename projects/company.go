@@ -415,8 +415,8 @@ func (c *CompanyDeleteResponse) HandleHTTPResponse(resp *http.Response) error {
 	return nil
 }
 
-// CompanyDelete creates a new client/company using the provided request and
-// returns the response.
+// CompanyDelete deletes a client/company using the provided request and returns
+// the response.
 func CompanyDelete(
 	ctx context.Context,
 	engine *twapi.Engine,
