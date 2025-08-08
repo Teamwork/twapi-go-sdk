@@ -263,39 +263,39 @@ type TimelogUpdateRequest struct {
 	Path TimelogUpdateRequestPath `json:"-"`
 
 	// Description is an optional description of the timelog.
-	Description *string `json:"description"`
+	Description *string `json:"description,omitempty"`
 
 	// Date is the date when the timelog was logged. Only the date part is used,
 	// the time part is ignored.
-	Date twapi.Date `json:"date"`
+	Date *twapi.Date `json:"date,omitempty"`
 
 	// Time is the time when the timelog was logged. It can be in local time or
 	// UTC.
-	Time twapi.Time `json:"time"`
+	Time *twapi.Time `json:"time,omitempty"`
 
 	// IsUTC indicates whether the time is in UTC. When false, it will consider
 	// the timezone configured for the logged user.
-	IsUTC bool `json:"isUTC"`
+	IsUTC *bool `json:"isUTC,omitempty"`
 
 	// Hours is the number of hours logged in the timelog. This is optional and
 	// can be used instead of Minutes. If both Hours and Minutes are provided,
 	// they will be summed up to calculate the total time logged.
-	Hours int64 `json:"hours"`
+	Hours *int64 `json:"hours,omitempty"`
 
 	// Minutes is the number of minutes logged in the timelog. This is optional
 	// and can be used instead of Hours. If both Hours and Minutes are provided,
 	// they will be summed up to calculate the total time logged.
-	Minutes int64 `json:"minutes"`
+	Minutes *int64 `json:"minutes,omitempty"`
 
 	// Billable indicates whether the timelog is billable or not.
-	Billable bool `json:"isBillable"`
+	Billable *bool `json:"isBillable,omitempty"`
 
 	// UserID is an optional ID of the user who logged the timelog. If not
 	// provided, the timelog will be logged by the user making the request.
-	UserID *int64 `json:"userId"`
+	UserID *int64 `json:"userId,omitempty"`
 
 	// TagIDs is an optional list of tag IDs to associate with the timelog.
-	TagIDs []int64 `json:"tagIds"`
+	TagIDs []int64 `json:"tagIds,omitempty"`
 }
 
 // NewTimelogUpdateRequest creates a new TimelogUpdateRequest with the
