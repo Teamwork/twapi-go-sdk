@@ -17,14 +17,6 @@
 
 ---
 
-> [!WARNING]
-> **🚧 Under Active Development**
->
-> This library is currently under active development. APIs and interfaces may
-> change without notice in future versions. Please use with caution in
-> production environments and pin to specific versions to avoid breaking
-> changes.
-
 ## ✨ Features
 
 - � **Multiple Authentication Methods** - Bearer token, Basic auth, and OAuth2
