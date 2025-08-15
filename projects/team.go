@@ -434,6 +434,18 @@ type TeamListRequestFilters struct {
 	// SearchTerm is an optional search term to filter teams by name or e-mail.
 	SearchTerm string
 
+	// IncludeCompanyTeams indicates whether to include client/company teams in
+	// the response. By default client/company teams are not included.
+	IncludeCompanyTeams bool
+
+	// IncludeProjectTeams indicates whether to include project teams in the
+	// response. By default project teams are not included.
+	IncludeProjectTeams bool
+
+	// IncludeSubteams indicates whether to include subteams in the response. By
+	// default sub-teams are not included.
+	IncludeSubteams bool
+
 	// Page is the page number to retrieve. Defaults to 1.
 	Page int64
 
@@ -484,6 +496,15 @@ func (u TeamListRequest) HTTPRequest(ctx context.Context, server string) (*http.
 	query := req.URL.Query()
 	if u.Filters.SearchTerm != "" {
 		query.Set("searchTerm", u.Filters.SearchTerm)
+	}
+	if u.Filters.IncludeCompanyTeams {
+		query.Set("includeCompanyTeams", "true")
+	}
+	if u.Filters.IncludeProjectTeams {
+		query.Set("includeProjectTeams", "true")
+	}
+	if u.Filters.IncludeSubteams {
+		query.Set("includeSubteams", "true")
 	}
 	if u.Filters.Page > 0 {
 		query.Set("page", strconv.FormatInt(u.Filters.Page, 10))
