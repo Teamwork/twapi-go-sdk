@@ -24,6 +24,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	fmt.Printf("📡 Server listening on http://%s/oauth2/callback\n", *callbackServerAddr)
 	session := session.NewOAuth2(*clientID, *clientSecret,
 		session.WithOAuth2Server(*server),
 		session.WithOAuth2CallbackServerAddr(*callbackServerAddr),
