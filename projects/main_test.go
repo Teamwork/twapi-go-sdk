@@ -386,6 +386,21 @@ func createTimelogInProject(t testEngine, projectID int64) (int64, func(), error
 	}, nil
 }
 
+func createTimer(t testEngine, projectID int64) (int64, func(), error) {
+	timerResponse, err := projects.TimerCreate(t.Context(), engine, projects.NewTimerCreateRequest(projectID))
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to create timer for test: %w", err)
+	}
+	id := timerResponse.Timer.ID
+	return id, func() {
+		ctx := context.Background() // t.Context is always canceled in cleanup
+		_, err := projects.TimerDelete(ctx, engine, projects.NewTimerDeleteRequest(id))
+		if err != nil {
+			t.Errorf("failed to delete timer after test: %s", err)
+		}
+	}, nil
+}
+
 type testEngine interface {
 	Context() context.Context
 	Errorf(string, ...any)
