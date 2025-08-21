@@ -92,6 +92,19 @@ type User struct {
 	UpdatedAt *time.Time `json:"updatedAt"`
 }
 
+// UserMe represents an special type for the logged user.
+type UserMe struct {
+	User
+
+	// SiteOwner indicates whether the user is the account owner. The site owner
+	// has full control over the account and its settings.
+	SiteOwner bool `json:"siteOwner"`
+
+	// InOwnerCompany indicates whether the user is in the owner company. Users in
+	// owner companies typically have different permissions.
+	InOwnerCompany bool `json:"inOwnerCompany"`
+}
+
 // UserCreateRequest represents the request body for creating a new
 // user.
 //
@@ -447,7 +460,7 @@ func (u UserGetMeRequest) HTTPRequest(ctx context.Context, server string) (*http
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/people/get-projects-api-v3-me-json
 type UserGetMeResponse struct {
-	User User `json:"person"`
+	User UserMe `json:"person"`
 }
 
 // HandleHTTPResponse handles the HTTP response for the UserGetMeResponse. If
