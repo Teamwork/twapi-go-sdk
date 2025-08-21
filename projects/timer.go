@@ -212,23 +212,23 @@ type TimerUpdateRequest struct {
 	Path TimerUpdateRequestPath `json:"-"`
 
 	// Description is a brief summary of the timer's purpose.
-	Description *string `json:"description"`
+	Description *string `json:"description,omitempty"`
 
 	// Billable indicates whether the timer is billable.
-	Billable *bool `json:"isBillable"`
+	Billable *bool `json:"isBillable,omitempty"`
 
 	// Running indicates whether the timer is currently running.
-	Running *bool `json:"isRunning"`
+	Running *bool `json:"isRunning,omitempty"`
 
 	// StopRunningTimers indicates whether to stop all running timers.
-	StopRunningTimers *bool `json:"stopRunningTimers"`
+	StopRunningTimers *bool `json:"stopRunningTimers,omitempty"`
 
 	// ProjectID is the unique identifier of the project associated with the
 	// timer. The ProjectID must be provided.
-	ProjectID int64 `json:"projectId"`
+	ProjectID *int64 `json:"projectId,omitempty"`
 
 	// TaskID is the unique identifier of the task associated with the timer.
-	TaskID *int64 `json:"taskId"`
+	TaskID *int64 `json:"taskId,omitempty"`
 }
 
 // NewTimerUpdateRequest creates a new TimerUpdateRequest with the
