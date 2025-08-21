@@ -1,0 +1,270 @@
+package projects_test
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/teamwork/twapi-go-sdk"
+	"github.com/teamwork/twapi-go-sdk/projects"
+	"github.com/teamwork/twapi-go-sdk/session"
+)
+
+func ExampleRateUserGet() {
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
+
+	req := projects.NewRateUserGetRequest(12345) // User ID
+	resp, err := projects.RateUserGet(context.Background(), engine, req)
+	if err != nil {
+		fmt.Printf("Error: %s\n", err)
+		return
+	}
+
+	fmt.Printf("User installation rate: %d\n", resp.InstallationRate)
+	fmt.Printf("Number of project rates: %d\n", len(resp.ProjectRates))
+}
+
+func ExampleRateInstallationUserList() {
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
+
+	req := projects.NewRateInstallationUserListRequest()
+	req.Filters.PageSize = 10 // Get first 10 users
+
+	resp, err := projects.RateInstallationUserList(context.Background(), engine, req)
+	if err != nil {
+		fmt.Printf("Error: %s\n", err)
+		return
+	}
+
+	fmt.Printf("Found %d user rates\n", len(resp.UserRates))
+
+	// Iterate through all pages
+	for {
+		for _, userRate := range resp.UserRates {
+			fmt.Printf("User %d has rate %d\n", userRate.User.ID, userRate.Rate)
+		}
+
+		// Get next page if available
+		nextReq := resp.Iterate()
+		if nextReq == nil {
+			break
+		}
+
+		resp, err = projects.RateInstallationUserList(context.Background(), engine, *nextReq)
+		if err != nil {
+			fmt.Printf("Error: %s\n", err)
+			return
+		}
+	}
+}
+
+func ExampleRateInstallationUserGet() {
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
+
+	req := projects.NewRateInstallationUserGetRequest(12345) // User ID
+	req.Filters.Include = []string{"currencies"}
+
+	resp, err := projects.RateInstallationUserGet(context.Background(), engine, req)
+	if err != nil {
+		fmt.Printf("Error: %s\n", err)
+		return
+	}
+
+	fmt.Printf("User rate: %d\n", resp.UserRate)
+	fmt.Printf("Number of currency rates: %d\n", len(resp.UserRates))
+}
+
+func ExampleRateInstallationUserUpdate() {
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
+
+	req := projects.NewRateInstallationUserUpdateRequest(12345, 5000) // User ID, Rate
+	_, err := projects.RateInstallationUserUpdate(context.Background(), engine, req)
+	if err != nil {
+		fmt.Printf("Error: %s\n", err)
+		return
+	}
+
+	fmt.Println("User rate updated successfully")
+}
+
+func ExampleRateInstallationUserBulkUpdate() {
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
+
+	req := projects.NewRateInstallationUserBulkUpdateRequest(5000) // Rate
+	req.IDs = []int64{12345, 12346, 12347}                         // Specific user IDs to update
+
+	resp, err := projects.RateInstallationUserBulkUpdate(context.Background(), engine, req)
+	if err != nil {
+		fmt.Printf("Error: %s\n", err)
+		return
+	}
+
+	fmt.Printf("Updated %d users with rate %d\n", len(resp.IDs), resp.Rate)
+}
+
+func ExampleRateProjectGet() {
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
+
+	req := projects.NewRateProjectGetRequest(67890) // Project ID
+	req.Filters.Include = []string{"currencies"}
+
+	resp, err := projects.RateProjectGet(context.Background(), engine, req)
+	if err != nil {
+		fmt.Printf("Error: %s\n", err)
+		return
+	}
+
+	fmt.Printf("Project rate: %d\n", resp.ProjectRate)
+	fmt.Printf("Rate value: %.2f\n", resp.Rate.Value())
+}
+
+func ExampleRateProjectUpdate() {
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
+
+	req := projects.NewRateProjectUpdateRequest(67890, 7500) // Project ID, Rate
+	_, err := projects.RateProjectUpdate(context.Background(), engine, req)
+	if err != nil {
+		fmt.Printf("Error: %s\n", err)
+		return
+	}
+
+	fmt.Println("Project rate updated successfully")
+}
+
+func ExampleRateProjectAndUsersUpdate() {
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
+
+	req := projects.NewRateProjectAndUsersUpdateRequest(67890, 7500) // Project ID, Rate
+
+	// Add user-specific rate exceptions
+	req.UserRates = []projects.ProjectUserRateRequest{
+		{
+			User: twapi.Relationship{
+				ID:   12345,
+				Type: "user",
+			},
+			UserRate: 8000, // Higher rate for this specific user
+		},
+		{
+			User: twapi.Relationship{
+				ID:   12346,
+				Type: "user",
+			},
+			UserRate: 6000, // Lower rate for this user
+		},
+	}
+
+	_, err := projects.RateProjectAndUsersUpdate(context.Background(), engine, req)
+	if err != nil {
+		fmt.Printf("Error: %s\n", err)
+		return
+	}
+
+	fmt.Println("Project and user rates updated successfully")
+}
+
+func ExampleRateProjectUserList() {
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
+
+	req := projects.NewRateProjectUserListRequest(67890) // Project ID
+	req.Filters.SearchTerm = "john"
+	req.Filters.OrderBy = "name"
+	req.Filters.OrderMode = "asc"
+	req.Filters.PageSize = 20
+
+	resp, err := projects.RateProjectUserList(context.Background(), engine, req)
+	if err != nil {
+		fmt.Printf("Error: %s\n", err)
+		return
+	}
+
+	fmt.Printf("Found %d user rates for project\n", len(resp.UserRates))
+
+	for _, userRate := range resp.UserRates {
+		fmt.Printf("User %d effective rate: %.2f\n", userRate.User.ID, userRate.EffectiveRate.Value())
+	}
+}
+
+func ExampleRateProjectUserGet() {
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
+
+	req := projects.NewRateProjectUserGetRequest(67890, 12345) // Project ID, User ID
+	req.Filters.Include = []string{"currencies"}
+
+	resp, err := projects.RateProjectUserGet(context.Background(), engine, req)
+	if err != nil {
+		fmt.Printf("Error: %s\n", err)
+		return
+	}
+
+	fmt.Printf("User rate for project: %d\n", resp.UserRate)
+	fmt.Printf("Rate value: %.2f\n", resp.Rate.Value())
+}
+
+func ExampleRateProjectUserUpdate() {
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
+
+	req := projects.NewRateProjectUserUpdateRequest(67890, 12345, 8500) // Project ID, User ID, Rate
+	resp, err := projects.RateProjectUserUpdate(context.Background(), engine, req)
+	if err != nil {
+		fmt.Printf("Error: %s\n", err)
+		return
+	}
+
+	fmt.Printf("Updated user rate to: %d\n", resp.UserRate)
+}
+
+func ExampleRateProjectUserHistoryGet() {
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
+
+	req := projects.NewRateProjectUserHistoryGetRequest(67890, 12345) // Project ID, User ID
+	req.Filters.OrderMode = "desc"                                    // Most recent first
+	req.Filters.PageSize = 10
+
+	resp, err := projects.RateProjectUserHistoryGet(context.Background(), engine, req)
+	if err != nil {
+		fmt.Printf("Error: %s\n", err)
+		return
+	}
+
+	fmt.Printf("Found %d historical rate entries\n", len(resp.UserRateHistory))
+
+	for _, history := range resp.UserRateHistory {
+		fmt.Printf("Rate: %.2f", history.Rate.Value())
+		if history.FromDate != nil {
+			fmt.Printf(" (effective from %s)", history.FromDate.Format("2006-01-02"))
+		}
+		if history.ToDate != nil {
+			fmt.Printf(" (until %s)", history.ToDate.Format("2006-01-02"))
+		}
+		fmt.Println()
+	}
+}
+
+// Example of working with pagination across all pages
+func ExampleRateProjectUserList_pagination() {
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
+
+	req := projects.NewRateProjectUserListRequest(67890)
+	req.Filters.PageSize = 50
+
+	allUserRates := []projects.EffectiveUserProjectRate{}
+
+	for {
+		resp, err := projects.RateProjectUserList(context.Background(), engine, req)
+		if err != nil {
+			fmt.Printf("Error: %s\n", err)
+			return
+		}
+
+		allUserRates = append(allUserRates, resp.UserRates...)
+
+		// Check if there are more pages
+		nextReq := resp.Iterate()
+		if nextReq == nil {
+			break
+		}
+		req = *nextReq
+	}
+
+	fmt.Printf("Total user rates collected: %d\n", len(allUserRates))
+}
