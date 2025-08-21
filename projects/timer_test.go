@@ -82,7 +82,7 @@ func TestTimerUpdate(t *testing.T) {
 			Description: twapi.Ptr("Updated description"),
 			Billable:    twapi.Ptr(true),
 			Running:     twapi.Ptr(true),
-			ProjectID:   testResources.ProjectID,
+			ProjectID:   &testResources.ProjectID,
 			TaskID:      &testResources.TaskID,
 		},
 	}}
