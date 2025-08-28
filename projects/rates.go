@@ -1129,13 +1129,11 @@ type RateProjectUserUpdateResponse struct {
 
 // HandleHTTPResponse handles the HTTP response for the RateProjectUserUpdateResponse.
 func (r *RateProjectUserUpdateResponse) HandleHTTPResponse(resp *http.Response) error {
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusCreated {
 		return twapi.NewHTTPError(resp, "failed to update project user rate")
 	}
 
-	if err := json.NewDecoder(resp.Body).Decode(r); err != nil {
-		return fmt.Errorf("failed to decode update project user rate response: %w", err)
-	}
+	// API returns 201 with no content, so no need to decode response body
 	return nil
 }
 
