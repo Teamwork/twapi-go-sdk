@@ -13,14 +13,25 @@ func ExampleRateUserGet() {
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
 
 	req := projects.NewRateUserGetRequest(12345) // User ID
+	// Configure optional filters
+	req.Filters.IncludeUserCost = true
+	req.Filters.Include = []string{"projects", "currencies"}
+
 	resp, err := projects.RateUserGet(context.Background(), engine, req)
 	if err != nil {
 		fmt.Printf("Error: %s\n", err)
 		return
 	}
 
-	fmt.Printf("User installation rate: %d\n", resp.InstallationRate)
+	if resp.InstallationRate != nil {
+		fmt.Printf("User installation rate: %d\n", *resp.InstallationRate)
+	}
 	fmt.Printf("Number of project rates: %d\n", len(resp.ProjectRates))
+	fmt.Printf("Number of multi-currency rates: %d\n", len(resp.InstallationRates))
+
+	if resp.UserCost != nil {
+		fmt.Printf("User cost: %d\n", *resp.UserCost)
+	}
 }
 
 func ExampleRateInstallationUserList() {
@@ -267,4 +278,43 @@ func ExampleRateProjectUserList_pagination() {
 	}
 
 	fmt.Printf("Total user rates collected: %d\n", len(allUserRates))
+}
+
+// Example showing enhanced metadata and multi-currency features
+func ExampleRateProjectUserList_metadata() {
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
+
+	req := projects.NewRateProjectUserListRequest(67890) // Project ID
+	resp, err := projects.RateProjectUserList(context.Background(), engine, req)
+	if err != nil {
+		fmt.Printf("Error: %s\n", err)
+		return
+	}
+
+	fmt.Printf("Found %d user rates for project\n", len(resp.UserRates))
+
+	for _, userRate := range resp.UserRates {
+		fmt.Printf("User %d effective rate: %.2f\n", userRate.User.ID, userRate.EffectiveRate.Value())
+
+		// Show rate source information
+		if userRate.Source != nil {
+			fmt.Printf("  Rate source: %s\n", *userRate.Source)
+		}
+
+		// Show temporal information
+		if userRate.FromDate != nil {
+			fmt.Printf("  Effective from: %s\n", userRate.FromDate.Format("2006-01-02"))
+		}
+
+		// Show update metadata
+		if userRate.UpdatedAt != nil {
+			fmt.Printf("  Last updated: %s\n", userRate.UpdatedAt.Format("2006-01-02"))
+		}
+
+		// Show billable rate with currency
+		if userRate.BillableRate != nil {
+			fmt.Printf("  Billable rate: %.2f (Currency ID: %d)\n",
+				userRate.BillableRate.Rate, userRate.BillableRate.Currency.ID)
+		}
+	}
 }

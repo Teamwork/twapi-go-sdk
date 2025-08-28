@@ -54,16 +54,36 @@ type Currency struct {
 	Name string `json:"name"`
 }
 
-// ProjectRate represents a project's rate information.
-type ProjectRate struct {
-	// ProjectID is the ID of the project.
-	ProjectID int64 `json:"projectId"`
+// EffectiveRateSource represents the source of an effective rate.
+type EffectiveRateSource string
 
-	// Rate is the rate amount.
-	Rate int64 `json:"rate"`
+const (
+	// EffectiveRateSourceInstallationRate represents a rate derived from the user's installation rate.
+	EffectiveRateSourceInstallationRate EffectiveRateSource = "installationrate"
+
+	// EffectiveRateSourceProjectRate represents a rate derived from the project's default rate.
+	EffectiveRateSourceProjectRate EffectiveRateSource = "projectrate"
+
+	// EffectiveRateSourceUserProjectRate represents a rate derived from a user's project-specific rate.
+	EffectiveRateSourceUserProjectRate EffectiveRateSource = "userprojectrate"
+)
+
+// BillableRate contains the rate and currency information for billable amounts.
+type BillableRate struct {
+	// Rate is the billable rate amount.
+	Rate float64 `json:"rate"`
 
 	// Currency is the currency information.
-	Currency Currency `json:"currency"`
+	Currency twapi.Relationship `json:"currency"`
+}
+
+// ProjectRate represents a project's rate information.
+type ProjectRate struct {
+	// Project is the relationship to the project.
+	Project twapi.Relationship `json:"project"`
+
+	// UserRate is the rate amount (legacy field name).
+	UserRate int64 `json:"userRate"`
 }
 
 // RateUserGetRequestPath contains the path parameters for getting a user's rates.
@@ -72,17 +92,48 @@ type RateUserGetRequestPath struct {
 	ID int64
 }
 
+// RateUserGetRequestFilters contains the filters for getting a user's rates.
+type RateUserGetRequestFilters struct {
+	// Page is the page number to retrieve. Defaults to 1.
+	Page int64
+
+	// PageSize is the number of rates to retrieve per page. Defaults to 50.
+	PageSize int64
+
+	// IncludeInstallationRate includes the installation rate in the response.
+	IncludeInstallationRate bool
+
+	// IncludeUserCost includes the user cost in the response.
+	IncludeUserCost bool
+
+	// IncludeArchivedProjects includes archived projects in the response.
+	IncludeArchivedProjects bool
+
+	// IncludeDeletedProjects includes deleted projects in the response.
+	IncludeDeletedProjects bool
+
+	// Include specifies which related data to include.
+	Include []string
+}
+
 // RateUserGetRequest represents the request for getting a user's rates.
 type RateUserGetRequest struct {
 	// Path contains the path parameters for the request.
 	Path RateUserGetRequestPath
+
+	// Filters contains the filters for the request.
+	Filters RateUserGetRequestFilters
 }
 
-// NewRateUserGetRequest creates a new RateUserGetRequest with the provided user ID.
+// NewRateUserGetRequest creates a new RateUserGetRequest with the provided user ID and default values.
 func NewRateUserGetRequest(userID int64) RateUserGetRequest {
 	return RateUserGetRequest{
 		Path: RateUserGetRequestPath{
 			ID: userID,
+		},
+		Filters: RateUserGetRequestFilters{
+			Page:     1,
+			PageSize: 50,
 		},
 	}
 }
@@ -96,24 +147,63 @@ func (r RateUserGetRequest) HTTPRequest(ctx context.Context, server string) (*ht
 		return nil, err
 	}
 
+	query := req.URL.Query()
+	if r.Filters.Page > 0 {
+		query.Set("page", strconv.FormatInt(r.Filters.Page, 10))
+	}
+	if r.Filters.PageSize > 0 {
+		query.Set("pageSize", strconv.FormatInt(r.Filters.PageSize, 10))
+	}
+	if r.Filters.IncludeInstallationRate {
+		query.Set("includeInstallationRate", "true")
+	}
+	if r.Filters.IncludeUserCost {
+		query.Set("includeUserCost", "true")
+	}
+	if r.Filters.IncludeArchivedProjects {
+		query.Set("includeArchivedProjects", "true")
+	}
+	if r.Filters.IncludeDeletedProjects {
+		query.Set("includeDeletedProjects", "true")
+	}
+	if len(r.Filters.Include) > 0 {
+		for _, include := range r.Filters.Include {
+			query.Add("include", include)
+		}
+	}
+	req.URL.RawQuery = query.Encode()
+
 	return req, nil
 }
 
 // RateUserGetResponse represents the response for getting a user's rates.
 type RateUserGetResponse struct {
-	// InstallationRate is the user's installation rate.
-	InstallationRate int64 `json:"installationRate"`
+	// ProjectRates contains project-specific rates.
+	ProjectRates []ProjectRate `json:"projectRates"`
+
+	// InstallationRate is the user's installation rate (legacy field).
+	InstallationRate *int64 `json:"installationRate,omitempty"`
 
 	// InstallationRates contains rates in different currencies.
-	InstallationRates map[string]twapi.Money `json:"installationRates"`
+	InstallationRates map[int64]twapi.Money `json:"installationRates,omitempty"`
 
-	// ProjectRates contains project-specific rates.
-	ProjectRates map[string]ProjectRate `json:"projectRates"`
+	// UserCost is the user's cost.
+	UserCost *int64 `json:"userCost,omitempty"`
+
+	// Meta contains pagination information.
+	Meta struct {
+		Page struct {
+			Offset  int64 `json:"offset"`
+			Size    int64 `json:"size"`
+			Count   int64 `json:"count"`
+			HasMore bool  `json:"hasMore"`
+		} `json:"page"`
+	} `json:"meta"`
 
 	// Included contains related data.
 	Included struct {
-		Currencies map[string]Currency           `json:"currencies"`
-		Projects   map[string]twapi.Relationship `json:"projects"`
+		Currencies map[string]Currency           `json:"currencies,omitempty"`
+		Projects   map[string]twapi.Relationship `json:"projects,omitempty"`
 	} `json:"included"`
 }
 
@@ -296,10 +386,10 @@ func (r RateInstallationUserGetRequest) HTTPRequest(ctx context.Context, server 
 
 // RateInstallationUserGetResponse represents the response for getting an installation user rate.
 type RateInstallationUserGetResponse struct {
-	// UserRate is the user's rate.
+	// UserRate is the user's rate (legacy field).
 	UserRate int64 `json:"userRate"`
 
-	// UserRates contains rates in different currencies.
+	// UserRates contains rates in different currencies (key is currency ID as string for JSON compatibility).
 	UserRates map[string]twapi.Money `json:"userRates"`
 
 	// Included contains related data.
@@ -626,7 +716,7 @@ func RateProjectUpdate(
 // ProjectUserRateRequest represents a user rate update within a project.
 type ProjectUserRateRequest struct {
 	// FromDate is the date from which this rate is effective.
-	FromDate *string `json:"fromDate,omitempty"`
+	FromDate *time.Time `json:"fromDate,omitempty"`
 
 	// User is the user relationship.
 	User twapi.Relationship `json:"user"`
@@ -794,6 +884,24 @@ type EffectiveUserProjectRate struct {
 
 	// ProjectRate is the project's default rate.
 	ProjectRate *twapi.Money `json:"projectRate,omitempty"`
+
+	// Source indicates the source of the effective rate.
+	Source *EffectiveRateSource `json:"source,omitempty"`
+
+	// FromDate is when this rate became effective.
+	FromDate *time.Time `json:"fromDate,omitempty"`
+
+	// ToDate is when this rate stops being effective.
+	ToDate *time.Time `json:"toDate,omitempty"`
+
+	// UpdatedAt is when this rate was last updated.
+	UpdatedAt *time.Time `json:"updatedAt,omitempty"`
+
+	// UpdatedBy is who last updated this rate.
+	UpdatedBy *twapi.Relationship `json:"updatedBy,omitempty"`
+
+	// BillableRate contains the rate and currency for billing.
+	BillableRate *BillableRate `json:"billableRate,omitempty"`
 }
 
 // RateProjectUserListResponse represents the response for listing project user rates.
