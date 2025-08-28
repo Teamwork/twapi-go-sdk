@@ -262,7 +262,7 @@ func TestRateProjectAndUsersUpdate(t *testing.T) {
 				{
 					User: twapi.Relationship{
 						ID:   testResources.UserID,
-						Type: "user",
+						Type: "users",
 					},
 					UserRate: tt.rate + 500, // Different rate for specific user
 				},

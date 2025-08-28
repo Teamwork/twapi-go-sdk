@@ -531,7 +531,7 @@ func (r RateInstallationUserBulkUpdateRequest) HTTPRequest(ctx context.Context, 
 		return nil, fmt.Errorf("failed to encode bulk update installation user rates request: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, uri, &body)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, uri, &body)
 	if err != nil {
 		return nil, err
 	}
