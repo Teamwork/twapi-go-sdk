@@ -79,10 +79,22 @@ type BillableRate struct {
 
 // ProjectRate represents a project's rate information.
 type ProjectRate struct {
+	// ProjectID is the ID of the project.
+	ProjectID int64 `json:"projectId"`
+
+	// Rate is the rate amount.
+	Rate int64 `json:"rate"`
+
+	// Currency is the currency information.
+	Currency Currency `json:"currency"`
+}
+
+// UserProjectRate represents a user's project rate (used in list responses).
+type UserProjectRate struct {
 	// Project is the relationship to the project.
 	Project twapi.Relationship `json:"project"`
 
-	// UserRate is the rate amount (legacy field name).
+	// UserRate is the rate amount.
 	UserRate int64 `json:"userRate"`
 }
 
@@ -179,24 +191,24 @@ func (r RateUserGetRequest) HTTPRequest(ctx context.Context, server string) (*ht
 // RateUserGetResponse represents the response for getting a user's rates.
 type RateUserGetResponse struct {
 	// ProjectRates contains project-specific rates.
-	ProjectRates []ProjectRate `json:"projectRates"`
+	ProjectRates []UserProjectRate `json:"projectRates"`
 
-	// InstallationRate is the user's installation rate (legacy field).
+	// InstallationRate is the user's installation rate (optional).
 	InstallationRate *int64 `json:"installationRate,omitempty"`
 
-	// InstallationRates contains rates in different currencies.
+	// InstallationRates contains rates in different currencies (optional).
 	InstallationRates map[int64]twapi.Money `json:"installationRates,omitempty"`
 
-	// UserCost is the user's cost.
+	// UserCost is the user's cost (optional).
 	UserCost *int64 `json:"userCost,omitempty"`
 
 	// Meta contains pagination information.
 	Meta struct {
 		Page struct {
-			Offset  int64 `json:"offset"`
-			Size    int64 `json:"size"`
-			Count   int64 `json:"count"`
-			HasMore bool  `json:"hasMore"`
+			PageOffset int64 `json:"pageOffset"`
+			PageSize   int64 `json:"pageSize"`
+			Count      int64 `json:"count"`
+			HasMore    bool  `json:"hasMore"`
 		} `json:"page"`
 	} `json:"meta"`
 
