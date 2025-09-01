@@ -87,7 +87,8 @@ func ExampleRateInstallationUserGet() {
 func ExampleRateInstallationUserUpdate() {
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
 
-	req := projects.NewRateInstallationUserUpdateRequest(12345, 5000) // User ID, Rate
+	rate := int64(5000)
+	req := projects.NewRateInstallationUserUpdateRequest(12345, &rate) // User ID, Rate
 	_, err := projects.RateInstallationUserUpdate(context.Background(), engine, req)
 	if err != nil {
 		fmt.Printf("Error: %s\n", err)
@@ -100,7 +101,8 @@ func ExampleRateInstallationUserUpdate() {
 func ExampleRateInstallationUserBulkUpdate() {
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
 
-	req := projects.NewRateInstallationUserBulkUpdateRequest(5000) // Rate
+	rate := int64(5000)
+	req := projects.NewRateInstallationUserBulkUpdateRequest(&rate) // Rate
 	req.IDs = []int64{12345, 12346, 12347}                         // Specific user IDs to update
 
 	resp, err := projects.RateInstallationUserBulkUpdate(context.Background(), engine, req)
@@ -131,7 +133,8 @@ func ExampleRateProjectGet() {
 func ExampleRateProjectUpdate() {
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
 
-	req := projects.NewRateProjectUpdateRequest(67890, 7500) // Project ID, Rate
+	rate := int64(7500)
+	req := projects.NewRateProjectUpdateRequest(67890, &rate) // Project ID, Rate
 	_, err := projects.RateProjectUpdate(context.Background(), engine, req)
 	if err != nil {
 		fmt.Printf("Error: %s\n", err)
@@ -214,7 +217,8 @@ func ExampleRateProjectUserGet() {
 func ExampleRateProjectUserUpdate() {
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
 
-	req := projects.NewRateProjectUserUpdateRequest(67890, 12345, 8500) // Project ID, User ID, Rate
+	rate := int64(8500)
+	req := projects.NewRateProjectUserUpdateRequest(67890, 12345, &rate) // Project ID, User ID, Rate
 	resp, err := projects.RateProjectUserUpdate(context.Background(), engine, req)
 	if err != nil {
 		fmt.Printf("Error: %s\n", err)
