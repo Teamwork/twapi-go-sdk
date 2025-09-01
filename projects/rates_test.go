@@ -130,7 +130,7 @@ func TestRateInstallationUserUpdate(t *testing.T) {
 			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
-			req := projects.NewRateInstallationUserUpdateRequest(tt.userID, tt.rate)
+			req := projects.NewRateInstallationUserUpdateRequest(tt.userID, &tt.rate)
 			resp, err := projects.RateInstallationUserUpdate(ctx, engine, req)
 			if err != nil {
 				t.Errorf("unexpected error: %s", err)
@@ -151,10 +151,13 @@ func TestRateInstallationUserBulkUpdate(t *testing.T) {
 		req  projects.RateInstallationUserBulkUpdateRequest
 	}{{
 		name: "update specific users",
-		req: projects.RateInstallationUserBulkUpdateRequest{
-			IDs:      []int64{testResources.UserID},
-			UserRate: int64(rand.Intn(10000) + 1000),
-		},
+		req: func() projects.RateInstallationUserBulkUpdateRequest {
+			rate := int64(rand.Intn(10000) + 1000)
+			return projects.RateInstallationUserBulkUpdateRequest{
+				IDs:      []int64{testResources.UserID},
+				UserRate: &rate,
+			}
+		}(),
 	}}
 
 	for _, tt := range tests {
@@ -224,7 +227,7 @@ func TestRateProjectUpdate(t *testing.T) {
 			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
-			req := projects.NewRateProjectUpdateRequest(tt.projectID, tt.rate)
+			req := projects.NewRateProjectUpdateRequest(tt.projectID, &tt.rate)
 			resp, err := projects.RateProjectUpdate(ctx, engine, req)
 			if err != nil {
 				t.Errorf("unexpected error: %s", err)
@@ -379,7 +382,7 @@ func TestRateProjectUserUpdate(t *testing.T) {
 			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
-			req := projects.NewRateProjectUserUpdateRequest(tt.projectID, tt.userID, tt.rate)
+			req := projects.NewRateProjectUserUpdateRequest(tt.projectID, tt.userID, &tt.rate)
 			resp, err := projects.RateProjectUserUpdate(ctx, engine, req)
 			if err != nil {
 				t.Errorf("unexpected error: %s", err)
@@ -581,15 +584,16 @@ func TestRateConstructors(t *testing.T) {
 	})
 
 	t.Run("NewRateInstallationUserUpdateRequest", func(t *testing.T) {
-		req := projects.NewRateInstallationUserUpdateRequest(123, 5000)
+		rate := int64(5000)
+		req := projects.NewRateInstallationUserUpdateRequest(123, &rate)
 		if req.Path.UserID != 123 {
 			t.Errorf("expected UserID 123 but got %d", req.Path.UserID)
 		}
 		if req.CurrencyID != nil {
 			t.Errorf("expected CurrencyID to be nil but got %v", req.CurrencyID)
 		}
-		if req.UserRate != 5000 {
-			t.Errorf("expected UserRate 5000 but got %d", req.UserRate)
+		if req.UserRate == nil || *req.UserRate != 5000 {
+			t.Errorf("expected UserRate 5000 but got %v", req.UserRate)
 		}
 	})
 

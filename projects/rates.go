@@ -445,12 +445,12 @@ type RateInstallationUserUpdateRequest struct {
 	// CurrencyID is the ID of the currency for the rate (optional, only used in multi-currency mode).
 	CurrencyID *int64 `json:"currencyId,omitempty"`
 
-	// UserRate is the new rate for the user.
-	UserRate int64 `json:"userRate"`
+	// UserRate is the new rate for the user. Use nil to clear/remove the rate.
+	UserRate *int64 `json:"userRate"`
 }
 
 // NewRateInstallationUserUpdateRequest creates a new RateInstallationUserUpdateRequest.
-func NewRateInstallationUserUpdateRequest(userID int64, rate int64) RateInstallationUserUpdateRequest {
+func NewRateInstallationUserUpdateRequest(userID int64, rate *int64) RateInstallationUserUpdateRequest {
 	return RateInstallationUserUpdateRequest{
 		Path: RateInstallationUserUpdateRequestPath{
 			UserID: userID,
@@ -511,12 +511,12 @@ type RateInstallationUserBulkUpdateRequest struct {
 	// CurrencyID is the ID of the currency for the rate (optional, only used in multi-currency mode).
 	CurrencyID *int64 `json:"currencyId,omitempty"`
 
-	// UserRate is the new rate for the users.
-	UserRate int64 `json:"userRate"`
+	// UserRate is the new rate for the users. Use nil to clear/remove the rate.
+	UserRate *int64 `json:"userRate"`
 }
 
 // NewRateInstallationUserBulkUpdateRequest creates a new RateInstallationUserBulkUpdateRequest.
-func NewRateInstallationUserBulkUpdateRequest(rate int64) RateInstallationUserBulkUpdateRequest {
+func NewRateInstallationUserBulkUpdateRequest(rate *int64) RateInstallationUserBulkUpdateRequest {
 	return RateInstallationUserBulkUpdateRequest{
 		UserRate: rate,
 	}
@@ -673,12 +673,12 @@ type RateProjectUpdateRequest struct {
 	// Path contains the path parameters for the request.
 	Path RateProjectUpdateRequestPath `json:"-"`
 
-	// ProjectRate is the new rate for the project.
-	ProjectRate int64 `json:"projectRate"`
+	// ProjectRate is the new rate for the project. Use nil to clear/remove the rate.
+	ProjectRate *int64 `json:"projectRate"`
 }
 
 // NewRateProjectUpdateRequest creates a new RateProjectUpdateRequest.
-func NewRateProjectUpdateRequest(projectID int64, rate int64) RateProjectUpdateRequest {
+func NewRateProjectUpdateRequest(projectID int64, rate *int64) RateProjectUpdateRequest {
 	return RateProjectUpdateRequest{
 		Path: RateProjectUpdateRequestPath{
 			ProjectID: projectID,
@@ -1080,12 +1080,12 @@ type RateProjectUserUpdateRequest struct {
 	// CurrencyID is the ID of the currency for the rate (optional, only used in multi-currency mode).
 	CurrencyID *int64 `json:"currencyId,omitempty"`
 
-	// UserRate is the new rate for the user.
-	UserRate int64 `json:"userRate"`
+	// UserRate is the new rate for the user. Use nil to clear/remove the rate.
+	UserRate *int64 `json:"userRate"`
 }
 
 // NewRateProjectUserUpdateRequest creates a new RateProjectUserUpdateRequest.
-func NewRateProjectUserUpdateRequest(projectID int64, userID int64, rate int64) RateProjectUserUpdateRequest {
+func NewRateProjectUserUpdateRequest(projectID int64, userID int64, rate *int64) RateProjectUserUpdateRequest {
 	return RateProjectUserUpdateRequest{
 		Path: RateProjectUserUpdateRequestPath{
 			ProjectID: projectID,
