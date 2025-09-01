@@ -103,7 +103,7 @@ func ExampleRateInstallationUserBulkUpdate() {
 
 	rate := int64(5000)
 	req := projects.NewRateInstallationUserBulkUpdateRequest(&rate) // Rate
-	req.IDs = []int64{12345, 12346, 12347}                         // Specific user IDs to update
+	req.IDs = []int64{12345, 12346, 12347}                          // Specific user IDs to update
 
 	resp, err := projects.RateInstallationUserBulkUpdate(context.Background(), engine, req)
 	if err != nil {
