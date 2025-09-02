@@ -514,6 +514,28 @@ type TimelogListRequestFilters struct {
 	// timelogs that have at least one of the specified tags will be returned.
 	MatchAllTags *bool
 
+	// StartDate is an optional start date to filter the timelogs by. If provided,
+	// only timelogs that started on or after this date will be returned.
+	StartDate *time.Time
+
+	// EndDate is an optional end date to filter the timelogs by. If provided,
+	// only timelogs that ended on or before this date will be returned.
+	EndDate *time.Time
+
+	// AssignedToUserIDs is an optional list of user IDs to filter the timelogs
+	// by. If provided, only timelogs assigned to these users will be returned.
+	AssignedToUserIDs []int64
+
+	// AssignedToCompanyIDs is an optional list of client/company IDs to filter
+	// the timelogs by users in the specific companies. If provided, only timelogs
+	// assigned to these companies will be returned.
+	AssignedToCompanyIDs []int64
+
+	// AssignedToTeamIDs is an optional list of team IDs to filter the timelogs by
+	// users in the specific teams. If provided, only timelogs assigned to these
+	// teams will be returned.
+	AssignedToTeamIDs []int64
+
 	// Page is the page number to retrieve. Defaults to 1.
 	Page int64
 
@@ -571,6 +593,33 @@ func (t TimelogListRequest) HTTPRequest(ctx context.Context, server string) (*ht
 	}
 	if t.Filters.MatchAllTags != nil {
 		query.Set("matchAllTags", strconv.FormatBool(*t.Filters.MatchAllTags))
+	}
+	if t.Filters.StartDate != nil && !t.Filters.StartDate.IsZero() {
+		query.Set("startDate", t.Filters.StartDate.Format(time.RFC3339))
+	}
+	if t.Filters.EndDate != nil && !t.Filters.EndDate.IsZero() {
+		query.Set("endDate", t.Filters.EndDate.Format(time.RFC3339))
+	}
+	if len(t.Filters.AssignedToUserIDs) > 0 {
+		assignedToUserIDs := make([]string, len(t.Filters.AssignedToUserIDs))
+		for i, id := range t.Filters.AssignedToUserIDs {
+			assignedToUserIDs[i] = strconv.FormatInt(id, 10)
+		}
+		query.Set("assignedToUserIds", strings.Join(assignedToUserIDs, ","))
+	}
+	if len(t.Filters.AssignedToCompanyIDs) > 0 {
+		assignedToCompanyIDs := make([]string, len(t.Filters.AssignedToCompanyIDs))
+		for i, id := range t.Filters.AssignedToCompanyIDs {
+			assignedToCompanyIDs[i] = strconv.FormatInt(id, 10)
+		}
+		query.Set("assignedToCompanyIds", strings.Join(assignedToCompanyIDs, ","))
+	}
+	if len(t.Filters.AssignedToTeamIDs) > 0 {
+		assignedToTeamIDs := make([]string, len(t.Filters.AssignedToTeamIDs))
+		for i, id := range t.Filters.AssignedToTeamIDs {
+			assignedToTeamIDs[i] = strconv.FormatInt(id, 10)
+		}
+		query.Set("assignedToTeamIds", strings.Join(assignedToTeamIDs, ","))
 	}
 	if t.Filters.Page > 0 {
 		query.Set("page", strconv.FormatInt(t.Filters.Page, 10))
