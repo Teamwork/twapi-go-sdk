@@ -125,39 +125,48 @@ const (
 	LogItemTypeBudget           LogItemType = "budget"
 )
 
+// keep a map with logItemTypes in lowercase for fast case insensitive matching
+var logItemTypes = map[string]LogItemType{
+	"message":           LogItemTypeMessage,
+	"comment":           LogItemTypeComment,
+	"task":              LogItemTypeTask,
+	"tasklist":          LogItemTypeTasklist,
+	"taskgroup":         LogItemTypeTaskgroup,
+	"milestone":         LogItemTypeMilestone,
+	"file":              LogItemTypeFile,
+	"form":              LogItemTypeForm,
+	"notebook":          LogItemTypeNotebook,
+	"timelog":           LogItemTypeTimelog,
+	"task_comment":      LogItemTypeTaskComment,
+	"notebook_comment":  LogItemTypeNotebookComment,
+	"file_comment":      LogItemTypeFileComment,
+	"link_comment":      LogItemTypeLinkComment,
+	"milestone_comment": LogItemTypeMilestoneComment,
+	"project":           LogItemTypeProject,
+	"link":              LogItemTypeLink,
+	"billinginvoice":    LogItemTypeBillingInvoice,
+	"risk":              LogItemTypeRisk,
+	"projectupdate":     LogItemTypeProjectUpdate,
+	"reacted":           LogItemTypeReacted,
+	"budget":            LogItemTypeBudget,
+}
+
 // UnmarshalText decodes the text into a LogItemType.
 func (l *LogItemType) UnmarshalText(text []byte) error {
 	if l == nil {
 		panic("unmarshal LogItemType: nil pointer")
 	}
-	logItemType := LogItemType(strings.ToLower(string(text)))
-	switch logItemType {
-	case LogItemTypeMessage,
-		LogItemTypeComment,
-		LogItemTypeTask,
-		LogItemTypeTasklist,
-		LogItemTypeTaskgroup,
-		LogItemTypeMilestone,
-		LogItemTypeFile,
-		LogItemTypeForm,
-		LogItemTypeNotebook,
-		LogItemTypeTimelog,
-		LogItemTypeTaskComment,
-		LogItemTypeNotebookComment,
-		LogItemTypeFileComment,
-		LogItemTypeLinkComment,
-		LogItemTypeMilestoneComment,
-		LogItemTypeProject,
-		LogItemTypeLink,
-		LogItemTypeBillingInvoice,
-		LogItemTypeRisk,
-		LogItemTypeProjectUpdate,
-		LogItemTypeReacted,
-		LogItemTypeBudget:
-		*l = logItemType
-	default:
+
+	normalizedText := string(text)
+	normalizedText = strings.TrimSpace(normalizedText)
+	normalizedText = strings.ToLower(normalizedText)
+
+	logItemType, ok := logItemTypes[normalizedText]
+	if !ok {
 		return fmt.Errorf("invalid log item type: %q", text)
 	}
+
+	*l = logItemType
 	return nil
 }
 
