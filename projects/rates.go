@@ -113,6 +113,12 @@ type RateUserGetRequestPath struct {
 	ID int64
 }
 
+type RateUserGetRequestSideload string
+
+const (
+	RateSideloadProjects RateUserGetRequestSideload = "projects"
+)
+
 // RateUserGetRequestFilters contains the filters for getting a user's rates.
 type RateUserGetRequestFilters struct {
 	// Page is the page number to retrieve. Defaults to 1.
@@ -133,8 +139,8 @@ type RateUserGetRequestFilters struct {
 	// IncludeDeletedProjects includes deleted projects in the response.
 	IncludeDeletedProjects bool
 
-	// Include specifies which related data to include.
-	Include []string
+	// Include specifies which related data to include. Supports: "projects".
+	Include []RateUserGetRequestSideload
 }
 
 // RateUserGetRequest represents the request for getting a user's rates.
@@ -189,7 +195,7 @@ func (r RateUserGetRequest) HTTPRequest(ctx context.Context, server string) (*ht
 	}
 	if len(r.Filters.Include) > 0 {
 		for _, include := range r.Filters.Include {
-			query.Add("include", include)
+			query.Add("include", string(include))
 		}
 	}
 	req.URL.RawQuery = query.Encode()
@@ -361,10 +367,16 @@ type RateInstallationUserGetRequestPath struct {
 	UserID int64
 }
 
+type RateInstallationUserGetRequestSideload string
+
+const (
+	RateInstallationUserGetRequestSideloadCurrencies RateInstallationUserGetRequestSideload = "currencies"
+)
+
 // RateInstallationUserGetRequestFilters contains the filters for getting an installation user rate.
 type RateInstallationUserGetRequestFilters struct {
 	// Include specifies which related data to include.
-	Include []string
+	Include []RateInstallationUserGetRequestSideload
 }
 
 // RateInstallationUserGetRequest represents the request for getting an installation user rate.
@@ -397,7 +409,7 @@ func (r RateInstallationUserGetRequest) HTTPRequest(ctx context.Context, server 
 	query := req.URL.Query()
 	if len(r.Filters.Include) > 0 {
 		for _, include := range r.Filters.Include {
-			query.Add("include", include)
+			query.Add("include", string(include))
 		}
 	}
 	req.URL.RawQuery = query.Encode()
@@ -592,10 +604,16 @@ type RateProjectGetRequestPath struct {
 	ProjectID int64
 }
 
+type RateProjectGetRequestSideload string
+
+const (
+	RateProjectGetRequestSideloadCurrencies RateProjectGetRequestSideload = "currencies"
+)
+
 // RateProjectGetRequestFilters contains the filters for getting a project rate.
 type RateProjectGetRequestFilters struct {
 	// Include specifies which related data to include.
-	Include []string
+	Include []RateProjectGetRequestSideload
 }
 
 // RateProjectGetRequest represents the request for getting a project rate.
@@ -628,7 +646,7 @@ func (r RateProjectGetRequest) HTTPRequest(ctx context.Context, server string) (
 	query := req.URL.Query()
 	if len(r.Filters.Include) > 0 {
 		for _, include := range r.Filters.Include {
-			query.Add("include", include)
+			query.Add("include", string(include))
 		}
 	}
 	req.URL.RawQuery = query.Encode()
@@ -992,10 +1010,16 @@ type RateProjectUserGetRequestPath struct {
 	UserID int64
 }
 
+type RateProjectUserGetRequestSideload string
+
+const (
+	RateProjectUserGetRequestSideloadCurrencies RateProjectUserGetRequestSideload = "currencies"
+)
+
 // RateProjectUserGetRequestFilters contains the filters for getting a project user rate.
 type RateProjectUserGetRequestFilters struct {
 	// Include specifies which related data to include.
-	Include []string
+	Include []RateProjectUserGetRequestSideload
 }
 
 // RateProjectUserGetRequest represents the request for getting a project user rate.
@@ -1029,7 +1053,7 @@ func (r RateProjectUserGetRequest) HTTPRequest(ctx context.Context, server strin
 	query := req.URL.Query()
 	if len(r.Filters.Include) > 0 {
 		for _, include := range r.Filters.Include {
-			query.Add("include", include)
+			query.Add("include", string(include))
 		}
 	}
 	req.URL.RawQuery = query.Encode()
@@ -1164,6 +1188,13 @@ type RateProjectUserHistoryGetRequestPath struct {
 	UserID int64
 }
 
+type RateProjectUserHistoryGetRequestSideload string
+
+const (
+	RateProjectUserHistoryGetRequestSideloadCurrencies RateProjectUserHistoryGetRequestSideload = "currencies"
+	RateProjectUserHistoryGetRequestSideloadUsers      RateProjectUserHistoryGetRequestSideload = "users"
+)
+
 // RateProjectUserHistoryGetRequestFilters contains the filters for getting project user rate history.
 type RateProjectUserHistoryGetRequestFilters struct {
 	// SearchTerm is an optional search term to filter by first name or last name.
@@ -1180,6 +1211,9 @@ type RateProjectUserHistoryGetRequestFilters struct {
 
 	// PageSize is the number of rates to retrieve per page. Defaults to 50.
 	PageSize int64
+
+	// Include specifies which related data to include.
+	Include []RateProjectUserHistoryGetRequestSideload
 }
 
 // RateProjectUserHistoryGetRequest represents the request for getting project user rate history.
@@ -1230,6 +1264,11 @@ func (r RateProjectUserHistoryGetRequest) HTTPRequest(ctx context.Context, serve
 	}
 	if r.Filters.PageSize > 0 {
 		query.Set("pageSize", strconv.FormatInt(r.Filters.PageSize, 10))
+	}
+	if len(r.Filters.Include) > 0 {
+		for _, include := range r.Filters.Include {
+			query.Add("include", string(include))
+		}
 	}
 	req.URL.RawQuery = query.Encode()
 
