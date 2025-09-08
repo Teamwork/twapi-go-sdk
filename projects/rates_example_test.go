@@ -13,9 +13,12 @@ func ExampleRateUserGet() {
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
 
 	req := projects.NewRateUserGetRequest(12345) // User ID
-	// Configure optional filters
-	req.Filters.IncludeUserCost = true
-	req.Filters.Include = []string{"projects", "currencies"}
+    // Configure optional filters
+    req.Filters.IncludeUserCost = true
+    // Include supported related resources via enum
+    req.Filters.Include = []projects.RateUserGetRequestSideload{
+        projects.RateSideloadProjects,
+    }
 
 	resp, err := projects.RateUserGet(context.Background(), engine, req)
 	if err != nil {
@@ -71,8 +74,10 @@ func ExampleRateInstallationUserList() {
 func ExampleRateInstallationUserGet() {
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
 
-	req := projects.NewRateInstallationUserGetRequest(12345) // User ID
-	req.Filters.Include = []string{"currencies"}
+    req := projects.NewRateInstallationUserGetRequest(12345) // User ID
+    req.Filters.Include = []projects.RateInstallationUserGetRequestSideload{
+        projects.RateInstallationUserGetRequestSideloadCurrencies,
+    }
 
 	resp, err := projects.RateInstallationUserGet(context.Background(), engine, req)
 	if err != nil {
@@ -117,8 +122,10 @@ func ExampleRateInstallationUserBulkUpdate() {
 func ExampleRateProjectGet() {
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
 
-	req := projects.NewRateProjectGetRequest(67890) // Project ID
-	req.Filters.Include = []string{"currencies"}
+    req := projects.NewRateProjectGetRequest(67890) // Project ID
+    req.Filters.Include = []projects.RateProjectGetRequestSideload{
+        projects.RateProjectGetRequestSideloadCurrencies,
+    }
 
 	resp, err := projects.RateProjectGet(context.Background(), engine, req)
 	if err != nil {
@@ -201,8 +208,10 @@ func ExampleRateProjectUserList() {
 func ExampleRateProjectUserGet() {
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
 
-	req := projects.NewRateProjectUserGetRequest(67890, 12345) // Project ID, User ID
-	req.Filters.Include = []string{"currencies"}
+    req := projects.NewRateProjectUserGetRequest(67890, 12345) // Project ID, User ID
+    req.Filters.Include = []projects.RateProjectUserGetRequestSideload{
+        projects.RateProjectUserGetRequestSideloadCurrencies,
+    }
 
 	resp, err := projects.RateProjectUserGet(context.Background(), engine, req)
 	if err != nil {
