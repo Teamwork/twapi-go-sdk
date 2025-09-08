@@ -38,37 +38,41 @@ func ExampleRateUserGet() {
 }
 
 func ExampleRateInstallationUserList() {
-	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
+    engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
 
-	req := projects.NewRateInstallationUserListRequest()
-	req.Filters.PageSize = 10 // Get first 10 users
+    req := projects.NewRateInstallationUserListRequest()
+    req.Filters.PageSize = 10 // Get first 10 users
 
-	resp, err := projects.RateInstallationUserList(context.Background(), engine, req)
-	if err != nil {
-		fmt.Printf("Error: %s\n", err)
-		return
-	}
+    next, err := twapi.Iterate[projects.RateInstallationUserListRequest, *projects.RateInstallationUserListResponse](
+        context.Background(),
+        engine,
+        req,
+    )
+    if err != nil {
+        fmt.Printf("Error: %s\n", err)
+        return
+    }
 
-	fmt.Printf("Found %d user rates\n", len(resp.UserRates))
+    var iteration int
+    for {
+        iteration++
+        fmt.Printf("Iteration %d\n", iteration)
 
-	// Iterate through all pages
-	for {
-		for _, userRate := range resp.UserRates {
-			fmt.Printf("User %d has rate %d\n", userRate.User.ID, userRate.Rate)
-		}
-
-		// Get next page if available
-		nextReq := resp.Iterate()
-		if nextReq == nil {
-			break
-		}
-
-		resp, err = projects.RateInstallationUserList(context.Background(), engine, *nextReq)
-		if err != nil {
-			fmt.Printf("Error: %s\n", err)
-			return
-		}
-	}
+        resp, hasNext, err := next()
+        if err != nil {
+            fmt.Printf("Error: %s\n", err)
+            return
+        }
+        if resp == nil {
+            break
+        }
+        for _, userRate := range resp.UserRates {
+            fmt.Printf("User %d has rate %d\n", userRate.User.ID, userRate.Rate)
+        }
+        if !hasNext {
+            break
+        }
+    }
 }
 
 func ExampleRateInstallationUserGet() {
@@ -184,25 +188,36 @@ func ExampleRateProjectAndUsersUpdate() {
 }
 
 func ExampleRateProjectUserList() {
-	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
+    engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
 
-	req := projects.NewRateProjectUserListRequest(67890) // Project ID
-	req.Filters.SearchTerm = "john"
-	req.Filters.OrderBy = "name"
-	req.Filters.OrderMode = "asc"
-	req.Filters.PageSize = 20
+    req := projects.NewRateProjectUserListRequest(67890) // Project ID
+    req.Filters.SearchTerm = "john"
+    req.Filters.OrderBy = "name"
+    req.Filters.OrderMode = "asc"
+    req.Filters.PageSize = 20
 
-	resp, err := projects.RateProjectUserList(context.Background(), engine, req)
-	if err != nil {
-		fmt.Printf("Error: %s\n", err)
-		return
-	}
+    next, err := twapi.Iterate[projects.RateProjectUserListRequest, *projects.RateProjectUserListResponse](
+        context.Background(),
+        engine,
+        req,
+    )
+    if err != nil {
+        fmt.Printf("Error: %s\n", err)
+        return
+    }
 
-	fmt.Printf("Found %d user rates for project\n", len(resp.UserRates))
-
-	for _, userRate := range resp.UserRates {
-		fmt.Printf("User %d effective rate: %.2f\n", userRate.User.ID, userRate.EffectiveRate.Value())
-	}
+    // Pull the first page and print results
+    resp, _, err := next()
+    if err != nil {
+        fmt.Printf("Error: %s\n", err)
+        return
+    }
+    if resp != nil {
+        fmt.Printf("Found %d user rates for project\n", len(resp.UserRates))
+        for _, userRate := range resp.UserRates {
+            fmt.Printf("User %d effective rate: %.2f\n", userRate.User.ID, userRate.EffectiveRate.Value())
+        }
+    }
 }
 
 func ExampleRateProjectUserGet() {
@@ -238,73 +253,108 @@ func ExampleRateProjectUserUpdate() {
 }
 
 func ExampleRateProjectUserHistoryGet() {
-	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
+    engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
 
-	req := projects.NewRateProjectUserHistoryGetRequest(67890, 12345) // Project ID, User ID
-	req.Filters.OrderMode = "desc"                                    // Most recent first
-	req.Filters.PageSize = 10
+    req := projects.NewRateProjectUserHistoryGetRequest(67890, 12345) // Project ID, User ID
+    req.Filters.OrderMode = "desc"                                    // Most recent first
+    req.Filters.PageSize = 10
 
-	resp, err := projects.RateProjectUserHistoryGet(context.Background(), engine, req)
-	if err != nil {
-		fmt.Printf("Error: %s\n", err)
-		return
-	}
+    next, err := twapi.Iterate[projects.RateProjectUserHistoryGetRequest, *projects.RateProjectUserHistoryGetResponse](
+        context.Background(),
+        engine,
+        req,
+    )
+    if err != nil {
+        fmt.Printf("Error: %s\n", err)
+        return
+    }
 
-	fmt.Printf("Found %d historical rate entries\n", len(resp.UserRateHistory))
+    for {
+        resp, hasNext, err := next()
+        if err != nil {
+            fmt.Printf("Error: %s\n", err)
+            return
+        }
+        if resp == nil {
+            break
+        }
 
-	for _, history := range resp.UserRateHistory {
-		fmt.Printf("Rate: %.2f", history.Rate.Value())
-		if history.FromDate != nil {
-			fmt.Printf(" (effective from %s)", history.FromDate.Format("2006-01-02"))
-		}
-		if history.ToDate != nil {
-			fmt.Printf(" (until %s)", history.ToDate.Format("2006-01-02"))
-		}
-		fmt.Println()
-	}
+        for _, history := range resp.UserRateHistory {
+            fmt.Printf("Rate: %.2f", history.Rate.Value())
+            if history.FromDate != nil {
+                fmt.Printf(" (effective from %s)", history.FromDate.Format("2006-01-02"))
+            }
+            if history.ToDate != nil {
+                fmt.Printf(" (until %s)", history.ToDate.Format("2006-01-02"))
+            }
+            fmt.Println()
+        }
+
+        if !hasNext {
+            break
+        }
+    }
 }
 
 // Example of working with pagination across all pages
 func ExampleRateProjectUserList_pagination() {
-	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
+    engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
 
-	req := projects.NewRateProjectUserListRequest(67890)
-	req.Filters.PageSize = 50
+    req := projects.NewRateProjectUserListRequest(67890)
+    req.Filters.PageSize = 50
 
-	allUserRates := []projects.EffectiveUserProjectRate{}
+    allUserRates := []projects.EffectiveUserProjectRate{}
 
-	for {
-		resp, err := projects.RateProjectUserList(context.Background(), engine, req)
-		if err != nil {
-			fmt.Printf("Error: %s\n", err)
-			return
-		}
+    next, err := twapi.Iterate[projects.RateProjectUserListRequest, *projects.RateProjectUserListResponse](
+        context.Background(),
+        engine,
+        req,
+    )
+    if err != nil {
+        fmt.Printf("Error: %s\n", err)
+        return
+    }
 
-		allUserRates = append(allUserRates, resp.UserRates...)
-
-		// Check if there are more pages
-		nextReq := resp.Iterate()
-		if nextReq == nil {
-			break
-		}
-		req = *nextReq
-	}
+    for {
+        resp, hasNext, err := next()
+        if err != nil {
+            fmt.Printf("Error: %s\n", err)
+            return
+        }
+        if resp == nil {
+            break
+        }
+        allUserRates = append(allUserRates, resp.UserRates...)
+        if !hasNext {
+            break
+        }
+    }
 
 	fmt.Printf("Total user rates collected: %d\n", len(allUserRates))
 }
 
 // Example showing enhanced metadata and multi-currency features
 func ExampleRateProjectUserList_metadata() {
-	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
+    engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
 
-	req := projects.NewRateProjectUserListRequest(67890) // Project ID
-	resp, err := projects.RateProjectUserList(context.Background(), engine, req)
-	if err != nil {
-		fmt.Printf("Error: %s\n", err)
-		return
-	}
+    req := projects.NewRateProjectUserListRequest(67890) // Project ID
+    next, err := twapi.Iterate[projects.RateProjectUserListRequest, *projects.RateProjectUserListResponse](
+        context.Background(),
+        engine,
+        req,
+    )
+    if err != nil {
+        fmt.Printf("Error: %s\n", err)
+        return
+    }
 
-	fmt.Printf("Found %d user rates for project\n", len(resp.UserRates))
+    resp, _, err := next()
+    if err != nil {
+        fmt.Printf("Error: %s\n", err)
+        return
+    }
+
+    fmt.Printf("Found %d user rates for project\n", len(resp.UserRates))
 
 	for _, userRate := range resp.UserRates {
 		fmt.Printf("User %d effective rate: %.2f\n", userRate.User.ID, userRate.EffectiveRate.Value())
