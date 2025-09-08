@@ -114,15 +114,15 @@ func TestRateInstallationUserUpdate(t *testing.T) {
 		t.Skip("Skipping test because the engine is not initialized")
 	}
 
-	tests := []struct {
-		name   string
-		userID int64
-		rate   int64
-	}{{
-		name:   "update installation user rate",
-		userID: testResources.UserID,
-		rate:   int64(rand.Intn(10000) + 1000), // Random rate between 1000-11000
-	}}
+    tests := []struct {
+        name   string
+        userID int64
+        rate   twapi.Money
+    }{{
+        name:   "update installation user rate",
+        userID: testResources.UserID,
+        rate:   twapi.Money(int64(rand.Intn(10000) + 1000)), // cents
+    }}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -130,7 +130,7 @@ func TestRateInstallationUserUpdate(t *testing.T) {
 			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
-			req := projects.NewRateInstallationUserUpdateRequest(tt.userID, &tt.rate)
+        req := projects.NewRateInstallationUserUpdateRequest(tt.userID, &tt.rate)
 			resp, err := projects.RateInstallationUserUpdate(ctx, engine, req)
 			if err != nil {
 				t.Errorf("unexpected error: %s", err)
@@ -146,19 +146,19 @@ func TestRateInstallationUserBulkUpdate(t *testing.T) {
 		t.Skip("Skipping test because the engine is not initialized")
 	}
 
-	tests := []struct {
-		name string
-		req  projects.RateInstallationUserBulkUpdateRequest
-	}{{
-		name: "update specific users",
-		req: func() projects.RateInstallationUserBulkUpdateRequest {
-			rate := int64(rand.Intn(10000) + 1000)
-			return projects.RateInstallationUserBulkUpdateRequest{
-				IDs:      []int64{testResources.UserID},
-				UserRate: &rate,
-			}
-		}(),
-	}}
+    tests := []struct {
+        name string
+        req  projects.RateInstallationUserBulkUpdateRequest
+    }{{
+        name: "update specific users",
+        req: func() projects.RateInstallationUserBulkUpdateRequest {
+            rate := twapi.Money(int64(rand.Intn(10000) + 1000))
+            return projects.RateInstallationUserBulkUpdateRequest{
+                IDs:      []int64{testResources.UserID},
+                UserRate: &rate,
+            }
+        }(),
+    }}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -211,15 +211,15 @@ func TestRateProjectUpdate(t *testing.T) {
 		t.Skip("Skipping test because the engine is not initialized")
 	}
 
-	tests := []struct {
-		name      string
-		projectID int64
-		rate      int64
-	}{{
-		name:      "update project rate",
-		projectID: testResources.ProjectID,
-		rate:      int64(rand.Intn(10000) + 1000),
-	}}
+    tests := []struct {
+        name      string
+        projectID int64
+        rate      twapi.Money
+    }{{
+        name:      "update project rate",
+        projectID: testResources.ProjectID,
+        rate:      twapi.Money(int64(rand.Intn(10000) + 1000)),
+    }}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -227,7 +227,7 @@ func TestRateProjectUpdate(t *testing.T) {
 			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
-			req := projects.NewRateProjectUpdateRequest(tt.projectID, &tt.rate)
+        req := projects.NewRateProjectUpdateRequest(tt.projectID, &tt.rate)
 			resp, err := projects.RateProjectUpdate(ctx, engine, req)
 			if err != nil {
 				t.Errorf("unexpected error: %s", err)
@@ -243,15 +243,15 @@ func TestRateProjectAndUsersUpdate(t *testing.T) {
 		t.Skip("Skipping test because the engine is not initialized")
 	}
 
-	tests := []struct {
-		name      string
-		projectID int64
-		rate      int64
-	}{{
-		name:      "update project and users rate",
-		projectID: testResources.ProjectID,
-		rate:      int64(rand.Intn(10000) + 1000),
-	}}
+    tests := []struct {
+        name      string
+        projectID int64
+        rate      twapi.Money
+    }{{
+        name:      "update project and users rate",
+        projectID: testResources.ProjectID,
+        rate:      twapi.Money(int64(rand.Intn(10000) + 1000)),
+    }}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -259,7 +259,7 @@ func TestRateProjectAndUsersUpdate(t *testing.T) {
 			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
-			req := projects.NewRateProjectAndUsersUpdateRequest(tt.projectID, tt.rate)
+        req := projects.NewRateProjectAndUsersUpdateRequest(tt.projectID, tt.rate)
 			// Add user rate exceptions if needed
 			req.UserRates = []projects.ProjectUserRateRequest{
 				{
@@ -267,7 +267,7 @@ func TestRateProjectAndUsersUpdate(t *testing.T) {
 						ID:   testResources.UserID,
 						Type: "users",
 					},
-					UserRate: tt.rate + 500, // Different rate for specific user
+            UserRate: tt.rate + twapi.Money(500), // Different rate for specific user
 				},
 			}
 
@@ -364,17 +364,17 @@ func TestRateProjectUserUpdate(t *testing.T) {
 		t.Skip("Skipping test because the engine is not initialized")
 	}
 
-	tests := []struct {
-		name      string
-		projectID int64
-		userID    int64
-		rate      int64
-	}{{
-		name:      "update project user rate",
-		projectID: testResources.ProjectID,
-		userID:    testResources.UserID,
-		rate:      int64(rand.Intn(10000) + 1000),
-	}}
+    tests := []struct {
+        name      string
+        projectID int64
+        userID    int64
+        rate      twapi.Money
+    }{{
+        name:      "update project user rate",
+        projectID: testResources.ProjectID,
+        userID:    testResources.UserID,
+        rate:      twapi.Money(int64(rand.Intn(10000) + 1000)),
+    }}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -382,7 +382,7 @@ func TestRateProjectUserUpdate(t *testing.T) {
 			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
-			req := projects.NewRateProjectUserUpdateRequest(tt.projectID, tt.userID, &tt.rate)
+        req := projects.NewRateProjectUserUpdateRequest(tt.projectID, tt.userID, &tt.rate)
 			resp, err := projects.RateProjectUserUpdate(ctx, engine, req)
 			if err != nil {
 				t.Errorf("unexpected error: %s", err)
@@ -583,19 +583,19 @@ func TestRateConstructors(t *testing.T) {
 		}
 	})
 
-	t.Run("NewRateInstallationUserUpdateRequest", func(t *testing.T) {
-		rate := int64(5000)
-		req := projects.NewRateInstallationUserUpdateRequest(123, &rate)
-		if req.Path.UserID != 123 {
-			t.Errorf("expected UserID 123 but got %d", req.Path.UserID)
-		}
-		if req.CurrencyID != nil {
-			t.Errorf("expected CurrencyID to be nil but got %v", req.CurrencyID)
-		}
-		if req.UserRate == nil || *req.UserRate != 5000 {
-			t.Errorf("expected UserRate 5000 but got %v", req.UserRate)
-		}
-	})
+    t.Run("NewRateInstallationUserUpdateRequest", func(t *testing.T) {
+        rate := twapi.Money(5000)
+        req := projects.NewRateInstallationUserUpdateRequest(123, &rate)
+        if req.Path.UserID != 123 {
+            t.Errorf("expected UserID 123 but got %d", req.Path.UserID)
+        }
+        if req.CurrencyID != nil {
+            t.Errorf("expected CurrencyID to be nil but got %v", req.CurrencyID)
+        }
+        if req.UserRate == nil || *req.UserRate != twapi.Money(5000) {
+            t.Errorf("expected UserRate 5000 but got %v", req.UserRate)
+        }
+    })
 
 	t.Run("NewRateProjectGetRequest", func(t *testing.T) {
 		req := projects.NewRateProjectGetRequest(789)

@@ -94,25 +94,25 @@ func ExampleRateInstallationUserGet() {
 }
 
 func ExampleRateInstallationUserUpdate() {
-	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
+    engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
 
-	rate := int64(5000)
-	req := projects.NewRateInstallationUserUpdateRequest(12345, &rate) // User ID, Rate
-	_, err := projects.RateInstallationUserUpdate(context.Background(), engine, req)
-	if err != nil {
-		fmt.Printf("Error: %s\n", err)
-		return
-	}
+    rate := twapi.NewMoney(50.00)
+    req := projects.NewRateInstallationUserUpdateRequest(12345, &rate) // User ID, Rate
+    _, err := projects.RateInstallationUserUpdate(context.Background(), engine, req)
+    if err != nil {
+        fmt.Printf("Error: %s\n", err)
+        return
+    }
 
 	fmt.Println("User rate updated successfully")
 }
 
 func ExampleRateInstallationUserBulkUpdate() {
-	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
+    engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
 
-	rate := int64(5000)
-	req := projects.NewRateInstallationUserBulkUpdateRequest(&rate) // Rate
-	req.IDs = []int64{12345, 12346, 12347}                          // Specific user IDs to update
+    rate := twapi.NewMoney(50.00)
+    req := projects.NewRateInstallationUserBulkUpdateRequest(&rate) // Rate
+    req.IDs = []int64{12345, 12346, 12347}                          // Specific user IDs to update
 
 	resp, err := projects.RateInstallationUserBulkUpdate(context.Background(), engine, req)
 	if err != nil {
@@ -137,46 +137,46 @@ func ExampleRateProjectGet() {
 		return
 	}
 
-	fmt.Printf("Project rate: %d\n", resp.ProjectRate)
-	fmt.Printf("Rate value: %.2f\n", resp.Rate.Value())
+    fmt.Printf("Project rate: %d\n", resp.ProjectRate)
+    fmt.Printf("Rate value: %.2f\n", resp.Rate.Amount)
 }
 
 func ExampleRateProjectUpdate() {
-	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
+    engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
 
-	rate := int64(7500)
-	req := projects.NewRateProjectUpdateRequest(67890, &rate) // Project ID, Rate
-	_, err := projects.RateProjectUpdate(context.Background(), engine, req)
-	if err != nil {
-		fmt.Printf("Error: %s\n", err)
-		return
-	}
+    rate := twapi.NewMoney(75.00)
+    req := projects.NewRateProjectUpdateRequest(67890, &rate) // Project ID, Rate
+    _, err := projects.RateProjectUpdate(context.Background(), engine, req)
+    if err != nil {
+        fmt.Printf("Error: %s\n", err)
+        return
+    }
 
 	fmt.Println("Project rate updated successfully")
 }
 
 func ExampleRateProjectAndUsersUpdate() {
-	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
+    engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
 
-	req := projects.NewRateProjectAndUsersUpdateRequest(67890, 7500) // Project ID, Rate
+    req := projects.NewRateProjectAndUsersUpdateRequest(67890, twapi.NewMoney(75.00)) // Project ID, Rate
 
-	// Add user-specific rate exceptions
-	req.UserRates = []projects.ProjectUserRateRequest{
-		{
-			User: twapi.Relationship{
-				ID:   12345,
-				Type: "user",
-			},
-			UserRate: 8000, // Higher rate for this specific user
-		},
-		{
-			User: twapi.Relationship{
-				ID:   12346,
-				Type: "user",
-			},
-			UserRate: 6000, // Lower rate for this user
-		},
-	}
+    // Add user-specific rate exceptions
+    req.UserRates = []projects.ProjectUserRateRequest{
+        {
+            User: twapi.Relationship{
+                ID:   12345,
+                Type: "user",
+            },
+            UserRate: twapi.NewMoney(80.00), // Higher rate for this specific user
+        },
+        {
+            User: twapi.Relationship{
+                ID:   12346,
+                Type: "user",
+            },
+            UserRate: twapi.NewMoney(60.00), // Lower rate for this user
+        },
+    }
 
 	_, err := projects.RateProjectAndUsersUpdate(context.Background(), engine, req)
 	if err != nil {
@@ -234,20 +234,20 @@ func ExampleRateProjectUserGet() {
 		return
 	}
 
-	fmt.Printf("User rate for project: %d\n", resp.UserRate)
-	fmt.Printf("Rate value: %.2f\n", resp.Rate.Value())
+    fmt.Printf("User rate for project: %.2f\n", resp.UserRate.Amount)
+    fmt.Printf("Rate value: %.2f\n", resp.Rate.Value())
 }
 
 func ExampleRateProjectUserUpdate() {
-	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
+    engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
 
-	rate := int64(8500)
-	req := projects.NewRateProjectUserUpdateRequest(67890, 12345, &rate) // Project ID, User ID, Rate
-	resp, err := projects.RateProjectUserUpdate(context.Background(), engine, req)
-	if err != nil {
-		fmt.Printf("Error: %s\n", err)
-		return
-	}
+    rate := twapi.NewMoney(85.00)
+    req := projects.NewRateProjectUserUpdateRequest(67890, 12345, &rate) // Project ID, User ID, Rate
+    resp, err := projects.RateProjectUserUpdate(context.Background(), engine, req)
+    if err != nil {
+        fmt.Printf("Error: %s\n", err)
+        return
+    }
 
 	fmt.Printf("Updated user rate to: %d\n", resp.UserRate)
 }
