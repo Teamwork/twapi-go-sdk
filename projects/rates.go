@@ -77,6 +77,15 @@ type BillableRate struct {
 	Currency twapi.Relationship `json:"currency"`
 }
 
+// UserRateAmount represents a user rate with amount and currency information.
+type UserRateAmount struct {
+	// Amount is the rate amount.
+	Amount int64 `json:"amount"`
+
+	// Currency is the currency information.
+	Currency twapi.Relationship `json:"currency"`
+}
+
 // ProjectRate represents a project's rate information.
 type ProjectRate struct {
 	// ProjectID is the ID of the project.
@@ -402,7 +411,7 @@ type RateInstallationUserGetResponse struct {
 	UserRate int64 `json:"userRate"`
 
 	// UserRates contains rates in different currencies (key is currency ID as string for JSON compatibility).
-	UserRates map[string]twapi.Money `json:"userRates"`
+	UserRates map[string]UserRateAmount `json:"userRates"`
 
 	// Included contains related data.
 	Included struct {
