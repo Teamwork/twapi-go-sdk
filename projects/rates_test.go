@@ -117,11 +117,11 @@ func TestRateInstallationUserUpdate(t *testing.T) {
     tests := []struct {
         name   string
         userID int64
-        rate   twapi.Money
+        rate   int64
     }{{
         name:   "update installation user rate",
         userID: testResources.UserID,
-        rate:   twapi.Money(int64(rand.Intn(10000) + 1000)), // cents
+        rate:   int64(rand.Intn(10000) + 1000), // cents
     }}
 
 	for _, tt := range tests {
@@ -152,7 +152,7 @@ func TestRateInstallationUserBulkUpdate(t *testing.T) {
     }{{
         name: "update specific users",
         req: func() projects.RateInstallationUserBulkUpdateRequest {
-            rate := twapi.Money(int64(rand.Intn(10000) + 1000))
+            rate := int64(rand.Intn(10000) + 1000)
             return projects.RateInstallationUserBulkUpdateRequest{
                 IDs:      []int64{testResources.UserID},
                 UserRate: &rate,
@@ -214,11 +214,11 @@ func TestRateProjectUpdate(t *testing.T) {
     tests := []struct {
         name      string
         projectID int64
-        rate      twapi.Money
+        rate      int64
     }{{
         name:      "update project rate",
         projectID: testResources.ProjectID,
-        rate:      twapi.Money(int64(rand.Intn(10000) + 1000)),
+        rate:      int64(rand.Intn(10000) + 1000),
     }}
 
 	for _, tt := range tests {
@@ -246,11 +246,11 @@ func TestRateProjectAndUsersUpdate(t *testing.T) {
     tests := []struct {
         name      string
         projectID int64
-        rate      twapi.Money
+        rate      int64
     }{{
         name:      "update project and users rate",
         projectID: testResources.ProjectID,
-        rate:      twapi.Money(int64(rand.Intn(10000) + 1000)),
+        rate:      int64(rand.Intn(10000) + 1000),
     }}
 
 	for _, tt := range tests {
@@ -267,7 +267,7 @@ func TestRateProjectAndUsersUpdate(t *testing.T) {
 						ID:   testResources.UserID,
 						Type: "users",
 					},
-            UserRate: tt.rate + twapi.Money(500), // Different rate for specific user
+            UserRate: tt.rate + 500, // Different rate for specific user
 				},
 			}
 
@@ -368,12 +368,12 @@ func TestRateProjectUserUpdate(t *testing.T) {
         name      string
         projectID int64
         userID    int64
-        rate      twapi.Money
+        rate      int64
     }{{
         name:      "update project user rate",
         projectID: testResources.ProjectID,
         userID:    testResources.UserID,
-        rate:      twapi.Money(int64(rand.Intn(10000) + 1000)),
+        rate:      int64(rand.Intn(10000) + 1000),
     }}
 
 	for _, tt := range tests {
@@ -584,7 +584,7 @@ func TestRateConstructors(t *testing.T) {
 	})
 
     t.Run("NewRateInstallationUserUpdateRequest", func(t *testing.T) {
-        rate := twapi.Money(5000)
+        rate := 5000
         req := projects.NewRateInstallationUserUpdateRequest(123, &rate)
         if req.Path.UserID != 123 {
             t.Errorf("expected UserID 123 but got %d", req.Path.UserID)
@@ -592,7 +592,7 @@ func TestRateConstructors(t *testing.T) {
         if req.CurrencyID != nil {
             t.Errorf("expected CurrencyID to be nil but got %v", req.CurrencyID)
         }
-        if req.UserRate == nil || *req.UserRate != twapi.Money(5000) {
+        if req.UserRate == nil || *req.UserRate != 5000 {
             t.Errorf("expected UserRate 5000 but got %v", req.UserRate)
         }
     })

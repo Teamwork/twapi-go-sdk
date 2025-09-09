@@ -96,8 +96,8 @@ func ExampleRateInstallationUserGet() {
 func ExampleRateInstallationUserUpdate() {
     engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
 
-    rate := twapi.NewMoney(50.00)
-    req := projects.NewRateInstallationUserUpdateRequest(12345, &rate) // User ID, Rate
+    var rate int64 = 5000
+    req := projects.NewRateInstallationUserUpdateRequest(12345, &rate) // User ID, Rate (cents)
     _, err := projects.RateInstallationUserUpdate(context.Background(), engine, req)
     if err != nil {
         fmt.Printf("Error: %s\n", err)
@@ -110,8 +110,8 @@ func ExampleRateInstallationUserUpdate() {
 func ExampleRateInstallationUserBulkUpdate() {
     engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
 
-    rate := twapi.NewMoney(50.00)
-    req := projects.NewRateInstallationUserBulkUpdateRequest(&rate) // Rate
+    var rate int64 = 5000
+    req := projects.NewRateInstallationUserBulkUpdateRequest(&rate) // Rate (cents)
     req.IDs = []int64{12345, 12346, 12347}                          // Specific user IDs to update
 
 	resp, err := projects.RateInstallationUserBulkUpdate(context.Background(), engine, req)
@@ -144,8 +144,8 @@ func ExampleRateProjectGet() {
 func ExampleRateProjectUpdate() {
     engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
 
-    rate := twapi.NewMoney(75.00)
-    req := projects.NewRateProjectUpdateRequest(67890, &rate) // Project ID, Rate
+    var rate int64 = 7500
+    req := projects.NewRateProjectUpdateRequest(67890, &rate) // Project ID, Rate (cents)
     _, err := projects.RateProjectUpdate(context.Background(), engine, req)
     if err != nil {
         fmt.Printf("Error: %s\n", err)
@@ -158,7 +158,7 @@ func ExampleRateProjectUpdate() {
 func ExampleRateProjectAndUsersUpdate() {
     engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
 
-    req := projects.NewRateProjectAndUsersUpdateRequest(67890, twapi.NewMoney(75.00)) // Project ID, Rate
+    req := projects.NewRateProjectAndUsersUpdateRequest(67890, int64(7500)) // Project ID, Rate (cents)
 
     // Add user-specific rate exceptions
     req.UserRates = []projects.ProjectUserRateRequest{
@@ -167,14 +167,14 @@ func ExampleRateProjectAndUsersUpdate() {
                 ID:   12345,
                 Type: "user",
             },
-            UserRate: twapi.NewMoney(80.00), // Higher rate for this specific user
+            UserRate: int64(8000), // Higher rate for this specific user (cents)
         },
         {
             User: twapi.Relationship{
                 ID:   12346,
                 Type: "user",
             },
-            UserRate: twapi.NewMoney(60.00), // Lower rate for this user
+            UserRate: int64(6000), // Lower rate for this user (cents)
         },
     }
 
@@ -215,7 +215,7 @@ func ExampleRateProjectUserList() {
 	if resp != nil {
 		fmt.Printf("Found %d user rates for project\n", len(resp.UserRates))
 		for _, userRate := range resp.UserRates {
-			fmt.Printf("User %d effective rate: %.2f\n", userRate.User.ID, userRate.EffectiveRate.Value())
+			fmt.Printf("User %d effective rate: %d\n", userRate.User.ID, userRate.EffectiveRate)
 		}
 	}
 }
@@ -235,14 +235,14 @@ func ExampleRateProjectUserGet() {
 	}
 
     fmt.Printf("User rate for project: %.2f\n", resp.UserRate.Amount)
-    fmt.Printf("Rate value: %.2f\n", resp.Rate.Value())
+    fmt.Printf("Rate value: %d\n", resp.Rate)
 }
 
 func ExampleRateProjectUserUpdate() {
     engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
 
-    rate := twapi.NewMoney(85.00)
-    req := projects.NewRateProjectUserUpdateRequest(67890, 12345, &rate) // Project ID, User ID, Rate
+    var rate int64 = 8500
+    req := projects.NewRateProjectUserUpdateRequest(67890, 12345, &rate) // Project ID, User ID, Rate (cents)
     resp, err := projects.RateProjectUserUpdate(context.Background(), engine, req)
     if err != nil {
         fmt.Printf("Error: %s\n", err)
@@ -280,7 +280,7 @@ func ExampleRateProjectUserHistoryGet() {
 		}
 
 		for _, history := range resp.UserRateHistory {
-			fmt.Printf("Rate: %.2f", history.Rate.Value())
+			fmt.Printf("Rate: %d", history.Rate)
 			if history.FromDate != nil {
 				fmt.Printf(" (effective from %s)", history.FromDate.Format("2006-01-02"))
 			}
@@ -357,7 +357,7 @@ func ExampleRateProjectUserList_metadata() {
 	fmt.Printf("Found %d user rates for project\n", len(resp.UserRates))
 
 	for _, userRate := range resp.UserRates {
-		fmt.Printf("User %d effective rate: %.2f\n", userRate.User.ID, userRate.EffectiveRate.Value())
+		fmt.Printf("User %d effective rate: %d\n", userRate.User.ID, userRate.EffectiveRate)
 
 		// Show rate source information
 		if userRate.Source != nil {

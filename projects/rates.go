@@ -91,7 +91,7 @@ type ProjectRate struct {
 	ProjectID int64 `json:"projectId"`
 
 	// Rate is the rate amount.
-	Rate twapi.Money `json:"rate"`
+    Rate int64 `json:"rate"`
 
 	// Currency is the currency information.
 	Currency Currency `json:"currency"`
@@ -103,7 +103,7 @@ type UserProjectRate struct {
 	Project twapi.Relationship `json:"project"`
 
 	// UserRate is the rate amount.
-	UserRate twapi.Money `json:"userRate"`
+    UserRate int64 `json:"userRate"`
 }
 
 // RateUserGetRequestPath contains the path parameters for getting a user's rates.
@@ -208,13 +208,13 @@ type RateUserGetResponse struct {
 	ProjectRates []UserProjectRate `json:"projectRates"`
 
 	// InstallationRate is the user's installation rate (optional).
-	InstallationRate *twapi.Money `json:"installationRate,omitempty"`
+    InstallationRate *int64 `json:"installationRate,omitempty"`
 
 	// InstallationRates contains rates in different currencies (optional).
-	InstallationRates map[int64]twapi.Money `json:"installationRates,omitempty"`
+    InstallationRates map[int64]int64 `json:"installationRates,omitempty"`
 
 	// UserCost is the user's cost (optional).
-	UserCost *twapi.Money `json:"userCost,omitempty"`
+    UserCost *int64 `json:"userCost,omitempty"`
 
 	// Meta contains pagination information.
 	Meta struct {
@@ -316,10 +316,10 @@ type RateInstallationUserListResponse struct {
 	} `json:"meta"`
 
 	// UserRates contains the list of user rates.
-	UserRates []struct {
-		User twapi.Relationship `json:"user"`
-		Rate twapi.Money        `json:"rate"`
-	} `json:"userRates"`
+    UserRates []struct {
+        User twapi.Relationship `json:"user"`
+        Rate int64              `json:"rate"`
+    } `json:"userRates"`
 
 	InstallationUserRates map[int64]MultiCurrencyInstallationUserRate `json:"installationUserRates"`
 
@@ -424,8 +424,8 @@ func (r RateInstallationUserGetRequest) HTTPRequest(ctx context.Context, server 
 
 // RateInstallationUserGetResponse represents the response for getting an installation user rate.
 type RateInstallationUserGetResponse struct {
-	// UserRate is the user's rate (legacy field).
-	UserRate twapi.Money `json:"userRate"`
+    // UserRate is the user's rate (legacy field).
+    UserRate int64 `json:"userRate"`
 
 	// UserRates contains rates in different currencies (key is currency ID as string for JSON compatibility).
 	UserRates map[string]MultiCurrencyRate `json:"userRates"`
@@ -471,12 +471,12 @@ type RateInstallationUserUpdateRequest struct {
 	// CurrencyID is the ID of the currency for the rate (optional, only used in multi-currency mode).
 	CurrencyID *int64 `json:"currencyId,omitempty"`
 
-	// UserRate is the new rate for the user. Use nil to clear/remove the rate.
-	UserRate *twapi.Money `json:"userRate"`
+    // UserRate is the new rate for the user. Use nil to clear/remove the rate.
+    UserRate *int64 `json:"userRate"`
 }
 
 // NewRateInstallationUserUpdateRequest creates a new RateInstallationUserUpdateRequest.
-func NewRateInstallationUserUpdateRequest(userID int64, rate *twapi.Money) RateInstallationUserUpdateRequest {
+func NewRateInstallationUserUpdateRequest(userID int64, rate *int64) RateInstallationUserUpdateRequest {
 	return RateInstallationUserUpdateRequest{
 		Path: RateInstallationUserUpdateRequestPath{
 			UserID: userID,
@@ -537,12 +537,12 @@ type RateInstallationUserBulkUpdateRequest struct {
 	// CurrencyID is the ID of the currency for the rate (optional, only used in multi-currency mode).
 	CurrencyID *int64 `json:"currencyId,omitempty"`
 
-	// UserRate is the new rate for the users. Use nil to clear/remove the rate.
-	UserRate *twapi.Money `json:"userRate"`
+    // UserRate is the new rate for the users. Use nil to clear/remove the rate.
+    UserRate *int64 `json:"userRate"`
 }
 
 // NewRateInstallationUserBulkUpdateRequest creates a new RateInstallationUserBulkUpdateRequest.
-func NewRateInstallationUserBulkUpdateRequest(rate *twapi.Money) RateInstallationUserBulkUpdateRequest {
+func NewRateInstallationUserBulkUpdateRequest(rate *int64) RateInstallationUserBulkUpdateRequest {
 	return RateInstallationUserBulkUpdateRequest{
 		UserRate: rate,
 	}
@@ -577,8 +577,8 @@ type RateInstallationUserBulkUpdateResponse struct {
 	// ExcludeIDs contains user IDs that were excluded.
 	ExcludeIDs []int64 `json:"excludeIds"`
 
-	// Rate is the rate that was set.
-	Rate twapi.Money `json:"rate"`
+    // Rate is the rate that was set.
+    Rate int64 `json:"rate"`
 }
 
 // HandleHTTPResponse handles the HTTP response for the RateInstallationUserBulkUpdateResponse.
@@ -661,8 +661,8 @@ func (r RateProjectGetRequest) HTTPRequest(ctx context.Context, server string) (
 
 // RateProjectGetResponse represents the response for getting a project rate.
 type RateProjectGetResponse struct {
-	// ProjectRate is the project's rate.
-	ProjectRate twapi.Money `json:"projectRate"`
+    // ProjectRate is the project's rate.
+    ProjectRate int64 `json:"projectRate"`
 
 	// Rate is the rate in money format.
 	Rate MultiCurrencyRate `json:"rate"`
@@ -706,11 +706,11 @@ type RateProjectUpdateRequest struct {
 	Path RateProjectUpdateRequestPath `json:"-"`
 
 	// ProjectRate is the new rate for the project. Use nil to clear/remove the rate.
-	ProjectRate *twapi.Money `json:"projectRate"`
+    ProjectRate *int64 `json:"projectRate"`
 }
 
 // NewRateProjectUpdateRequest creates a new RateProjectUpdateRequest.
-func NewRateProjectUpdateRequest(projectID int64, rate *twapi.Money) RateProjectUpdateRequest {
+func NewRateProjectUpdateRequest(projectID int64, rate *int64) RateProjectUpdateRequest {
 	return RateProjectUpdateRequest{
 		Path: RateProjectUpdateRequestPath{
 			ProjectID: projectID,
@@ -765,8 +765,8 @@ type ProjectUserRateRequest struct {
 	// User is the user relationship.
 	User twapi.Relationship `json:"user"`
 
-	// UserRate is the rate for the user.
-	UserRate twapi.Money `json:"userRate"`
+    // UserRate is the rate for the user.
+    UserRate int64 `json:"userRate"`
 }
 
 // RateProjectAndUsersUpdateRequestPath contains the path parameters for updating a project and user rates.
@@ -780,15 +780,15 @@ type RateProjectAndUsersUpdateRequest struct {
 	// Path contains the path parameters for the request.
 	Path RateProjectAndUsersUpdateRequestPath `json:"-"`
 
-	// ProjectRate is the new rate for the project.
-	ProjectRate twapi.Money `json:"projectRate"`
+    // ProjectRate is the new rate for the project.
+    ProjectRate int64 `json:"projectRate"`
 
 	// UserRates contains the user rates to set as exceptions.
 	UserRates []ProjectUserRateRequest `json:"userRates,omitempty"`
 }
 
 // NewRateProjectAndUsersUpdateRequest creates a new RateProjectAndUsersUpdateRequest.
-func NewRateProjectAndUsersUpdateRequest(projectID int64, projectRate twapi.Money) RateProjectAndUsersUpdateRequest {
+func NewRateProjectAndUsersUpdateRequest(projectID int64, projectRate int64) RateProjectAndUsersUpdateRequest {
 	return RateProjectAndUsersUpdateRequest{
 		Path: RateProjectAndUsersUpdateRequestPath{
 			ProjectID: projectID,
@@ -917,17 +917,17 @@ type EffectiveUserProjectRate struct {
 	// User is the user relationship.
 	User twapi.Relationship `json:"user"`
 
-	// EffectiveRate is the effective rate.
-	EffectiveRate twapi.Money `json:"effectiveRate"`
+    // EffectiveRate is the effective rate.
+    EffectiveRate int64 `json:"effectiveRate"`
 
-	// UserProjectRate is the user's project-specific rate.
-	UserProjectRate *twapi.Money `json:"userProjectRate,omitempty"`
+    // UserProjectRate is the user's project-specific rate.
+    UserProjectRate *int64 `json:"userProjectRate,omitempty"`
 
-	// UserInstallationRate is the user's installation rate.
-	UserInstallationRate *twapi.Money `json:"userInstallationRate,omitempty"`
+    // UserInstallationRate is the user's installation rate.
+    UserInstallationRate *int64 `json:"userInstallationRate,omitempty"`
 
-	// ProjectRate is the project's default rate.
-	ProjectRate *twapi.Money `json:"projectRate,omitempty"`
+    // ProjectRate is the project's default rate.
+    ProjectRate *int64 `json:"projectRate,omitempty"`
 
 	// Source indicates the source of the effective rate.
 	Source *EffectiveRateSource `json:"source,omitempty"`
@@ -1068,11 +1068,11 @@ func (r RateProjectUserGetRequest) HTTPRequest(ctx context.Context, server strin
 
 // RateProjectUserGetResponse represents the response for getting a project user rate.
 type RateProjectUserGetResponse struct {
-	// UserRate is the user's rate.
-	UserRate MultiCurrencyRate `json:"userRate"`
+    // UserRate is the user's rate.
+    UserRate MultiCurrencyRate `json:"userRate"`
 
-	// Rate is the rate in money format.
-	Rate twapi.Money `json:"rate"`
+    // Rate is the rate in money format.
+    Rate int64 `json:"rate"`
 
 	// Included contains related data.
 	Included struct {
@@ -1118,12 +1118,12 @@ type RateProjectUserUpdateRequest struct {
 	// CurrencyID is the ID of the currency for the rate (optional, only used in multi-currency mode).
 	CurrencyID *int64 `json:"currencyId,omitempty"`
 
-	// UserRate is the new rate for the user. Use nil to clear/remove the rate.
-	UserRate *twapi.Money `json:"userRate"`
+    // UserRate is the new rate for the user. Use nil to clear/remove the rate.
+    UserRate *int64 `json:"userRate"`
 }
 
 // NewRateProjectUserUpdateRequest creates a new RateProjectUserUpdateRequest.
-func NewRateProjectUserUpdateRequest(projectID int64, userID int64, rate *twapi.Money) RateProjectUserUpdateRequest {
+func NewRateProjectUserUpdateRequest(projectID int64, userID int64, rate *int64) RateProjectUserUpdateRequest {
 	return RateProjectUserUpdateRequest{
 		Path: RateProjectUserUpdateRequestPath{
 			ProjectID: projectID,
@@ -1153,11 +1153,11 @@ func (r RateProjectUserUpdateRequest) HTTPRequest(ctx context.Context, server st
 
 // RateProjectUserUpdateResponse represents the response for updating a project user rate.
 type RateProjectUserUpdateResponse struct {
-	// UserRate is the user's updated rate.
-	UserRate twapi.Money `json:"userRate"`
+    // UserRate is the user's updated rate.
+    UserRate int64 `json:"userRate"`
 
-	// Rate is the rate in money format.
-	Rate twapi.Money `json:"rate"`
+    // Rate is the rate in money format.
+    Rate int64 `json:"rate"`
 
 	// Included contains related data.
 	Included struct {
@@ -1282,8 +1282,8 @@ func (r RateProjectUserHistoryGetRequest) HTTPRequest(ctx context.Context, serve
 
 // UserRateHistory represents a historical rate entry for a user.
 type UserRateHistory struct {
-	// Rate is the rate amount.
-	Rate twapi.Money `json:"rate"`
+    // Rate is the rate amount.
+    Rate int64 `json:"rate"`
 
 	// FromDate is the date from which this rate was effective.
 	FromDate *time.Time `json:"fromDate"`
