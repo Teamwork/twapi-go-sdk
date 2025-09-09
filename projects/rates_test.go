@@ -584,7 +584,7 @@ func TestRateConstructors(t *testing.T) {
 	})
 
     t.Run("NewRateInstallationUserUpdateRequest", func(t *testing.T) {
-        rate := 5000
+        var rate int64 = 5000
         req := projects.NewRateInstallationUserUpdateRequest(123, &rate)
         if req.Path.UserID != 123 {
             t.Errorf("expected UserID 123 but got %d", req.Path.UserID)
