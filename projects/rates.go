@@ -209,17 +209,17 @@ type RateUserGetResponse struct {
 	// ProjectRates contains project-specific rates.
 	ProjectRates []UserProjectRate `json:"projectRates"`
 
-    // InstallationRate is the user's installation rate (optional) as a
-    // monetary amount in the smallest currency unit (e.g., cents).
-    InstallationRate *int64 `json:"installationRate,omitempty"`
+	// InstallationRate is the user's installation rate (optional) as a
+	// monetary amount in the smallest currency unit (e.g., cents).
+	InstallationRate *int64 `json:"installationRate,omitempty"`
 
-    // InstallationRates contains rates in different currencies (optional)
-    // as monetary amounts in the smallest currency unit (e.g., cents).
-    InstallationRates map[int64]int64 `json:"installationRates,omitempty"`
+	// InstallationRates contains rates in different currencies (optional)
+	// as monetary amounts in the smallest currency unit (e.g., cents).
+	InstallationRates map[int64]int64 `json:"installationRates,omitempty"`
 
-    // UserCost is the user's cost (optional) as a monetary amount in the
-    // smallest currency unit (e.g., cents).
-    UserCost *int64 `json:"userCost,omitempty"`
+	// UserCost is the user's cost (optional) as a monetary amount in the
+	// smallest currency unit (e.g., cents).
+	UserCost *int64 `json:"userCost,omitempty"`
 
 	// Meta contains pagination information.
 	Meta struct {
@@ -320,13 +320,13 @@ type RateInstallationUserListResponse struct {
 		} `json:"page"`
 	} `json:"meta"`
 
-    // UserRates contains the list of user rates.
-    UserRates []struct {
-        User twapi.Relationship `json:"user"`
-        // Rate is the monetary amount in the smallest currency unit
-        // (e.g., cents). For example, €10.00 is represented as 1000.
-        Rate int64 `json:"rate"`
-    } `json:"userRates"`
+	// UserRates contains the list of user rates.
+	UserRates []struct {
+		User twapi.Relationship `json:"user"`
+		// Rate is the monetary amount in the smallest currency unit
+		// (e.g., cents). For example, €10.00 is represented as 1000.
+		Rate int64 `json:"rate"`
+	} `json:"userRates"`
 
 	InstallationUserRates map[int64]MultiCurrencyInstallationUserRate `json:"installationUserRates"`
 
@@ -431,12 +431,12 @@ func (r RateInstallationUserGetRequest) HTTPRequest(ctx context.Context, server 
 
 // RateInstallationUserGetResponse represents the response for getting an installation user rate.
 type RateInstallationUserGetResponse struct {
-    // UserRate is the user's rate (legacy field) as a monetary amount in the
-    // smallest currency unit (e.g., cents).
-    UserRate int64 `json:"userRate"`
+	// UserRate is the user's rate (legacy field) as a monetary amount in the
+	// smallest currency unit (e.g., cents).
+	UserRate int64 `json:"userRate"`
 
 	// UserRates contains rates in different currencies (key is currency ID as string for JSON compatibility).
-	UserRates map[string]MultiCurrencyRate `json:"userRates"`
+	UserRates map[string]MultiCurrencyRate `json:"userRates,omitempty"`
 
 	// Included contains related data.
 	Included struct {
@@ -479,9 +479,9 @@ type RateInstallationUserUpdateRequest struct {
 	// CurrencyID is the ID of the currency for the rate (optional, only used in multi-currency mode).
 	CurrencyID *int64 `json:"currencyId,omitempty"`
 
-    // UserRate is the new rate for the user as a monetary amount in the
-    // smallest currency unit (e.g., cents). Use nil to clear/remove the rate.
-    UserRate *int64 `json:"userRate"`
+	// UserRate is the new rate for the user as a monetary amount in the
+	// smallest currency unit (e.g., cents). Use nil to clear/remove the rate.
+	UserRate *int64 `json:"userRate"`
 }
 
 // NewRateInstallationUserUpdateRequest creates a new RateInstallationUserUpdateRequest.
@@ -548,9 +548,9 @@ type RateInstallationUserBulkUpdateRequest struct {
 	// CurrencyID is the ID of the currency for the rate (optional, only used in multi-currency mode).
 	CurrencyID *int64 `json:"currencyId,omitempty"`
 
-    // UserRate is the new rate for the users as a monetary amount in the
-    // smallest currency unit (e.g., cents). Use nil to clear/remove the rate.
-    UserRate *int64 `json:"userRate"`
+	// UserRate is the new rate for the users as a monetary amount in the
+	// smallest currency unit (e.g., cents). Use nil to clear/remove the rate.
+	UserRate *int64 `json:"userRate"`
 }
 
 // NewRateInstallationUserBulkUpdateRequest creates a new RateInstallationUserBulkUpdateRequest.
@@ -591,9 +591,9 @@ type RateInstallationUserBulkUpdateResponse struct {
 	// ExcludeIDs contains user IDs that were excluded.
 	ExcludeIDs []int64 `json:"excludeIds"`
 
-    // Rate is the rate that was set, as a monetary amount in the smallest
-    // currency unit (e.g., cents).
-    Rate int64 `json:"rate"`
+	// Rate is the rate that was set, as a monetary amount in the smallest
+	// currency unit (e.g., cents).
+	Rate int64 `json:"rate"`
 }
 
 // HandleHTTPResponse handles the HTTP response for the RateInstallationUserBulkUpdateResponse.
@@ -676,12 +676,12 @@ func (r RateProjectGetRequest) HTTPRequest(ctx context.Context, server string) (
 
 // RateProjectGetResponse represents the response for getting a project rate.
 type RateProjectGetResponse struct {
-    // ProjectRate is the project's rate as a monetary amount in the smallest
-    // currency unit (e.g., cents).
-    ProjectRate int64 `json:"projectRate"`
+	// ProjectRate is the project's rate as a monetary amount in the smallest
+	// currency unit (e.g., cents).
+	ProjectRate int64 `json:"projectRate"`
 
 	// Rate is the rate in money format.
-	Rate MultiCurrencyRate `json:"rate"`
+	Rate *MultiCurrencyRate `json:"rate,omitempty"`
 
 	// Included contains related data.
 	Included struct {
@@ -783,9 +783,9 @@ type ProjectUserRateRequest struct {
 	// User is the user relationship.
 	User twapi.Relationship `json:"user"`
 
-    // UserRate is the rate for the user as a monetary amount in the smallest
-    // currency unit (e.g., cents).
-    UserRate int64 `json:"userRate"`
+	// UserRate is the rate for the user as a monetary amount in the smallest
+	// currency unit (e.g., cents).
+	UserRate int64 `json:"userRate"`
 }
 
 // RateProjectAndUsersUpdateRequestPath contains the path parameters for updating a project and user rates.
@@ -799,9 +799,9 @@ type RateProjectAndUsersUpdateRequest struct {
 	// Path contains the path parameters for the request.
 	Path RateProjectAndUsersUpdateRequestPath `json:"-"`
 
-    // ProjectRate is the new rate for the project as a monetary amount in the
-    // smallest currency unit (e.g., cents).
-    ProjectRate int64 `json:"projectRate"`
+	// ProjectRate is the new rate for the project as a monetary amount in the
+	// smallest currency unit (e.g., cents).
+	ProjectRate int64 `json:"projectRate"`
 
 	// UserRates contains the user rates to set as exceptions.
 	UserRates []ProjectUserRateRequest `json:"userRates,omitempty"`
@@ -939,21 +939,21 @@ type EffectiveUserProjectRate struct {
 	// User is the user relationship.
 	User twapi.Relationship `json:"user"`
 
-    // EffectiveRate is the effective rate as a monetary amount in the smallest
-    // currency unit (e.g., cents).
-    EffectiveRate int64 `json:"effectiveRate"`
+	// EffectiveRate is the effective rate as a monetary amount in the smallest
+	// currency unit (e.g., cents).
+	EffectiveRate int64 `json:"effectiveRate"`
 
-    // UserProjectRate is the user's project-specific rate as a monetary amount
-    // in the smallest currency unit (e.g., cents).
-    UserProjectRate *int64 `json:"userProjectRate,omitempty"`
+	// UserProjectRate is the user's project-specific rate as a monetary amount
+	// in the smallest currency unit (e.g., cents).
+	UserProjectRate *int64 `json:"userProjectRate,omitempty"`
 
-    // UserInstallationRate is the user's installation rate as a monetary amount
-    // in the smallest currency unit (e.g., cents).
-    UserInstallationRate *int64 `json:"userInstallationRate,omitempty"`
+	// UserInstallationRate is the user's installation rate as a monetary amount
+	// in the smallest currency unit (e.g., cents).
+	UserInstallationRate *int64 `json:"userInstallationRate,omitempty"`
 
-    // ProjectRate is the project's default rate as a monetary amount in the
-    // smallest currency unit (e.g., cents).
-    ProjectRate *int64 `json:"projectRate,omitempty"`
+	// ProjectRate is the project's default rate as a monetary amount in the
+	// smallest currency unit (e.g., cents).
+	ProjectRate *int64 `json:"projectRate,omitempty"`
 
 	// Source indicates the source of the effective rate.
 	Source *EffectiveRateSource `json:"source,omitempty"`
@@ -1094,12 +1094,12 @@ func (r RateProjectUserGetRequest) HTTPRequest(ctx context.Context, server strin
 
 // RateProjectUserGetResponse represents the response for getting a project user rate.
 type RateProjectUserGetResponse struct {
-    // UserRate is the user's rate.
-    UserRate MultiCurrencyRate `json:"userRate"`
+	// UserRate is the user's rate.
+	UserRate *MultiCurrencyRate `json:"rate,omitempty"`
 
-    // Rate is the rate as a monetary amount in the smallest currency unit
-    // (e.g., cents).
-    Rate int64 `json:"rate"`
+	// Rate is the rate as a monetary amount in the smallest currency unit
+	// (e.g., cents).
+	Rate int64 `json:"userRate"`
 
 	// Included contains related data.
 	Included struct {
@@ -1145,9 +1145,9 @@ type RateProjectUserUpdateRequest struct {
 	// CurrencyID is the ID of the currency for the rate (optional, only used in multi-currency mode).
 	CurrencyID *int64 `json:"currencyId,omitempty"`
 
-    // UserRate is the new rate for the user as a monetary amount in the
-    // smallest currency unit (e.g., cents). Use nil to clear/remove the rate.
-    UserRate *int64 `json:"userRate"`
+	// UserRate is the new rate for the user as a monetary amount in the
+	// smallest currency unit (e.g., cents). Use nil to clear/remove the rate.
+	UserRate *int64 `json:"userRate"`
 }
 
 // NewRateProjectUserUpdateRequest creates a new request. Rate should be provided
@@ -1182,13 +1182,13 @@ func (r RateProjectUserUpdateRequest) HTTPRequest(ctx context.Context, server st
 
 // RateProjectUserUpdateResponse represents the response for updating a project user rate.
 type RateProjectUserUpdateResponse struct {
-    // UserRate is the user's updated rate as a monetary amount in the smallest
-    // currency unit (e.g., cents).
-    UserRate int64 `json:"userRate"`
+	// UserRate is the user's updated rate as a monetary amount in the smallest
+	// currency unit (e.g., cents).
+	UserRate int64 `json:"userRate"`
 
-    // Rate is the rate as a monetary amount in the smallest currency unit
-    // (e.g., cents).
-    Rate int64 `json:"rate"`
+	// Rate is the rate as a monetary amount in the smallest currency unit
+	// (e.g., cents).
+	Rate int64 `json:"rate"`
 
 	// Included contains related data.
 	Included struct {
@@ -1313,9 +1313,9 @@ func (r RateProjectUserHistoryGetRequest) HTTPRequest(ctx context.Context, serve
 
 // UserRateHistory represents a historical rate entry for a user.
 type UserRateHistory struct {
-    // Rate is the rate amount as a monetary amount in the smallest currency
-    // unit (e.g., cents).
-    Rate int64 `json:"rate"`
+	// Rate is the rate amount as a monetary amount in the smallest currency
+	// unit (e.g., cents).
+	Rate int64 `json:"rate"`
 
 	// FromDate is the date from which this rate was effective.
 	FromDate *time.Time `json:"fromDate"`
