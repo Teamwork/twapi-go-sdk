@@ -144,15 +144,15 @@ type Money int64
 
 // Set sets the value of Money from a float64.
 func (m *Money) Set(value float64) {
-    *m = Money(value * 100)
+	*m = Money(value * 100)
 }
 
 // Value returns the value of Money as a float64.
 func (m Money) Value() float64 {
-    return float64(m) / 100
+	return float64(m) / 100
 }
 
 // NewMoney creates a Money from a float64 value (in major units).
 func NewMoney(value float64) Money {
-    return Money(value * 100)
+	return Money(value * 100)
 }
