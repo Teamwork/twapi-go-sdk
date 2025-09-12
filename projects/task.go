@@ -70,12 +70,20 @@ type Task struct {
 	// Tasklist is the relationship to the tasklist containing this task.
 	Tasklist twapi.Relationship `json:"tasklist"`
 
+	// ParentTask is the relationship to the parent task, if this task is a
+	// subtask.
+	ParentTask *twapi.Relationship `json:"parentTask"`
+
 	// Assignees is the list of users, teams or clients/companies assigned to this
 	// task.
 	Assignees []twapi.Relationship `json:"assignees"`
 
 	// Tags is the list of tags associated with this task.
 	Tags []twapi.Relationship `json:"tags"`
+
+	// Predecessors is the list of tasks that must be completed before this task
+	// can be started or completed.
+	Predecessors []twapi.Relationship `json:"predecessors"`
 
 	// CreatedBy is the ID of the user who created the task.
 	CreatedBy *int64 `json:"createdBy"`
@@ -107,6 +115,28 @@ type Task struct {
 	// Status is the status of the task. It can be "new", "reopened", "completed"
 	// or "deleted".
 	Status string `json:"status"`
+}
+
+// TaskPredecessorType defines the predecessor constraint type
+type TaskPredecessorType string
+
+const (
+	// TaskPredecessorTypeStart must start before task.
+	TaskPredecessorTypeStart TaskPredecessorType = "start"
+	// TaskPredecessorTypeFinish must finish before task.
+	TaskPredecessorTypeFinish TaskPredecessorType = "complete"
+)
+
+// TaskPredecessor represents a task predecessor with its type. This is used
+// when creating or updating a task to set a dependency on another task. That
+// means the task cannot be started or completed until the predecessor task is
+// completed, depending on the type.
+type TaskPredecessor struct {
+	// ID is the unique identifier of the predecessor task.
+	ID int64 `json:"id"`
+
+	// Type is the type of predecessor constraint.
+	Type TaskPredecessorType `json:"type"`
 }
 
 // TaskUpdateRequestPath contains the path parameters for creating a
@@ -147,12 +177,19 @@ type TaskCreateRequest struct {
 	// EstimatedMinutes is the estimated time to complete the task, in minutes.
 	EstimatedMinutes *int64 `json:"estimatedMinutes,omitempty"`
 
+	// ParentTaskID is the identifier of the parent task, if this task is a
+	// subtask.
+	ParentTaskID *int64 `json:"parentTaskId,omitempty"`
+
 	// Assignees is the list of users, teams or clients/companies assigned to this
 	// task.
 	Assignees *UserGroups `json:"assignees,omitempty"`
 
 	// TagIDs is the list of tag IDs associated with this task.
 	TagIDs []int64 `json:"tagIds,omitempty"`
+
+	// Predecessors is the list of task predecessors associated with this task.
+	Predecessors []TaskPredecessor `json:"-"`
 }
 
 // NewTaskCreateRequest creates a new TaskCreateRequest with the provided name
@@ -171,8 +208,12 @@ func (t TaskCreateRequest) HTTPRequest(ctx context.Context, server string) (*htt
 	uri := fmt.Sprintf("%s/projects/api/v3/tasklists/%d/tasks.json", server, t.Path.TasklistID)
 
 	payload := struct {
-		Task TaskCreateRequest `json:"task"`
-	}{Task: t}
+		Task         TaskCreateRequest `json:"task"`
+		Predecessors []TaskPredecessor `json:"predecessors,omitempty"`
+	}{
+		Task:         t,
+		Predecessors: t.Predecessors,
+	}
 
 	var body bytes.Buffer
 	if err := json.NewEncoder(&body).Encode(payload); err != nil {
@@ -263,12 +304,19 @@ type TaskUpdateRequest struct {
 	// provided, the task will be moved to this tasklist.
 	TasklistID *int64 `json:"tasklistId,omitempty"`
 
+	// ParentTaskID is the identifier of the parent task, if this task is a
+	// subtask. If provided, the task will be moved under this parent task.
+	ParentTaskID *int64 `json:"parentTaskId,omitempty"`
+
 	// Assignees is the list of users, teams or clients/companies assigned to this
 	// task.
 	Assignees *UserGroups `json:"assignees,omitempty"`
 
 	// TagIDs is the list of tag IDs associated with this task.
 	TagIDs []int64 `json:"tagIds,omitempty"`
+
+	// Predecessors is the list of task predecessors associated with this task.
+	Predecessors []TaskPredecessor `json:"-"`
 }
 
 // NewTaskUpdateRequest creates a new TaskUpdateRequest with the
@@ -286,8 +334,12 @@ func (t TaskUpdateRequest) HTTPRequest(ctx context.Context, server string) (*htt
 	uri := server + "/projects/api/v3/tasks/" + strconv.FormatInt(t.Path.ID, 10) + ".json"
 
 	payload := struct {
-		Task TaskUpdateRequest `json:"task"`
-	}{Task: t}
+		Task         TaskUpdateRequest `json:"task"`
+		Predecessors []TaskPredecessor `json:"predecessors,omitempty"`
+	}{
+		Task:         t,
+		Predecessors: t.Predecessors,
+	}
 
 	var body bytes.Buffer
 	if err := json.NewEncoder(&body).Encode(payload); err != nil {

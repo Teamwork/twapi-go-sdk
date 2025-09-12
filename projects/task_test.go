@@ -16,6 +16,12 @@ func TestTaskCreate(t *testing.T) {
 		t.Skip("Skipping test because the engine is not initialized")
 	}
 
+	parentTaskID, parentTaskCleanup, err := createTask(t, testResources.TasklistID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(parentTaskCleanup)
+
 	tests := []struct {
 		name  string
 		input projects.TaskCreateRequest
@@ -38,10 +44,14 @@ func TestTaskCreate(t *testing.T) {
 			StartAt:          twapi.Ptr(twapi.Date(time.Now().Add(24 * time.Hour))),
 			DueAt:            twapi.Ptr(twapi.Date(time.Now().Add(48 * time.Hour))),
 			EstimatedMinutes: twapi.Ptr(int64(120)),
+			ParentTaskID:     &parentTaskID,
 			Assignees: &projects.UserGroups{
 				UserIDs: []int64{testResources.UserID},
 			},
 			TagIDs: []int64{testResources.TagID},
+			Predecessors: []projects.TaskPredecessor{
+				{ID: testResources.TaskID, Type: projects.TaskPredecessorTypeFinish},
+			},
 		},
 	}}
 
@@ -82,6 +92,12 @@ func TestTaskUpdate(t *testing.T) {
 	}
 	t.Cleanup(taskCleanup)
 
+	parentTaskID, parentTaskCleanup, err := createTask(t, testResources.TasklistID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(parentTaskCleanup)
+
 	tests := []struct {
 		name  string
 		input projects.TaskUpdateRequest
@@ -99,10 +115,14 @@ func TestTaskUpdate(t *testing.T) {
 			DueAt:            twapi.Ptr(twapi.Date(time.Now().Add(48 * time.Hour))),
 			EstimatedMinutes: twapi.Ptr(int64(120)),
 			TasklistID:       &testResources.TasklistID,
+			ParentTaskID:     &parentTaskID,
 			Assignees: &projects.UserGroups{
 				UserIDs: []int64{testResources.UserID},
 			},
 			TagIDs: []int64{testResources.TagID},
+			Predecessors: []projects.TaskPredecessor{
+				{ID: testResources.TaskID, Type: projects.TaskPredecessorTypeFinish},
+			},
 		},
 	}}
 
