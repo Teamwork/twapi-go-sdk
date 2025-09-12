@@ -100,7 +100,7 @@ type MilestoneCreateRequestPath struct {
 // MilestoneCreateRequest represents the request body for creating a new
 // milestone.
 //
-// https://apidocs.teamwork.com/docs/teamwork/v1/task-lists/post-projects-id-milestones-json
+// https://apidocs.teamwork.com/docs/teamwork/v1/milestones/post-projects-id-milestones-json
 type MilestoneCreateRequest struct {
 	// Path contains the path parameters for the request.
 	Path MilestoneCreateRequestPath `json:"-"`
@@ -169,7 +169,7 @@ func (m MilestoneCreateRequest) HTTPRequest(ctx context.Context, server string) 
 // MilestoneCreateResponse represents the response body for creating a new
 // milestone.
 //
-// https://apidocs.teamwork.com/docs/teamwork/v1/task-lists/post-projects-id-milestones-json
+// https://apidocs.teamwork.com/docs/teamwork/v1/milestones/post-projects-id-milestones-json
 type MilestoneCreateResponse struct {
 	// ID is the unique identifier of the created milestone.
 	ID LegacyNumber `json:"milestoneId"`
@@ -212,7 +212,7 @@ type MilestoneUpdateRequestPath struct {
 // Besides the identifier, all other fields are optional. When a field is not
 // provided, it will not be modified.
 //
-// https://apidocs.teamwork.com/docs/teamwork/v1/task-lists/put-milestones-id-json
+// https://apidocs.teamwork.com/docs/teamwork/v1/milestones/put-milestones-id-json
 type MilestoneUpdateRequest struct {
 	// Path contains the path parameters for the request.
 	Path MilestoneUpdateRequestPath `json:"-"`
@@ -272,7 +272,7 @@ func (m MilestoneUpdateRequest) HTTPRequest(ctx context.Context, server string) 
 
 // MilestoneUpdateResponse represents the response body for updating a milestone.
 //
-// https://apidocs.teamwork.com/docs/teamwork/v1/task-lists/put-milestones-id-json
+// https://apidocs.teamwork.com/docs/teamwork/v1/milestones/put-milestones-id-json
 type MilestoneUpdateResponse struct{}
 
 // HandleHTTPResponse handles the HTTP response for the MilestoneUpdateResponse.
@@ -307,7 +307,7 @@ type MilestoneDeleteRequestPath struct {
 
 // MilestoneDeleteRequest represents the request body for deleting a milestone.
 //
-// https://apidocs.teamwork.com/docs/teamwork/v1/task-lists/delete-milestones-id-json
+// https://apidocs.teamwork.com/docs/teamwork/v1/milestones/delete-milestones-id-json
 type MilestoneDeleteRequest struct {
 	// Path contains the path parameters for the request.
 	Path MilestoneDeleteRequestPath
@@ -337,7 +337,7 @@ func (m MilestoneDeleteRequest) HTTPRequest(ctx context.Context, server string) 
 
 // MilestoneDeleteResponse represents the response body for deleting a milestone.
 //
-// https://apidocs.teamwork.com/docs/teamwork/v1/task-lists/delete-milestones-id-json
+// https://apidocs.teamwork.com/docs/teamwork/v1/milestones/delete-milestones-id-json
 type MilestoneDeleteResponse struct{}
 
 // HandleHTTPResponse handles the HTTP response for the MilestoneDeleteResponse.
