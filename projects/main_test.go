@@ -401,6 +401,26 @@ func createTimer(t testEngine, projectID int64) (int64, func(), error) {
 	}, nil
 }
 
+func createNotebook(t testEngine, projectID int64) (int64, func(), error) {
+	notebookResponse, err := projects.NotebookCreate(t.Context(), engine, projects.NewNotebookCreateRequest(
+		projectID,
+		fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
+		"An amazing content",
+		projects.NotebookTypeMarkdown,
+	))
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to create notebook for test: %w", err)
+	}
+	id := notebookResponse.Notebook.ID
+	return id, func() {
+		ctx := context.Background() // t.Context is always canceled in cleanup
+		_, err := projects.NotebookDelete(ctx, engine, projects.NewNotebookDeleteRequest(id))
+		if err != nil {
+			t.Errorf("failed to delete notebook after test: %s", err)
+		}
+	}, nil
+}
+
 type testEngine interface {
 	Context() context.Context
 	Errorf(string, ...any)
