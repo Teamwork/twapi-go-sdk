@@ -72,20 +72,20 @@ type Notebook struct {
 	Tags []twapi.Relationship `json:"tags"`
 
 	// CreatedAt is the date and time when the notebook was created.
-	CreatedAt *time.Time `json:"createdOn"`
+	CreatedAt *time.Time `json:"createdAt"`
 
 	// CreatedBy is the user who created the notebook.
 	CreatedBy *int64 `json:"createdBy"`
 
 	// UpdatedAt is the date and time when the notebook was last updated.
-	UpdatedAt *time.Time `json:"lastChangedOn"`
+	UpdatedAt *time.Time `json:"updatedAt"`
 
 	// UpdatedBy is the user who last updated the notebook.
-	UpdatedBy *int64 `json:"lastChangedBy"`
+	UpdatedBy *int64 `json:"updatedBy"`
 
 	// DeletedAt is the date and time when the notebook was deleted, if it was
 	// deleted.
-	DeletedAt *time.Time `json:"deletedOn"`
+	DeletedAt *time.Time `json:"deletedAt"`
 
 	// DeletedBy is the ID of the user who deleted the notebook, if it was
 	// deleted.
