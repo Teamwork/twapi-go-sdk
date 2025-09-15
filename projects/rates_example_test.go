@@ -224,7 +224,7 @@ func startRatesServer() (string, func(), error) {
 		}
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = fmt.Fprintln(w, `{"userRate":5000,"userRates":[{"rate":5000,"currency":{"id":1,"code":"USD"}}]}`)
+		_, _ = fmt.Fprintln(w, `{"userRate":5000,"userRates":{"1":{"rate":5000,"currency":{"id":1,"code":"USD"}}}}`)
 	})
 
 	// PUT /projects/api/v3/rates/installation/users/{id}.json
@@ -233,9 +233,7 @@ func startRatesServer() (string, func(), error) {
 			http.Error(w, "Not Found", http.StatusNotFound)
 			return
 		}
-		w.WriteHeader(http.StatusOK)
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = fmt.Fprintln(w, `{"STATUS":"OK"}`)
+		w.WriteHeader(http.StatusCreated)
 	})
 
 	// GET /projects/api/v3/rates/projects/{id}.json
@@ -255,9 +253,7 @@ func startRatesServer() (string, func(), error) {
 			http.Error(w, "Not Found", http.StatusNotFound)
 			return
 		}
-		w.WriteHeader(http.StatusOK)
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = fmt.Fprintln(w, `{"STATUS":"OK"}`)
+		w.WriteHeader(http.StatusNoContent)
 	})
 
 	// GET /projects/api/v3/rates/projects/{id}/users/{userId}.json
@@ -279,9 +275,7 @@ func startRatesServer() (string, func(), error) {
 				http.Error(w, "Not Found", http.StatusNotFound)
 				return
 			}
-			w.WriteHeader(http.StatusOK)
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = fmt.Fprintln(w, `{"userRate":8500}`)
+			w.WriteHeader(http.StatusCreated)
 		})
 
 	server := &http.Server{

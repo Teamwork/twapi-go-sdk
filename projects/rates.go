@@ -217,7 +217,7 @@ type RateUserGetResponse struct {
 
 	// InstallationRates contains rates in different currencies (optional)
 	// as monetary amounts in the smallest currency unit (e.g., cents).
-	InstallationRates map[int64]int64 `json:"installationRates,omitempty"`
+	InstallationRates map[int64]MultiCurrencyRate `json:"installationRates,omitempty"`
 
 	// UserCost is the user's cost (optional) as a monetary amount in the
 	// smallest currency unit (e.g., cents).
