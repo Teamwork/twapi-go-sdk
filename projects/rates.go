@@ -873,7 +873,7 @@ type RateProjectUserListRequestOrderBy string
 
 // Supported order by fields.
 const (
-	RateProjectUserListRequestOrderByUsername RateProjectUserListRequestOrderBy = "username"
+	RateProjectUserListRequestOrderByUsername RateProjectUserListRequestOrderBy = "name"
 )
 
 // RateProjectUserListRequestFilters contains the filters for listing project user rates.
@@ -1251,7 +1251,7 @@ type RateProjectUserHistoryGetRequestOrderBy string
 
 // Supported order by fields.
 const (
-	RateProjectUserHistoryGetRequestOrderByUsername RateProjectUserHistoryGetRequestOrderBy = "username"
+	RateProjectUserHistoryGetRequestOrderByUsername RateProjectUserHistoryGetRequestOrderBy = "name"
 )
 
 // RateProjectUserHistoryGetRequestFilters contains the filters for getting project user rate history.
