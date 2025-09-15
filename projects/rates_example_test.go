@@ -90,6 +90,57 @@ func ExampleRateInstallationUserUpdate() {
 	// Output: updated installation user rate with identifier 12345
 }
 
+func ExampleRateInstallationUserList() {
+	address, stop, err := startRatesServer() // mock server for demonstration purposes
+	if err != nil {
+		fmt.Printf("failed to start server: %s", err)
+		return
+	}
+	defer stop()
+
+	ctx := context.Background()
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
+
+	req := projects.NewRateInstallationUserListRequest()
+	// Configure pagination
+	req.Filters.Page = 1
+	req.Filters.PageSize = 10
+
+	resp, err := projects.RateInstallationUserList(ctx, engine, req)
+	if err != nil {
+		fmt.Printf("failed to list installation user rates: %s", err)
+	} else {
+		fmt.Printf("retrieved %d installation user rate(s)\n", len(resp.UserRates))
+	}
+
+	// Output: retrieved 1 installation user rate(s)
+}
+
+func ExampleRateInstallationUserBulkUpdate() {
+	address, stop, err := startRatesServer() // mock server for demonstration purposes
+	if err != nil {
+		fmt.Printf("failed to start server: %s", err)
+		return
+	}
+	defer stop()
+
+	ctx := context.Background()
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
+
+	var rate int64 = 6000
+	req := projects.NewRateInstallationUserBulkUpdateRequest(&rate) // Rate (cents)
+	req.IDs = []int64{12345}                                        // Update specific user IDs
+
+	_, err = projects.RateInstallationUserBulkUpdate(ctx, engine, req)
+	if err != nil {
+		fmt.Printf("failed to bulk update installation user rates: %s", err)
+	} else {
+		fmt.Printf("bulk updated installation user rates\n")
+	}
+
+	// Output: bulk updated installation user rates
+}
+
 func ExampleRateProjectGet() {
 	address, stop, err := startRatesServer() // mock server for demonstration purposes
 	if err != nil {
@@ -137,6 +188,35 @@ func ExampleRateProjectUpdate() {
 	}
 
 	// Output: updated project rate with identifier 67890
+}
+
+func ExampleRateProjectAndUsersUpdate() {
+	address, stop, err := startRatesServer() // mock server for demonstration purposes
+	if err != nil {
+		fmt.Printf("failed to start server: %s", err)
+		return
+	}
+	defer stop()
+
+	ctx := context.Background()
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
+
+	var projectRate int64 = 8000
+	req := projects.NewRateProjectAndUsersUpdateRequest(67890, projectRate) // Project ID, Rate (cents)
+	// Add user rates as exceptions
+	var userRate int64 = 9000
+	req.UserRates = []projects.ProjectUserRateRequest{
+		{User: twapi.Relationship{ID: 12345}, UserRate: userRate},
+	}
+
+	_, err = projects.RateProjectAndUsersUpdate(ctx, engine, req)
+	if err != nil {
+		fmt.Printf("failed to update project and users rates: %s", err)
+	} else {
+		fmt.Printf("updated project and users rates with identifier %d\n", 67890)
+	}
+
+	// Output: updated project and users rates with identifier 67890
 }
 
 func ExampleRateProjectUserGet() {
@@ -188,6 +268,57 @@ func ExampleRateProjectUserUpdate() {
 	// Output: updated project user rate with identifier 12345
 }
 
+func ExampleRateProjectUserList() {
+	address, stop, err := startRatesServer() // mock server for demonstration purposes
+	if err != nil {
+		fmt.Printf("failed to start server: %s", err)
+		return
+	}
+	defer stop()
+
+	ctx := context.Background()
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
+
+	req := projects.NewRateProjectUserListRequest(67890) // Project ID
+	// Configure pagination
+	req.Filters.Page = 1
+	req.Filters.PageSize = 10
+
+	resp, err := projects.RateProjectUserList(ctx, engine, req)
+	if err != nil {
+		fmt.Printf("failed to list project user rates: %s", err)
+	} else {
+		fmt.Printf("retrieved %d project user rate(s)\n", len(resp.UserRates))
+	}
+
+	// Output: retrieved 2 project user rate(s)
+}
+
+func ExampleRateProjectUserHistoryGet() {
+	address, stop, err := startRatesServer() // mock server for demonstration purposes
+	if err != nil {
+		fmt.Printf("failed to start server: %s", err)
+		return
+	}
+	defer stop()
+
+	ctx := context.Background()
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
+
+	req := projects.NewRateProjectUserHistoryGetRequest(67890, 12345) // Project ID, User ID
+	// Configure optional filters
+	req.Filters.SearchTerm = "rate"
+
+	resp, err := projects.RateProjectUserHistoryGet(ctx, engine, req)
+	if err != nil {
+		fmt.Printf("failed to get project user rate history: %s", err)
+	} else {
+		fmt.Printf("retrieved %d rate history entries for user %d\n", len(resp.UserRateHistory), 12345)
+	}
+
+	// Output: retrieved 2 rate history entries for user 12345
+}
+
 func startRatesServer() (string, func(), error) {
 	ln, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
@@ -205,7 +336,7 @@ func startRatesServer() (string, func(), error) {
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = fmt.Fprintln(w, `{"installationRate":5000,"projectRates":[{"id":123,"rate":7500}],`+
-			`"installationRates":[{"rate":5000,"currency":{"id":1,"code":"USD"}}],"userCost":4000}`)
+			`"installationRates":{"1":{"rate":5000,"currency":{"id":1,"code":"USD"}}},"userCost":4000}`)
 	})
 
 	// GET /projects/api/v3/rates/installation/users.json
@@ -236,6 +367,14 @@ func startRatesServer() (string, func(), error) {
 		w.WriteHeader(http.StatusCreated)
 	})
 
+	// PUT /projects/api/v3/rates/installation/users/bulk/update.json
+	mux.HandleFunc("PUT /projects/api/v3/rates/installation/users/bulk/update",
+		func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = fmt.Fprintln(w, `{"all":false,"ids":[12345],"excludeIds":[],"rate":6000}`)
+		})
+
 	// GET /projects/api/v3/rates/projects/{id}.json
 	mux.HandleFunc("GET /projects/api/v3/rates/projects/{id}", func(w http.ResponseWriter, r *http.Request) {
 		if r.PathValue("id") != "67890" {
@@ -256,6 +395,28 @@ func startRatesServer() (string, func(), error) {
 		w.WriteHeader(http.StatusNoContent)
 	})
 
+	// PUT /projects/api/v3/rates/projects/{id}/actions/update
+	mux.HandleFunc("PUT /projects/api/v3/rates/projects/{id}/actions/update",
+		func(w http.ResponseWriter, r *http.Request) {
+			if r.PathValue("id") != "67890" {
+				http.Error(w, "Not Found", http.StatusNotFound)
+				return
+			}
+			w.WriteHeader(http.StatusNoContent)
+		})
+
+	// GET /projects/api/v3/rates/projects/{id}/users
+	mux.HandleFunc("GET /projects/api/v3/rates/projects/{id}/users", func(w http.ResponseWriter, r *http.Request) {
+		if r.PathValue("id") != "67890" {
+			http.Error(w, "Not Found", http.StatusNotFound)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprintln(w, `{"userRates":[{"user":{"id":12345},"effectiveRate":8500},`+
+			`{"user":{"id":67891},"effectiveRate":9000}],"meta":{"page":{"count":2,"hasMore":false}}}`)
+	})
+
 	// GET /projects/api/v3/rates/projects/{id}/users/{userId}.json
 	mux.HandleFunc("GET /projects/api/v3/rates/projects/{projectId}/users/{userId}",
 		func(w http.ResponseWriter, r *http.Request) {
@@ -265,7 +426,7 @@ func startRatesServer() (string, func(), error) {
 			}
 			w.WriteHeader(http.StatusOK)
 			w.Header().Set("Content-Type", "application/json")
-			_, _ = fmt.Fprintln(w, `{"userRate":{"amount":85.00,"currency":{"id":1,"code":"USD"}},"rate":8500}`)
+			_, _ = fmt.Fprintln(w, `{"rate":{"amount":85.00,"currency":{"id":1,"code":"USD"}},"userRate":8500}`)
 		})
 
 	// PUT /projects/api/v3/rates/projects/{id}/users/{userId}.json
@@ -276,6 +437,19 @@ func startRatesServer() (string, func(), error) {
 				return
 			}
 			w.WriteHeader(http.StatusCreated)
+		})
+
+	// GET /projects/api/v3/rates/projects/{projectId}/users/{userId}/history
+	mux.HandleFunc("GET /projects/api/v3/rates/projects/{projectId}/users/{userId}/history",
+		func(w http.ResponseWriter, r *http.Request) {
+			if r.PathValue("projectId") != "67890" || r.PathValue("userId") != "12345" {
+				http.Error(w, "Not Found", http.StatusNotFound)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = fmt.Fprintln(w, `{"userRateHistory":[{"rate":8500,"fromDate":"2023-01-01T00:00:00Z"},`+
+				`{"rate":9000,"fromDate":"2023-06-01T00:00:00Z"}],"meta":{"page":{"hasMore":false}}}`)
 		})
 
 	server := &http.Server{
