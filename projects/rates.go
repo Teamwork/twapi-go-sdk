@@ -77,6 +77,7 @@ type BillableRate struct {
 	Currency twapi.Relationship `json:"currency"`
 }
 
+// MultiCurrencyRate represents a rate with multiple currency options.
 type MultiCurrencyRate struct {
 	// Rate is the rate amount.
 	Amount float64 `json:"amount"`
@@ -114,6 +115,7 @@ type RateUserGetRequestPath struct {
 	ID int64
 }
 
+// RateUserGetRequestSideload specifies which related resources to include in the response.
 type RateUserGetRequestSideload string
 
 const (
@@ -305,6 +307,7 @@ func (r RateInstallationUserListRequest) HTTPRequest(ctx context.Context, server
 	return req, nil
 }
 
+// MultiCurrencyInstallationUserRate represents an installation user rate with multiple currency options.
 type MultiCurrencyInstallationUserRate struct {
 	Rates map[int64]MultiCurrencyRate `json:"rates"`
 }
@@ -379,6 +382,7 @@ type RateInstallationUserGetRequestPath struct {
 	UserID int64
 }
 
+// RateInstallationUserGetRequestSideload specifies which related resources to include in the response.
 type RateInstallationUserGetRequestSideload string
 
 const (
@@ -624,6 +628,7 @@ type RateProjectGetRequestPath struct {
 	ProjectID int64
 }
 
+// RateProjectGetRequestSideload specifies which related resources to include in the response.
 type RateProjectGetRequestSideload string
 
 const (
@@ -1049,6 +1054,7 @@ type RateProjectUserGetRequestPath struct {
 	UserID int64
 }
 
+// RateProjectUserGetRequestSideload specifies which related resources to include in the response.
 type RateProjectUserGetRequestSideload string
 
 const (
@@ -1232,6 +1238,7 @@ type RateProjectUserHistoryGetRequestPath struct {
 	UserID int64
 }
 
+// RateProjectUserHistoryGetRequestSideload specifies which related resources to include in the response.
 type RateProjectUserHistoryGetRequestSideload string
 
 const (
