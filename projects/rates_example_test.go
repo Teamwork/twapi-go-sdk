@@ -204,14 +204,16 @@ func startRatesServer() (string, func(), error) {
 		}
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = fmt.Fprintln(w, `{"installationRate":5000,"projectRates":[{"id":123,"rate":7500}],"installationRates":[{"rate":5000,"currency":{"id":1,"code":"USD"}}],"userCost":4000}`)
+		_, _ = fmt.Fprintln(w, `{"installationRate":5000,"projectRates":[{"id":123,"rate":7500}],`+
+			`"installationRates":[{"rate":5000,"currency":{"id":1,"code":"USD"}}],"userCost":4000}`)
 	})
 
 	// GET /projects/api/v3/rates/installation/users.json
-	mux.HandleFunc("GET /projects/api/v3/rates/installation/users", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /projects/api/v3/rates/installation/users", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = fmt.Fprintln(w, `{"userRates":[{"user":{"id":12345},"rate":5000}],"meta":{"page":{"count":1,"hasMore":false}}}`)
+		_, _ = fmt.Fprintln(w, `{"userRates":[{"user":{"id":12345},"rate":5000}],`+
+			`"meta":{"page":{"count":1,"hasMore":false}}}`)
 	})
 
 	// GET /projects/api/v3/rates/installation/users/{id}.json
@@ -259,26 +261,28 @@ func startRatesServer() (string, func(), error) {
 	})
 
 	// GET /projects/api/v3/rates/projects/{id}/users/{userId}.json
-	mux.HandleFunc("GET /projects/api/v3/rates/projects/{projectId}/users/{userId}", func(w http.ResponseWriter, r *http.Request) {
-		if r.PathValue("projectId") != "67890" || r.PathValue("userId") != "12345" {
-			http.Error(w, "Not Found", http.StatusNotFound)
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = fmt.Fprintln(w, `{"userRate":{"amount":85.00,"currency":{"id":1,"code":"USD"}},"rate":8500}`)
-	})
+	mux.HandleFunc("GET /projects/api/v3/rates/projects/{projectId}/users/{userId}",
+		func(w http.ResponseWriter, r *http.Request) {
+			if r.PathValue("projectId") != "67890" || r.PathValue("userId") != "12345" {
+				http.Error(w, "Not Found", http.StatusNotFound)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = fmt.Fprintln(w, `{"userRate":{"amount":85.00,"currency":{"id":1,"code":"USD"}},"rate":8500}`)
+		})
 
 	// PUT /projects/api/v3/rates/projects/{id}/users/{userId}.json
-	mux.HandleFunc("PUT /projects/api/v3/rates/projects/{projectId}/users/{userId}", func(w http.ResponseWriter, r *http.Request) {
-		if r.PathValue("projectId") != "67890" || r.PathValue("userId") != "12345" {
-			http.Error(w, "Not Found", http.StatusNotFound)
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = fmt.Fprintln(w, `{"userRate":8500}`)
-	})
+	mux.HandleFunc("PUT /projects/api/v3/rates/projects/{projectId}/users/{userId}",
+		func(w http.ResponseWriter, r *http.Request) {
+			if r.PathValue("projectId") != "67890" || r.PathValue("userId") != "12345" {
+				http.Error(w, "Not Found", http.StatusNotFound)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = fmt.Fprintln(w, `{"userRate":8500}`)
+		})
 
 	server := &http.Server{
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

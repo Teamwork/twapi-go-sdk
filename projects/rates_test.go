@@ -24,9 +24,7 @@ func TestRateUserGet(t *testing.T) {
 	}{{
 		name:   "get user rates for test user",
 		userID: testResources.UserID,
-		req: func(userID int64) projects.RateUserGetRequest {
-			return projects.NewRateUserGetRequest(userID)
-		},
+		req:    projects.NewRateUserGetRequest,
 	}, {
 		name:   "get user rates with include installation rate",
 		userID: testResources.UserID,
@@ -162,9 +160,7 @@ func TestRateInstallationUserGet(t *testing.T) {
 	}{{
 		name:   "get installation user rate for test user",
 		userID: testResources.UserID,
-		req: func(userID int64) projects.RateInstallationUserGetRequest {
-			return projects.NewRateInstallationUserGetRequest(userID)
-		},
+		req:    projects.NewRateInstallationUserGetRequest,
 	}, {
 		name:   "get installation user rate with currencies sideload",
 		userID: testResources.UserID,
@@ -282,9 +278,7 @@ func TestRateProjectGet(t *testing.T) {
 	}{{
 		name:      "get project rate for test project",
 		projectID: testResources.ProjectID,
-		req: func(projectID int64) projects.RateProjectGetRequest {
-			return projects.NewRateProjectGetRequest(projectID)
-		},
+		req:       projects.NewRateProjectGetRequest,
 	}, {
 		name:      "get project rate with currencies sideload",
 		projectID: testResources.ProjectID,
@@ -489,9 +483,7 @@ func TestRateProjectUserGet(t *testing.T) {
 		name:      "get project user rate",
 		projectID: testResources.ProjectID,
 		userID:    testResources.UserID,
-		req: func(projectID int64, userID int64) projects.RateProjectUserGetRequest {
-			return projects.NewRateProjectUserGetRequest(projectID, userID)
-		},
+		req:       projects.NewRateProjectUserGetRequest,
 	}, {
 		name:      "get project user rate with currencies sideload",
 		projectID: testResources.ProjectID,
@@ -570,9 +562,7 @@ func TestRateProjectUserHistoryGet(t *testing.T) {
 		name:      "get project user rate history",
 		projectID: testResources.ProjectID,
 		userID:    testResources.UserID,
-		req: func(projectID int64, userID int64) projects.RateProjectUserHistoryGetRequest {
-			return projects.NewRateProjectUserHistoryGetRequest(projectID, userID)
-		},
+		req:       projects.NewRateProjectUserHistoryGetRequest,
 	}, {
 		name:      "get project user rate history with search term",
 		projectID: testResources.ProjectID,
