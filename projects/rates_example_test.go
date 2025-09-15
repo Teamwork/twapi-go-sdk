@@ -192,8 +192,8 @@ func ExampleRateProjectUserList() {
 
 	req := projects.NewRateProjectUserListRequest(67890) // Project ID
 	req.Filters.SearchTerm = "john"
-	req.Filters.OrderBy = "name"
-	req.Filters.OrderMode = "asc"
+	req.Filters.OrderBy = projects.RateProjectUserListRequestOrderByUsername
+	req.Filters.OrderMode = twapi.OrderModeAscending
 	req.Filters.PageSize = 20
 
 	next, err := twapi.Iterate[projects.RateProjectUserListRequest, *projects.RateProjectUserListResponse](
@@ -256,7 +256,7 @@ func ExampleRateProjectUserHistoryGet() {
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
 
 	req := projects.NewRateProjectUserHistoryGetRequest(67890, 12345) // Project ID, User ID
-	req.Filters.OrderMode = "desc"                                    // Most recent first
+	req.Filters.OrderMode = twapi.OrderModeDescending                 // Most recent first
 	req.Filters.PageSize = 10
 
 	next, err := twapi.Iterate[projects.RateProjectUserHistoryGetRequest, *projects.RateProjectUserHistoryGetResponse](
@@ -331,53 +331,4 @@ func ExampleRateProjectUserList_pagination() {
 	}
 
 	fmt.Printf("Total user rates collected: %d\n", len(allUserRates))
-}
-
-// Example showing enhanced metadata and multi-currency features
-func ExampleRateProjectUserList_metadata() {
-	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
-
-	req := projects.NewRateProjectUserListRequest(67890) // Project ID
-	next, err := twapi.Iterate[projects.RateProjectUserListRequest, *projects.RateProjectUserListResponse](
-		context.Background(),
-		engine,
-		req,
-	)
-	if err != nil {
-		fmt.Printf("Error: %s\n", err)
-		return
-	}
-
-	resp, _, err := next()
-	if err != nil {
-		fmt.Printf("Error: %s\n", err)
-		return
-	}
-
-	fmt.Printf("Found %d user rates for project\n", len(resp.UserRates))
-
-	for _, userRate := range resp.UserRates {
-		fmt.Printf("User %d effective rate: %d\n", userRate.User.ID, userRate.EffectiveRate)
-
-		// Show rate source information
-		if userRate.Source != nil {
-			fmt.Printf("  Rate source: %s\n", *userRate.Source)
-		}
-
-		// Show temporal information
-		if userRate.FromDate != nil {
-			fmt.Printf("  Effective from: %s\n", userRate.FromDate.Format("2006-01-02"))
-		}
-
-		// Show update metadata
-		if userRate.UpdatedAt != nil {
-			fmt.Printf("  Last updated: %s\n", userRate.UpdatedAt.Format("2006-01-02"))
-		}
-
-		// Show billable rate with currency
-		if userRate.BillableRate != nil {
-			fmt.Printf("  Billable rate: %.2f (Currency ID: %d)\n",
-				userRate.BillableRate.Rate, userRate.BillableRate.Currency.ID)
-		}
-	}
 }

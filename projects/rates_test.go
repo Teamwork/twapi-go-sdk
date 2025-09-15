@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/teamwork/twapi-go-sdk"
+	twapi "github.com/teamwork/twapi-go-sdk"
 	"github.com/teamwork/twapi-go-sdk/projects"
 )
 
@@ -303,8 +303,8 @@ func TestRateProjectUserList(t *testing.T) {
 			},
 			Filters: projects.RateProjectUserListRequestFilters{
 				SearchTerm: "test",
-				OrderBy:    "name",
-				OrderMode:  "asc",
+				OrderBy:    projects.RateProjectUserListRequestOrderByUsername,
+				OrderMode:  twapi.OrderModeAscending,
 				Page:       1,
 				PageSize:   10,
 			},
