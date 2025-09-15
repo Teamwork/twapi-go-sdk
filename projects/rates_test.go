@@ -20,9 +20,80 @@ func TestRateUserGet(t *testing.T) {
 	tests := []struct {
 		name   string
 		userID int64
+		req    func(userID int64) projects.RateUserGetRequest
 	}{{
 		name:   "get user rates for test user",
 		userID: testResources.UserID,
+		req: func(userID int64) projects.RateUserGetRequest {
+			return projects.NewRateUserGetRequest(userID)
+		},
+	}, {
+		name:   "get user rates with include installation rate",
+		userID: testResources.UserID,
+		req: func(userID int64) projects.RateUserGetRequest {
+			req := projects.NewRateUserGetRequest(userID)
+			req.Filters.IncludeInstallationRate = true
+			return req
+		},
+	}, {
+		name:   "get user rates with include user cost",
+		userID: testResources.UserID,
+		req: func(userID int64) projects.RateUserGetRequest {
+			req := projects.NewRateUserGetRequest(userID)
+			req.Filters.IncludeUserCost = true
+			return req
+		},
+	}, {
+		name:   "get user rates with include archived projects",
+		userID: testResources.UserID,
+		req: func(userID int64) projects.RateUserGetRequest {
+			req := projects.NewRateUserGetRequest(userID)
+			req.Filters.IncludeArchivedProjects = true
+			return req
+		},
+	}, {
+		name:   "get user rates with include deleted projects",
+		userID: testResources.UserID,
+		req: func(userID int64) projects.RateUserGetRequest {
+			req := projects.NewRateUserGetRequest(userID)
+			req.Filters.IncludeDeletedProjects = true
+			return req
+		},
+	}, {
+		name:   "get user rates with projects sideload",
+		userID: testResources.UserID,
+		req: func(userID int64) projects.RateUserGetRequest {
+			req := projects.NewRateUserGetRequest(userID)
+			req.Filters.Include = []projects.RateUserGetRequestSideload{
+				projects.RateSideloadProjects,
+			}
+			return req
+		},
+	}, {
+		name:   "get user rates with pagination",
+		userID: testResources.UserID,
+		req: func(userID int64) projects.RateUserGetRequest {
+			req := projects.NewRateUserGetRequest(userID)
+			req.Filters.Page = 1
+			req.Filters.PageSize = 20
+			return req
+		},
+	}, {
+		name:   "get user rates with all filters",
+		userID: testResources.UserID,
+		req: func(userID int64) projects.RateUserGetRequest {
+			req := projects.NewRateUserGetRequest(userID)
+			req.Filters.IncludeInstallationRate = true
+			req.Filters.IncludeUserCost = true
+			req.Filters.IncludeArchivedProjects = true
+			req.Filters.IncludeDeletedProjects = true
+			req.Filters.Include = []projects.RateUserGetRequestSideload{
+				projects.RateSideloadProjects,
+			}
+			req.Filters.Page = 1
+			req.Filters.PageSize = 10
+			return req
+		},
 	}}
 
 	for _, tt := range tests {
@@ -31,7 +102,7 @@ func TestRateUserGet(t *testing.T) {
 			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
-			req := projects.NewRateUserGetRequest(tt.userID)
+			req := tt.req(tt.userID)
 			resp, err := projects.RateUserGet(ctx, engine, req)
 			if err != nil {
 				t.Errorf("unexpected error: %s", err)
@@ -87,9 +158,23 @@ func TestRateInstallationUserGet(t *testing.T) {
 	tests := []struct {
 		name   string
 		userID int64
+		req    func(userID int64) projects.RateInstallationUserGetRequest
 	}{{
 		name:   "get installation user rate for test user",
 		userID: testResources.UserID,
+		req: func(userID int64) projects.RateInstallationUserGetRequest {
+			return projects.NewRateInstallationUserGetRequest(userID)
+		},
+	}, {
+		name:   "get installation user rate with currencies sideload",
+		userID: testResources.UserID,
+		req: func(userID int64) projects.RateInstallationUserGetRequest {
+			req := projects.NewRateInstallationUserGetRequest(userID)
+			req.Filters.Include = []projects.RateInstallationUserGetRequestSideload{
+				projects.RateInstallationUserGetRequestSideloadCurrencies,
+			}
+			return req
+		},
 	}}
 
 	for _, tt := range tests {
@@ -98,7 +183,7 @@ func TestRateInstallationUserGet(t *testing.T) {
 			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
-			req := projects.NewRateInstallationUserGetRequest(tt.userID)
+			req := tt.req(tt.userID)
 			resp, err := projects.RateInstallationUserGet(ctx, engine, req)
 			if err != nil {
 				t.Errorf("unexpected error: %s", err)
@@ -158,6 +243,15 @@ func TestRateInstallationUserBulkUpdate(t *testing.T) {
 				UserRate: &rate,
 			}
 		}(),
+	}, {
+		name: "update all users",
+		req: func() projects.RateInstallationUserBulkUpdateRequest {
+			rate := int64(rand.Intn(10000) + 1000)
+			return projects.RateInstallationUserBulkUpdateRequest{
+				All:      true,
+				UserRate: &rate,
+			}
+		}(),
 	}}
 
 	for _, tt := range tests {
@@ -184,9 +278,23 @@ func TestRateProjectGet(t *testing.T) {
 	tests := []struct {
 		name      string
 		projectID int64
+		req       func(projectID int64) projects.RateProjectGetRequest
 	}{{
 		name:      "get project rate for test project",
 		projectID: testResources.ProjectID,
+		req: func(projectID int64) projects.RateProjectGetRequest {
+			return projects.NewRateProjectGetRequest(projectID)
+		},
+	}, {
+		name:      "get project rate with currencies sideload",
+		projectID: testResources.ProjectID,
+		req: func(projectID int64) projects.RateProjectGetRequest {
+			req := projects.NewRateProjectGetRequest(projectID)
+			req.Filters.Include = []projects.RateProjectGetRequestSideload{
+				projects.RateProjectGetRequestSideloadCurrencies,
+			}
+			return req
+		},
 	}}
 
 	for _, tt := range tests {
@@ -195,7 +303,7 @@ func TestRateProjectGet(t *testing.T) {
 			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
-			req := projects.NewRateProjectGetRequest(tt.projectID)
+			req := tt.req(tt.projectID)
 			resp, err := projects.RateProjectGet(ctx, engine, req)
 			if err != nil {
 				t.Errorf("unexpected error: %s", err)
@@ -309,6 +417,46 @@ func TestRateProjectUserList(t *testing.T) {
 				PageSize:   10,
 			},
 		},
+	}, {
+		name:      "with descending order",
+		projectID: testResources.ProjectID,
+		req: projects.RateProjectUserListRequest{
+			Path: projects.RateProjectUserListRequestPath{
+				ProjectID: testResources.ProjectID,
+			},
+			Filters: projects.RateProjectUserListRequestFilters{
+				OrderBy:   projects.RateProjectUserListRequestOrderByUsername,
+				OrderMode: twapi.OrderModeDescending,
+				Page:      1,
+				PageSize:  10,
+			},
+		},
+	}, {
+		name:      "without search term",
+		projectID: testResources.ProjectID,
+		req: projects.RateProjectUserListRequest{
+			Path: projects.RateProjectUserListRequestPath{
+				ProjectID: testResources.ProjectID,
+			},
+			Filters: projects.RateProjectUserListRequestFilters{
+				OrderBy:   projects.RateProjectUserListRequestOrderByUsername,
+				OrderMode: twapi.OrderModeAscending,
+				Page:      1,
+				PageSize:  20,
+			},
+		},
+	}, {
+		name:      "pagination only",
+		projectID: testResources.ProjectID,
+		req: projects.RateProjectUserListRequest{
+			Path: projects.RateProjectUserListRequestPath{
+				ProjectID: testResources.ProjectID,
+			},
+			Filters: projects.RateProjectUserListRequestFilters{
+				Page:     2,
+				PageSize: 15,
+			},
+		},
 	}}
 
 	for _, tt := range tests {
@@ -336,10 +484,25 @@ func TestRateProjectUserGet(t *testing.T) {
 		name      string
 		projectID int64
 		userID    int64
+		req       func(projectID int64, userID int64) projects.RateProjectUserGetRequest
 	}{{
 		name:      "get project user rate",
 		projectID: testResources.ProjectID,
 		userID:    testResources.UserID,
+		req: func(projectID int64, userID int64) projects.RateProjectUserGetRequest {
+			return projects.NewRateProjectUserGetRequest(projectID, userID)
+		},
+	}, {
+		name:      "get project user rate with currencies sideload",
+		projectID: testResources.ProjectID,
+		userID:    testResources.UserID,
+		req: func(projectID int64, userID int64) projects.RateProjectUserGetRequest {
+			req := projects.NewRateProjectUserGetRequest(projectID, userID)
+			req.Filters.Include = []projects.RateProjectUserGetRequestSideload{
+				projects.RateProjectUserGetRequestSideloadCurrencies,
+			}
+			return req
+		},
 	}}
 
 	for _, tt := range tests {
@@ -348,7 +511,7 @@ func TestRateProjectUserGet(t *testing.T) {
 			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
-			req := projects.NewRateProjectUserGetRequest(tt.projectID, tt.userID)
+			req := tt.req(tt.projectID, tt.userID)
 			resp, err := projects.RateProjectUserGet(ctx, engine, req)
 			if err != nil {
 				t.Errorf("unexpected error: %s", err)
@@ -402,10 +565,70 @@ func TestRateProjectUserHistoryGet(t *testing.T) {
 		name      string
 		projectID int64
 		userID    int64
+		req       func(projectID int64, userID int64) projects.RateProjectUserHistoryGetRequest
 	}{{
 		name:      "get project user rate history",
 		projectID: testResources.ProjectID,
 		userID:    testResources.UserID,
+		req: func(projectID int64, userID int64) projects.RateProjectUserHistoryGetRequest {
+			return projects.NewRateProjectUserHistoryGetRequest(projectID, userID)
+		},
+	}, {
+		name:      "get project user rate history with search term",
+		projectID: testResources.ProjectID,
+		userID:    testResources.UserID,
+		req: func(projectID int64, userID int64) projects.RateProjectUserHistoryGetRequest {
+			req := projects.NewRateProjectUserHistoryGetRequest(projectID, userID)
+			req.Filters.SearchTerm = "test"
+			return req
+		},
+	}, {
+		name:      "get project user rate history with ordering",
+		projectID: testResources.ProjectID,
+		userID:    testResources.UserID,
+		req: func(projectID int64, userID int64) projects.RateProjectUserHistoryGetRequest {
+			req := projects.NewRateProjectUserHistoryGetRequest(projectID, userID)
+			req.Filters.OrderBy = projects.RateProjectUserHistoryGetRequestOrderByUsername
+			req.Filters.OrderMode = twapi.OrderModeDescending
+			return req
+		},
+	}, {
+		name:      "get project user rate history with users sideload",
+		projectID: testResources.ProjectID,
+		userID:    testResources.UserID,
+		req: func(projectID int64, userID int64) projects.RateProjectUserHistoryGetRequest {
+			req := projects.NewRateProjectUserHistoryGetRequest(projectID, userID)
+			req.Filters.Include = []projects.RateProjectUserHistoryGetRequestSideload{
+				projects.RateProjectUserHistoryGetRequestSideloadUsers,
+			}
+			return req
+		},
+	}, {
+		name:      "get project user rate history with pagination",
+		projectID: testResources.ProjectID,
+		userID:    testResources.UserID,
+		req: func(projectID int64, userID int64) projects.RateProjectUserHistoryGetRequest {
+			req := projects.NewRateProjectUserHistoryGetRequest(projectID, userID)
+			req.Filters.Page = 1
+			req.Filters.PageSize = 20
+			return req
+		},
+	}, {
+		name:      "get project user rate history with all filters",
+		projectID: testResources.ProjectID,
+		userID:    testResources.UserID,
+		req: func(projectID int64, userID int64) projects.RateProjectUserHistoryGetRequest {
+			req := projects.NewRateProjectUserHistoryGetRequest(projectID, userID)
+			req.Filters.SearchTerm = "test"
+			req.Filters.OrderBy = projects.RateProjectUserHistoryGetRequestOrderByUsername
+			req.Filters.OrderMode = twapi.OrderModeDescending
+			req.Filters.Include = []projects.RateProjectUserHistoryGetRequestSideload{
+				projects.RateProjectUserHistoryGetRequestSideloadUsers,
+			}
+			req.Filters.Page = 1
+			req.Filters.PageSize = 10
+			return req
+		},
 	}}
 
 	for _, tt := range tests {
@@ -414,7 +637,7 @@ func TestRateProjectUserHistoryGet(t *testing.T) {
 			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
-			req := projects.NewRateProjectUserHistoryGetRequest(tt.projectID, tt.userID)
+			req := tt.req(tt.projectID, tt.userID)
 			resp, err := projects.RateProjectUserHistoryGet(ctx, engine, req)
 			if err != nil {
 				t.Errorf("unexpected error: %s", err)
