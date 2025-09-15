@@ -863,16 +863,24 @@ type RateProjectUserListRequestPath struct {
 	ProjectID int64
 }
 
+// RateProjectUserListRequestOrderBy specifies the ordering of results.
+type RateProjectUserListRequestOrderBy string
+
+// Supported order by fields.
+const (
+	RateProjectUserListRequestOrderByUsername RateProjectUserListRequestOrderBy = "username"
+)
+
 // RateProjectUserListRequestFilters contains the filters for listing project user rates.
 type RateProjectUserListRequestFilters struct {
 	// SearchTerm is an optional search term to filter by first name or last name.
 	SearchTerm string
 
 	// OrderBy specifies the ordering of results.
-	OrderBy string
+	OrderBy RateProjectUserListRequestOrderBy
 
 	// OrderMode specifies the order direction (asc, desc).
-	OrderMode string
+	OrderMode twapi.OrderMode
 
 	// Page is the page number to retrieve. Defaults to 1.
 	Page int64
@@ -918,10 +926,10 @@ func (r RateProjectUserListRequest) HTTPRequest(ctx context.Context, server stri
 		query.Set("searchTerm", r.Filters.SearchTerm)
 	}
 	if r.Filters.OrderBy != "" {
-		query.Set("orderBy", r.Filters.OrderBy)
+		query.Set("orderBy", string(r.Filters.OrderBy))
 	}
 	if r.Filters.OrderMode != "" {
-		query.Set("orderMode", r.Filters.OrderMode)
+		query.Set("orderMode", string(r.Filters.OrderMode))
 	}
 	if r.Filters.Page > 0 {
 		query.Set("page", strconv.FormatInt(r.Filters.Page, 10))
@@ -1231,16 +1239,24 @@ const (
 	RateProjectUserHistoryGetRequestSideloadUsers      RateProjectUserHistoryGetRequestSideload = "users"
 )
 
+// RateProjectUserHistoryGetRequestOrderBy specifies the ordering of results.
+type RateProjectUserHistoryGetRequestOrderBy string
+
+// Supported order by fields.
+const (
+	RateProjectUserHistoryGetRequestOrderByUsername RateProjectUserHistoryGetRequestOrderBy = "username"
+)
+
 // RateProjectUserHistoryGetRequestFilters contains the filters for getting project user rate history.
 type RateProjectUserHistoryGetRequestFilters struct {
 	// SearchTerm is an optional search term to filter by first name or last name.
 	SearchTerm string
 
 	// OrderBy specifies the ordering of results.
-	OrderBy string
+	OrderBy RateProjectUserHistoryGetRequestOrderBy
 
 	// OrderMode specifies the order direction (asc, desc).
-	OrderMode string
+	OrderMode twapi.OrderMode
 
 	// Page is the page number to retrieve. Defaults to 1.
 	Page int64
@@ -1290,10 +1306,10 @@ func (r RateProjectUserHistoryGetRequest) HTTPRequest(ctx context.Context, serve
 		query.Set("searchTerm", r.Filters.SearchTerm)
 	}
 	if r.Filters.OrderBy != "" {
-		query.Set("orderBy", r.Filters.OrderBy)
+		query.Set("orderBy", string(r.Filters.OrderBy))
 	}
 	if r.Filters.OrderMode != "" {
-		query.Set("orderMode", r.Filters.OrderMode)
+		query.Set("orderMode", string(r.Filters.OrderMode))
 	}
 	if r.Filters.Page > 0 {
 		query.Set("page", strconv.FormatInt(r.Filters.Page, 10))

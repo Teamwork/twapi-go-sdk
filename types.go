@@ -156,3 +156,12 @@ func (m Money) Value() float64 {
 func NewMoney(value float64) Money {
 	return Money(value * 100)
 }
+
+// OrderMode specifies the order direction (asc, desc).
+type OrderMode string
+
+// Supported order modes.
+const (
+	OrderModeAscending  OrderMode = "asc"
+	OrderModeDescending OrderMode = "desc"
+)
