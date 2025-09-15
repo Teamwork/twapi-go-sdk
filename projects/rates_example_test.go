@@ -3,14 +3,25 @@ package projects_test
 import (
 	"context"
 	"fmt"
+	"net"
+	"net/http"
+	"strings"
 
-	"github.com/teamwork/twapi-go-sdk"
+	twapi "github.com/teamwork/twapi-go-sdk"
 	"github.com/teamwork/twapi-go-sdk/projects"
 	"github.com/teamwork/twapi-go-sdk/session"
 )
 
 func ExampleRateUserGet() {
-	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
+	address, stop, err := startRatesServer() // mock server for demonstration purposes
+	if err != nil {
+		fmt.Printf("failed to start server: %s", err)
+		return
+	}
+	defer stop()
+
+	ctx := context.Background()
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
 	req := projects.NewRateUserGetRequest(12345) // User ID
 	// Configure optional filters
@@ -20,315 +31,276 @@ func ExampleRateUserGet() {
 		projects.RateSideloadProjects,
 	}
 
-	resp, err := projects.RateUserGet(context.Background(), engine, req)
+	_, err = projects.RateUserGet(ctx, engine, req)
 	if err != nil {
-		fmt.Printf("Error: %s\n", err)
-		return
+		fmt.Printf("failed to get user rates: %s", err)
+	} else {
+		fmt.Printf("retrieved user rates with identifier %d\n", 12345)
 	}
 
-	if resp.InstallationRate != nil {
-		fmt.Printf("User installation rate: %d\n", *resp.InstallationRate)
-	}
-	fmt.Printf("Number of project rates: %d\n", len(resp.ProjectRates))
-	fmt.Printf("Number of multi-currency rates: %d\n", len(resp.InstallationRates))
-
-	if resp.UserCost != nil {
-		fmt.Printf("User cost: %d\n", *resp.UserCost)
-	}
-}
-
-func ExampleRateInstallationUserList() {
-	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
-
-	req := projects.NewRateInstallationUserListRequest()
-	req.Filters.PageSize = 10 // Get first 10 users
-
-	next, err := twapi.Iterate[projects.RateInstallationUserListRequest, *projects.RateInstallationUserListResponse](
-		context.Background(),
-		engine,
-		req,
-	)
-	if err != nil {
-		fmt.Printf("Error: %s\n", err)
-		return
-	}
-
-	var iteration int
-	for {
-		iteration++
-		fmt.Printf("Iteration %d\n", iteration)
-
-		resp, hasNext, err := next()
-		if err != nil {
-			fmt.Printf("Error: %s\n", err)
-			return
-		}
-		if resp == nil {
-			break
-		}
-		for _, userRate := range resp.UserRates {
-			fmt.Printf("User %d has rate %d\n", userRate.User.ID, userRate.Rate)
-		}
-		if !hasNext {
-			break
-		}
-	}
+	// Output: retrieved user rates with identifier 12345
 }
 
 func ExampleRateInstallationUserGet() {
-	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
+	address, stop, err := startRatesServer() // mock server for demonstration purposes
+	if err != nil {
+		fmt.Printf("failed to start server: %s", err)
+		return
+	}
+	defer stop()
+
+	ctx := context.Background()
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
 	req := projects.NewRateInstallationUserGetRequest(12345) // User ID
 	req.Filters.Include = []projects.RateInstallationUserGetRequestSideload{
 		projects.RateInstallationUserGetRequestSideloadCurrencies,
 	}
 
-	resp, err := projects.RateInstallationUserGet(context.Background(), engine, req)
+	_, err = projects.RateInstallationUserGet(ctx, engine, req)
 	if err != nil {
-		fmt.Printf("Error: %s\n", err)
-		return
+		fmt.Printf("failed to get installation user rate: %s", err)
+	} else {
+		fmt.Printf("retrieved installation user rate with identifier %d\n", 12345)
 	}
 
-	fmt.Printf("User rate: %d\n", resp.UserRate)
-	fmt.Printf("Number of currency rates: %d\n", len(resp.UserRates))
+	// Output: retrieved installation user rate with identifier 12345
 }
 
 func ExampleRateInstallationUserUpdate() {
-	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
+	address, stop, err := startRatesServer() // mock server for demonstration purposes
+	if err != nil {
+		fmt.Printf("failed to start server: %s", err)
+		return
+	}
+	defer stop()
+
+	ctx := context.Background()
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
 	var rate int64 = 5000
 	req := projects.NewRateInstallationUserUpdateRequest(12345, &rate) // User ID, Rate (cents)
-	_, err := projects.RateInstallationUserUpdate(context.Background(), engine, req)
+	_, err = projects.RateInstallationUserUpdate(ctx, engine, req)
 	if err != nil {
-		fmt.Printf("Error: %s\n", err)
-		return
+		fmt.Printf("failed to update user rate: %s", err)
+	} else {
+		fmt.Printf("updated installation user rate with identifier %d\n", 12345)
 	}
 
-	fmt.Println("User rate updated successfully")
-}
-
-func ExampleRateInstallationUserBulkUpdate() {
-	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
-
-	var rate int64 = 5000
-	req := projects.NewRateInstallationUserBulkUpdateRequest(&rate) // Rate (cents)
-	req.IDs = []int64{12345, 12346, 12347}                          // Specific user IDs to update
-
-	resp, err := projects.RateInstallationUserBulkUpdate(context.Background(), engine, req)
-	if err != nil {
-		fmt.Printf("Error: %s\n", err)
-		return
-	}
-
-	fmt.Printf("Updated %d users with rate %d\n", len(resp.IDs), resp.Rate)
+	// Output: updated installation user rate with identifier 12345
 }
 
 func ExampleRateProjectGet() {
-	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
+	address, stop, err := startRatesServer() // mock server for demonstration purposes
+	if err != nil {
+		fmt.Printf("failed to start server: %s", err)
+		return
+	}
+	defer stop()
+
+	ctx := context.Background()
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
 	req := projects.NewRateProjectGetRequest(67890) // Project ID
 	req.Filters.Include = []projects.RateProjectGetRequestSideload{
 		projects.RateProjectGetRequestSideloadCurrencies,
 	}
 
-	resp, err := projects.RateProjectGet(context.Background(), engine, req)
+	_, err = projects.RateProjectGet(ctx, engine, req)
 	if err != nil {
-		fmt.Printf("Error: %s\n", err)
-		return
+		fmt.Printf("failed to get project rate: %s", err)
+	} else {
+		fmt.Printf("retrieved project rate with identifier %d\n", 67890)
 	}
 
-	fmt.Printf("Project rate: %d\n", resp.ProjectRate)
-	fmt.Printf("Rate value: %.2f\n", resp.Rate.Amount)
+	// Output: retrieved project rate with identifier 67890
 }
 
 func ExampleRateProjectUpdate() {
-	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
+	address, stop, err := startRatesServer() // mock server for demonstration purposes
+	if err != nil {
+		fmt.Printf("failed to start server: %s", err)
+		return
+	}
+	defer stop()
+
+	ctx := context.Background()
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
 	var rate int64 = 7500
 	req := projects.NewRateProjectUpdateRequest(67890, &rate) // Project ID, Rate (cents)
-	_, err := projects.RateProjectUpdate(context.Background(), engine, req)
+	_, err = projects.RateProjectUpdate(ctx, engine, req)
 	if err != nil {
-		fmt.Printf("Error: %s\n", err)
-		return
+		fmt.Printf("failed to update project rate: %s", err)
+	} else {
+		fmt.Printf("updated project rate with identifier %d\n", 67890)
 	}
 
-	fmt.Println("Project rate updated successfully")
-}
-
-func ExampleRateProjectAndUsersUpdate() {
-	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
-
-	req := projects.NewRateProjectAndUsersUpdateRequest(67890, int64(7500)) // Project ID, Rate (cents)
-
-	// Add user-specific rate exceptions
-	req.UserRates = []projects.ProjectUserRateRequest{
-		{
-			User: twapi.Relationship{
-				ID:   12345,
-				Type: "user",
-			},
-			UserRate: int64(8000), // Higher rate for this specific user (cents)
-		},
-		{
-			User: twapi.Relationship{
-				ID:   12346,
-				Type: "user",
-			},
-			UserRate: int64(6000), // Lower rate for this user (cents)
-		},
-	}
-
-	_, err := projects.RateProjectAndUsersUpdate(context.Background(), engine, req)
-	if err != nil {
-		fmt.Printf("Error: %s\n", err)
-		return
-	}
-
-	fmt.Println("Project and user rates updated successfully")
-}
-
-func ExampleRateProjectUserList() {
-	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
-
-	req := projects.NewRateProjectUserListRequest(67890) // Project ID
-	req.Filters.SearchTerm = "john"
-	req.Filters.OrderBy = projects.RateProjectUserListRequestOrderByUsername
-	req.Filters.OrderMode = twapi.OrderModeAscending
-	req.Filters.PageSize = 20
-
-	next, err := twapi.Iterate[projects.RateProjectUserListRequest, *projects.RateProjectUserListResponse](
-		context.Background(),
-		engine,
-		req,
-	)
-	if err != nil {
-		fmt.Printf("Error: %s\n", err)
-		return
-	}
-
-	// Pull the first page and print results
-	resp, _, err := next()
-	if err != nil {
-		fmt.Printf("Error: %s\n", err)
-		return
-	}
-	if resp != nil {
-		fmt.Printf("Found %d user rates for project\n", len(resp.UserRates))
-		for _, userRate := range resp.UserRates {
-			fmt.Printf("User %d effective rate: %d\n", userRate.User.ID, userRate.EffectiveRate)
-		}
-	}
+	// Output: updated project rate with identifier 67890
 }
 
 func ExampleRateProjectUserGet() {
-	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
+	address, stop, err := startRatesServer() // mock server for demonstration purposes
+	if err != nil {
+		fmt.Printf("failed to start server: %s", err)
+		return
+	}
+	defer stop()
+
+	ctx := context.Background()
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
 	req := projects.NewRateProjectUserGetRequest(67890, 12345) // Project ID, User ID
 	req.Filters.Include = []projects.RateProjectUserGetRequestSideload{
 		projects.RateProjectUserGetRequestSideloadCurrencies,
 	}
 
-	resp, err := projects.RateProjectUserGet(context.Background(), engine, req)
+	_, err = projects.RateProjectUserGet(ctx, engine, req)
 	if err != nil {
-		fmt.Printf("Error: %s\n", err)
-		return
+		fmt.Printf("failed to get project user rate: %s", err)
+	} else {
+		fmt.Printf("retrieved project user rate with identifier %d\n", 12345)
 	}
 
-	fmt.Printf("User rate for project: %.2f\n", resp.UserRate.Amount)
-	fmt.Printf("Rate value: %d\n", resp.Rate)
+	// Output: retrieved project user rate with identifier 12345
 }
 
 func ExampleRateProjectUserUpdate() {
-	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
+	address, stop, err := startRatesServer() // mock server for demonstration purposes
+	if err != nil {
+		fmt.Printf("failed to start server: %s", err)
+		return
+	}
+	defer stop()
+
+	ctx := context.Background()
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
 	var rate int64 = 8500
 	req := projects.NewRateProjectUserUpdateRequest(67890, 12345, &rate) // Project ID, User ID, Rate (cents)
-	resp, err := projects.RateProjectUserUpdate(context.Background(), engine, req)
+	_, err = projects.RateProjectUserUpdate(ctx, engine, req)
 	if err != nil {
-		fmt.Printf("Error: %s\n", err)
-		return
+		fmt.Printf("failed to update user rate: %s", err)
+	} else {
+		fmt.Printf("updated project user rate with identifier %d\n", 12345)
 	}
 
-	fmt.Printf("Updated user rate to: %d\n", resp.UserRate)
+	// Output: updated project user rate with identifier 12345
 }
 
-func ExampleRateProjectUserHistoryGet() {
-	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
-
-	req := projects.NewRateProjectUserHistoryGetRequest(67890, 12345) // Project ID, User ID
-	req.Filters.OrderMode = twapi.OrderModeDescending                 // Most recent first
-	req.Filters.PageSize = 10
-
-	next, err := twapi.Iterate[projects.RateProjectUserHistoryGetRequest, *projects.RateProjectUserHistoryGetResponse](
-		context.Background(),
-		engine,
-		req,
-	)
+func startRatesServer() (string, func(), error) {
+	ln, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
-		fmt.Printf("Error: %s\n", err)
-		return
+		return "", nil, fmt.Errorf("failed to start server: %w", err)
 	}
 
-	for {
-		resp, hasNext, err := next()
-		if err != nil {
-			fmt.Printf("Error: %s\n", err)
+	mux := http.NewServeMux()
+
+	// GET /projects/api/v3/people/{id}/rates
+	mux.HandleFunc("GET /projects/api/v3/people/{id}/rates", func(w http.ResponseWriter, r *http.Request) {
+		if r.PathValue("id") != "12345" {
+			http.Error(w, "Not Found", http.StatusNotFound)
 			return
 		}
-		if resp == nil {
-			break
-		}
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprintln(w, `{"installationRate":5000,"projectRates":[{"id":123,"rate":7500}],"installationRates":[{"rate":5000,"currency":{"id":1,"code":"USD"}}],"userCost":4000}`)
+	})
 
-		for _, history := range resp.UserRateHistory {
-			fmt.Printf("Rate: %d", history.Rate)
-			if history.FromDate != nil {
-				fmt.Printf(" (effective from %s)", history.FromDate.Format("2006-01-02"))
-			}
-			if history.ToDate != nil {
-				fmt.Printf(" (until %s)", history.ToDate.Format("2006-01-02"))
-			}
-			fmt.Println()
-		}
+	// GET /projects/api/v3/rates/installation/users.json
+	mux.HandleFunc("GET /projects/api/v3/rates/installation/users", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprintln(w, `{"userRates":[{"user":{"id":12345},"rate":5000}],"meta":{"page":{"count":1,"hasMore":false}}}`)
+	})
 
-		if !hasNext {
-			break
-		}
-	}
-}
-
-// Example of working with pagination across all pages
-func ExampleRateProjectUserList_pagination() {
-	engine := twapi.NewEngine(session.NewBearerToken("your_token", "https://your-domain.teamwork.com"))
-
-	req := projects.NewRateProjectUserListRequest(67890)
-	req.Filters.PageSize = 50
-
-	allUserRates := []projects.EffectiveUserProjectRate{}
-
-	next, err := twapi.Iterate[projects.RateProjectUserListRequest, *projects.RateProjectUserListResponse](
-		context.Background(),
-		engine,
-		req,
-	)
-	if err != nil {
-		fmt.Printf("Error: %s\n", err)
-		return
-	}
-
-	for {
-		resp, hasNext, err := next()
-		if err != nil {
-			fmt.Printf("Error: %s\n", err)
+	// GET /projects/api/v3/rates/installation/users/{id}.json
+	mux.HandleFunc("GET /projects/api/v3/rates/installation/users/{id}", func(w http.ResponseWriter, r *http.Request) {
+		if r.PathValue("id") != "12345" {
+			http.Error(w, "Not Found", http.StatusNotFound)
 			return
 		}
-		if resp == nil {
-			break
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprintln(w, `{"userRate":5000,"userRates":[{"rate":5000,"currency":{"id":1,"code":"USD"}}]}`)
+	})
+
+	// PUT /projects/api/v3/rates/installation/users/{id}.json
+	mux.HandleFunc("PUT /projects/api/v3/rates/installation/users/{id}", func(w http.ResponseWriter, r *http.Request) {
+		if r.PathValue("id") != "12345" {
+			http.Error(w, "Not Found", http.StatusNotFound)
+			return
 		}
-		allUserRates = append(allUserRates, resp.UserRates...)
-		if !hasNext {
-			break
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprintln(w, `{"STATUS":"OK"}`)
+	})
+
+	// GET /projects/api/v3/rates/projects/{id}.json
+	mux.HandleFunc("GET /projects/api/v3/rates/projects/{id}", func(w http.ResponseWriter, r *http.Request) {
+		if r.PathValue("id") != "67890" {
+			http.Error(w, "Not Found", http.StatusNotFound)
+			return
 		}
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprintln(w, `{"projectRate":7500,"rate":{"amount":75.00,"currency":{"id":1,"code":"USD"}}}`)
+	})
+
+	// PUT /projects/api/v3/rates/projects/{id}.json
+	mux.HandleFunc("PUT /projects/api/v3/rates/projects/{id}", func(w http.ResponseWriter, r *http.Request) {
+		if r.PathValue("id") != "67890" {
+			http.Error(w, "Not Found", http.StatusNotFound)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprintln(w, `{"STATUS":"OK"}`)
+	})
+
+	// GET /projects/api/v3/rates/projects/{id}/users/{userId}.json
+	mux.HandleFunc("GET /projects/api/v3/rates/projects/{projectId}/users/{userId}", func(w http.ResponseWriter, r *http.Request) {
+		if r.PathValue("projectId") != "67890" || r.PathValue("userId") != "12345" {
+			http.Error(w, "Not Found", http.StatusNotFound)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprintln(w, `{"userRate":{"amount":85.00,"currency":{"id":1,"code":"USD"}},"rate":8500}`)
+	})
+
+	// PUT /projects/api/v3/rates/projects/{id}/users/{userId}.json
+	mux.HandleFunc("PUT /projects/api/v3/rates/projects/{projectId}/users/{userId}", func(w http.ResponseWriter, r *http.Request) {
+		if r.PathValue("projectId") != "67890" || r.PathValue("userId") != "12345" {
+			http.Error(w, "Not Found", http.StatusNotFound)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprintln(w, `{"userRate":8500}`)
+	})
+
+	server := &http.Server{
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("Authorization") != "Bearer your_token" {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+			r.URL.Path = strings.TrimSuffix(r.URL.Path, ".json")
+			mux.ServeHTTP(w, r)
+		}),
 	}
 
-	fmt.Printf("Total user rates collected: %d\n", len(allUserRates))
+	stop := make(chan struct{})
+	go func() {
+		_ = server.Serve(ln)
+	}()
+	go func() {
+		<-stop
+		_ = server.Shutdown(context.Background())
+	}()
+
+	return ln.Addr().String(), func() {
+		close(stop)
+	}, nil
 }
