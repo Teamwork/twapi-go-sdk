@@ -537,7 +537,7 @@ type TaskListRequestFilters struct {
 	TagIDs []int64
 
 	// AssigneeIDs is an optional list of tag IDs to filter tasks by tags.
-	AssigneeIDs []int64
+	AssigneeUserIDs []int64
 
 	// MatchAllTags is an optional flag to indicate if all tags must match. If set
 	// to true, only tasks matching all specified tags will be returned.
