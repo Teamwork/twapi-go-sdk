@@ -536,6 +536,9 @@ type TaskListRequestFilters struct {
 	// TagIDs is an optional list of tag IDs to filter tasks by tags.
 	TagIDs []int64
 
+	// AssigneeIDs is an optional list of tag IDs to filter tasks by tags.
+	AssigneeIDs []int64
+
 	// MatchAllTags is an optional flag to indicate if all tags must match. If set
 	// to true, only tasks matching all specified tags will be returned.
 	MatchAllTags *bool
@@ -590,6 +593,13 @@ func (t TaskListRequest) HTTPRequest(ctx context.Context, server string) (*http.
 	query := req.URL.Query()
 	if t.Filters.SearchTerm != "" {
 		query.Set("searchTerm", t.Filters.SearchTerm)
+	}
+	if len(t.Filters.AssigneeIDs) > 0 {
+		assigneeIDs := make([]string, len(t.Filters.AssigneeIDs))
+		for i, id := range t.Filters.AssigneeIDs {
+			assigneeIDs[i] = strconv.FormatInt(id, 10)
+		}
+		query.Set("responsiblePartyIds", strings.Join(assigneeIDs, ","))
 	}
 	if len(t.Filters.TagIDs) > 0 {
 		tagIDs := make([]string, len(t.Filters.TagIDs))
