@@ -151,3 +151,17 @@ func (m *Money) Set(value float64) {
 func (m Money) Value() float64 {
 	return float64(m) / 100
 }
+
+// NewMoney creates a Money from a float64 value (in major units).
+func NewMoney(value float64) Money {
+	return Money(value * 100)
+}
+
+// OrderMode specifies the order direction (asc, desc).
+type OrderMode string
+
+// Supported order modes.
+const (
+	OrderModeAscending  OrderMode = "asc"
+	OrderModeDescending OrderMode = "desc"
+)
