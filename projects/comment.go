@@ -495,6 +495,10 @@ type CommentListRequestFilters struct {
 	// UserIDs is an optional list of user IDs to filter comments by users.
 	UserIDs []int64
 
+	// UpdatedAfter is an optional filter to retrieve only comments updated after
+	// the specified date and time.
+	UpdatedAfter time.Time
+
 	// Page is the page number to retrieve. Defaults to 1.
 	Page int64
 
@@ -560,6 +564,9 @@ func (t CommentListRequest) HTTPRequest(ctx context.Context, server string) (*ht
 			tagIDs[i] = strconv.FormatInt(id, 10)
 		}
 		query.Set("userIds", strings.Join(tagIDs, ","))
+	}
+	if !t.Filters.UpdatedAfter.IsZero() {
+		query.Set("updatedAfter", t.Filters.UpdatedAfter.Format(time.RFC3339))
 	}
 	if t.Filters.Page > 0 {
 		query.Set("page", strconv.FormatInt(t.Filters.Page, 10))
