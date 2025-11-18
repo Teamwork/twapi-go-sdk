@@ -28,6 +28,7 @@ func ExampleProjectCreate() {
 	projectRequest.Description = twapi.Ptr("This is a new project created via the API.")
 	projectRequest.StartAt = twapi.Ptr(projects.LegacyDate(time.Now().AddDate(0, 0, 1)))
 	projectRequest.EndAt = twapi.Ptr(projects.LegacyDate(time.Now().AddDate(0, 0, 30)))
+	projectRequest.CategoryID = twapi.Ptr(int64(54321))
 	projectRequest.CompanyID = 12345
 	projectRequest.OwnerID = twapi.Ptr(int64(67890))
 	projectRequest.TagIDs = []int64{11111, 22222}

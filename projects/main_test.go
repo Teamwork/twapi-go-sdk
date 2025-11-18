@@ -18,13 +18,14 @@ import (
 var engine *twapi.Engine
 
 var testResources struct {
-	CompanyID   int64
-	ProjectID   int64
-	TasklistID  int64
-	TaskID      int64
-	UserID      int64
-	MilestoneID int64
-	TagID       int64
+	CompanyID         int64
+	ProjectID         int64
+	ProjectCategoryID int64
+	TasklistID        int64
+	TaskID            int64
+	UserID            int64
+	MilestoneID       int64
+	TagID             int64
 }
 
 func TestMain(m *testing.M) {
@@ -64,6 +65,17 @@ func TestMain(m *testing.M) {
 	}
 	defer projectCleanup()
 	testResources.ProjectID = projectID
+
+	projectCategoryID, projectCategoryCleanup, err := createProjectCategory(testEngine)
+	if err != nil {
+		logger.Error("Failed to create project category for tests",
+			slog.String("error", err.Error()),
+		)
+		exitCode = 1
+		return
+	}
+	defer projectCategoryCleanup()
+	testResources.ProjectCategoryID = projectCategoryID
 
 	tasklistID, tasklistCleanup, err := createTasklist(testEngine, projectID)
 	if err != nil {
@@ -154,6 +166,24 @@ func createProject(t testEngine) (int64, func(), error) {
 		_, err := projects.ProjectDelete(ctx, engine, projects.NewProjectDeleteRequest(id))
 		if err != nil {
 			t.Errorf("failed to delete project after test: %s", err)
+		}
+	}, nil
+}
+
+func createProjectCategory(t testEngine) (int64, func(), error) {
+	projectCategory, err := projects.ProjectCategoryCreate(t.Context(), engine, projects.ProjectCategoryCreateRequest{
+		Name:  fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
+		Color: twapi.Ptr("#00ff00"),
+	})
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to create project category for test: %w", err)
+	}
+	id := int64(projectCategory.ID)
+	return id, func() {
+		ctx := context.Background() // t.Context is always canceled in cleanup
+		_, err := projects.ProjectCategoryDelete(ctx, engine, projects.NewProjectCategoryDeleteRequest(id))
+		if err != nil {
+			t.Errorf("failed to delete project category after test: %s", err)
 		}
 	}, nil
 }
