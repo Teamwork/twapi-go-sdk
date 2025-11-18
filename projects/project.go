@@ -54,6 +54,9 @@ type Project struct {
 	// EndAt is the end date of the project.
 	EndAt *time.Time `json:"endAt"`
 
+	// Category is the category associated with the project.
+	Category *twapi.Relationship `json:"category"`
+
 	// Company is the company associated with the project.
 	Company twapi.Relationship `json:"company"`
 
@@ -108,6 +111,9 @@ type ProjectCreateRequest struct {
 	// EndAt is an optional end date for the project. By default it doesn't have
 	// an end date.
 	EndAt *LegacyDate `json:"end-date,omitempty"`
+
+	// CategoryID is an optional ID of the category associated with the project.
+	CategoryID *int64 `json:"category-id,omitempty"`
 
 	// CompanyID is an optional ID of the company/client associated with the
 	// project. By default it is the ID of the company of the logged user
@@ -211,6 +217,9 @@ type ProjectUpdateRequest struct {
 
 	// EndAt is the end date for the project.
 	EndAt *LegacyDate `json:"end-date,omitempty"`
+
+	// CategoryID is the ID of the category associated with the project.
+	CategoryID *int64 `json:"category-id,omitempty"`
 
 	// CompanyID is the company/client associated with the project.
 	CompanyID *int64 `json:"companyId,omitempty"`
@@ -416,6 +425,10 @@ func ProjectGet(
 
 // ProjectListRequestFilters contains the filters for loading multiple projects.
 type ProjectListRequestFilters struct {
+	// ProjectCategoryIDs is an optional list of project category IDs to filter
+	// projects by categories.
+	ProjectCategoryIDs []int64
+
 	// SearchTerm is an optional search term to filter projects by name or
 	// description.
 	SearchTerm string
@@ -462,6 +475,13 @@ func (p ProjectListRequest) HTTPRequest(ctx context.Context, server string) (*ht
 	}
 
 	query := req.URL.Query()
+	if len(p.Filters.ProjectCategoryIDs) > 0 {
+		categoryIDs := make([]string, len(p.Filters.ProjectCategoryIDs))
+		for i, id := range p.Filters.ProjectCategoryIDs {
+			categoryIDs[i] = strconv.FormatInt(id, 10)
+		}
+		query.Set("projectCategoryIds", strings.Join(categoryIDs, ","))
+	}
 	if p.Filters.SearchTerm != "" {
 		query.Set("searchTerm", p.Filters.SearchTerm)
 	}
