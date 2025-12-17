@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	twapi "github.com/teamwork/twapi-go-sdk"
@@ -58,13 +59,16 @@ type Currency struct {
 type EffectiveRateSource string
 
 const (
-	// EffectiveRateSourceInstallationRate represents a rate derived from the user's installation rate.
+	// EffectiveRateSourceInstallationRate represents a rate derived from the
+	// user's installation rate.
 	EffectiveRateSourceInstallationRate EffectiveRateSource = "installationrate"
 
-	// EffectiveRateSourceProjectRate represents a rate derived from the project's default rate.
+	// EffectiveRateSourceProjectRate represents a rate derived from the project's
+	// default rate.
 	EffectiveRateSourceProjectRate EffectiveRateSource = "projectrate"
 
-	// EffectiveRateSourceUserProjectRate represents a rate derived from a user's project-specific rate.
+	// EffectiveRateSourceUserProjectRate represents a rate derived from a user's
+	// project-specific rate.
 	EffectiveRateSourceUserProjectRate EffectiveRateSource = "userprojectrate"
 )
 
@@ -91,8 +95,8 @@ type ProjectRate struct {
 	// ProjectID is the ID of the project.
 	ProjectID int64 `json:"projectId"`
 
-	// Rate is the monetary amount in the smallest currency unit
-	// (e.g., cents). For example, €10.00 is represented as 1000.
+	// Rate is the monetary amount in the smallest currency unit (e.g., cents).
+	// For example, €10.00 is represented as 1000.
 	Rate int64 `json:"rate"`
 
 	// Currency is the currency information.
@@ -104,8 +108,8 @@ type UserProjectRate struct {
 	// Project is the relationship to the project.
 	Project twapi.Relationship `json:"project"`
 
-	// UserRate is the monetary amount in the smallest currency unit
-	// (e.g., cents). For example, €10.00 is represented as 1000.
+	// UserRate is the monetary amount in the smallest currency unit (e.g.,
+	// cents). For example, €10.00 is represented as 1000.
 	UserRate int64 `json:"userRate"`
 }
 
@@ -115,7 +119,8 @@ type RateUserGetRequestPath struct {
 	ID int64
 }
 
-// RateUserGetRequestSideload specifies which related resources to include in the response.
+// RateUserGetRequestSideload specifies which related resources to include in
+// the response.
 type RateUserGetRequestSideload string
 
 const (
@@ -155,7 +160,8 @@ type RateUserGetRequest struct {
 	Filters RateUserGetRequestFilters
 }
 
-// NewRateUserGetRequest creates a new RateUserGetRequest with the provided user ID and default values.
+// NewRateUserGetRequest creates a new RateUserGetRequest with the provided user
+// ID and default values.
 func NewRateUserGetRequest(userID int64) RateUserGetRequest {
 	return RateUserGetRequest{
 		Path: RateUserGetRequestPath{
@@ -197,9 +203,11 @@ func (r RateUserGetRequest) HTTPRequest(ctx context.Context, server string) (*ht
 		query.Set("includeDeletedProjects", "true")
 	}
 	if len(r.Filters.Include) > 0 {
-		for _, include := range r.Filters.Include {
-			query.Add("include", string(include))
+		var include []string
+		for _, i := range r.Filters.Include {
+			include = append(include, string(i))
 		}
+		query.Set("include", strings.Join(include, ","))
 	}
 	req.URL.RawQuery = query.Encode()
 
@@ -211,16 +219,16 @@ type RateUserGetResponse struct {
 	// ProjectRates contains project-specific rates.
 	ProjectRates []UserProjectRate `json:"projectRates"`
 
-	// InstallationRate is the user's installation rate (optional) as a
-	// monetary amount in the smallest currency unit (e.g., cents).
+	// InstallationRate is the user's installation rate (optional) as a monetary
+	// amount in the smallest currency unit (e.g., cents).
 	InstallationRate *int64 `json:"installationRate,omitempty"`
 
-	// InstallationRates contains rates in different currencies (optional)
-	// as monetary amounts in the smallest currency unit (e.g., cents).
+	// InstallationRates contains rates in different currencies (optional) as
+	// monetary amounts in the smallest currency unit (e.g., cents).
 	InstallationRates map[int64]MultiCurrencyRate `json:"installationRates,omitempty"`
 
-	// UserCost is the user's cost (optional) as a monetary amount in the
-	// smallest currency unit (e.g., cents).
+	// UserCost is the user's cost (optional) as a monetary amount in the smallest
+	// currency unit (e.g., cents).
 	UserCost *int64 `json:"userCost,omitempty"`
 
 	// Meta contains pagination information.
@@ -252,7 +260,8 @@ func (r *RateUserGetResponse) HandleHTTPResponse(resp *http.Response) error {
 	return nil
 }
 
-// RateUserGet retrieves a user's rates using the provided request and returns the response.
+// RateUserGet retrieves a user's rates using the provided request and returns
+// the response.
 func RateUserGet(
 	ctx context.Context,
 	engine *twapi.Engine,
@@ -261,7 +270,8 @@ func RateUserGet(
 	return twapi.Execute[RateUserGetRequest, *RateUserGetResponse](ctx, engine, req)
 }
 
-// RateInstallationUserListRequestFilters contains the filters for listing installation user rates.
+// RateInstallationUserListRequestFilters contains the filters for listing
+// installation user rates.
 type RateInstallationUserListRequestFilters struct {
 	// Page is the page number to retrieve. Defaults to 1.
 	Page int64
@@ -270,13 +280,15 @@ type RateInstallationUserListRequestFilters struct {
 	PageSize int64
 }
 
-// RateInstallationUserListRequest represents the request for listing installation user rates.
+// RateInstallationUserListRequest represents the request for listing
+// installation user rates.
 type RateInstallationUserListRequest struct {
 	// Filters contains the filters for the request.
 	Filters RateInstallationUserListRequestFilters
 }
 
-// NewRateInstallationUserListRequest creates a new RateInstallationUserListRequest with default values.
+// NewRateInstallationUserListRequest creates a new
+// RateInstallationUserListRequest with default values.
 func NewRateInstallationUserListRequest() RateInstallationUserListRequest {
 	return RateInstallationUserListRequest{
 		Filters: RateInstallationUserListRequestFilters{
@@ -307,12 +319,14 @@ func (r RateInstallationUserListRequest) HTTPRequest(ctx context.Context, server
 	return req, nil
 }
 
-// MultiCurrencyInstallationUserRate represents an installation user rate with multiple currency options.
+// MultiCurrencyInstallationUserRate represents an installation user rate with
+// multiple currency options.
 type MultiCurrencyInstallationUserRate struct {
 	Rates map[int64]MultiCurrencyRate `json:"rates"`
 }
 
-// RateInstallationUserListResponse represents the response for listing installation user rates.
+// RateInstallationUserListResponse represents the response for listing
+// installation user rates.
 type RateInstallationUserListResponse struct {
 	request RateInstallationUserListRequest
 
@@ -326,8 +340,8 @@ type RateInstallationUserListResponse struct {
 	// UserRates contains the list of user rates.
 	UserRates []struct {
 		User twapi.Relationship `json:"user"`
-		// Rate is the monetary amount in the smallest currency unit
-		// (e.g., cents). For example, €10.00 is represented as 1000.
+		// Rate is the monetary amount in the smallest currency unit (e.g., cents).
+		// For example, €10.00 is represented as 1000.
 		Rate int64 `json:"rate"`
 	} `json:"userRates"`
 
@@ -367,7 +381,8 @@ func (r *RateInstallationUserListResponse) Iterate() *RateInstallationUserListRe
 	return &req
 }
 
-// RateInstallationUserList retrieves installation user rates using the provided request and returns the response.
+// RateInstallationUserList retrieves installation user rates using the provided
+// request and returns the response.
 func RateInstallationUserList(
 	ctx context.Context,
 	engine *twapi.Engine,
@@ -376,26 +391,31 @@ func RateInstallationUserList(
 	return twapi.Execute[RateInstallationUserListRequest, *RateInstallationUserListResponse](ctx, engine, req)
 }
 
-// RateInstallationUserGetRequestPath contains the path parameters for getting an installation user rate.
+// RateInstallationUserGetRequestPath contains the path parameters for getting
+// an installation user rate.
 type RateInstallationUserGetRequestPath struct {
-	// UserID is the unique identifier of the user whose installation rate is to be retrieved.
+	// UserID is the unique identifier of the user whose installation rate is to
+	// be retrieved.
 	UserID int64
 }
 
-// RateInstallationUserGetRequestSideload specifies which related resources to include in the response.
+// RateInstallationUserGetRequestSideload specifies which related resources to
+// include in the response.
 type RateInstallationUserGetRequestSideload string
 
 const (
 	RateInstallationUserGetRequestSideloadCurrencies RateInstallationUserGetRequestSideload = "currencies"
 )
 
-// RateInstallationUserGetRequestFilters contains the filters for getting an installation user rate.
+// RateInstallationUserGetRequestFilters contains the filters for getting an
+// installation user rate.
 type RateInstallationUserGetRequestFilters struct {
 	// Include specifies which related data to include.
 	Include []RateInstallationUserGetRequestSideload
 }
 
-// RateInstallationUserGetRequest represents the request for getting an installation user rate.
+// RateInstallationUserGetRequest represents the request for getting an
+// installation user rate.
 type RateInstallationUserGetRequest struct {
 	// Path contains the path parameters for the request.
 	Path RateInstallationUserGetRequestPath
@@ -404,7 +424,8 @@ type RateInstallationUserGetRequest struct {
 	Filters RateInstallationUserGetRequestFilters
 }
 
-// NewRateInstallationUserGetRequest creates a new RateInstallationUserGetRequest with the provided user ID.
+// NewRateInstallationUserGetRequest creates a new
+// RateInstallationUserGetRequest with the provided user ID.
 func NewRateInstallationUserGetRequest(userID int64) RateInstallationUserGetRequest {
 	return RateInstallationUserGetRequest{
 		Path: RateInstallationUserGetRequestPath{
@@ -439,7 +460,8 @@ type RateInstallationUserGetResponse struct {
 	// smallest currency unit (e.g., cents).
 	UserRate int64 `json:"userRate"`
 
-	// UserRates contains rates in different currencies (key is currency ID as string for JSON compatibility).
+	// UserRates contains rates in different currencies (key is currency ID as
+	// string for JSON compatibility).
 	UserRates map[string]MultiCurrencyRate `json:"userRates,omitempty"`
 
 	// Included contains related data.
@@ -460,7 +482,8 @@ func (r *RateInstallationUserGetResponse) HandleHTTPResponse(resp *http.Response
 	return nil
 }
 
-// RateInstallationUserGet retrieves an installation user rate using the provided request and returns the response.
+// RateInstallationUserGet retrieves an installation user rate using the
+// provided request and returns the response.
 func RateInstallationUserGet(
 	ctx context.Context,
 	engine *twapi.Engine,
@@ -469,28 +492,31 @@ func RateInstallationUserGet(
 	return twapi.Execute[RateInstallationUserGetRequest, *RateInstallationUserGetResponse](ctx, engine, req)
 }
 
-// RateInstallationUserUpdateRequestPath contains the path parameters for updating an installation user rate.
+// RateInstallationUserUpdateRequestPath contains the path parameters for
+// updating an installation user rate.
 type RateInstallationUserUpdateRequestPath struct {
 	// UserID is the unique identifier of the user whose rate is to be updated.
 	UserID int64
 }
 
-// RateInstallationUserUpdateRequest represents the request for updating an installation user rate.
+// RateInstallationUserUpdateRequest represents the request for updating an
+// installation user rate.
 type RateInstallationUserUpdateRequest struct {
 	// Path contains the path parameters for the request.
 	Path RateInstallationUserUpdateRequestPath `json:"-"`
 
-	// CurrencyID is the ID of the currency for the rate (optional, only used in multi-currency mode).
+	// CurrencyID is the ID of the currency for the rate (optional, only used in
+	// multi-currency mode).
 	CurrencyID *int64 `json:"currencyId,omitempty"`
 
-	// UserRate is the new rate for the user as a monetary amount in the
-	// smallest currency unit (e.g., cents). Use nil to clear/remove the rate.
+	// UserRate is the new rate for the user as a monetary amount in the smallest
+	// currency unit (e.g., cents). Use nil to clear/remove the rate.
 	UserRate *int64 `json:"userRate"`
 }
 
-// NewRateInstallationUserUpdateRequest creates a new RateInstallationUserUpdateRequest.
-// Rate should be provided in the smallest currency unit (e.g., cents). For
-// example, €10.00 is represented as 1000.
+// NewRateInstallationUserUpdateRequest creates a new
+// RateInstallationUserUpdateRequest. Rate should be provided in the smallest
+// currency unit (e.g., cents). For example, €10.00 is represented as 1000.
 func NewRateInstallationUserUpdateRequest(userID int64, rate *int64) RateInstallationUserUpdateRequest {
 	return RateInstallationUserUpdateRequest{
 		Path: RateInstallationUserUpdateRequestPath{
@@ -500,7 +526,8 @@ func NewRateInstallationUserUpdateRequest(userID int64, rate *int64) RateInstall
 	}
 }
 
-// HTTPRequest creates an HTTP request for the RateInstallationUserUpdateRequest.
+// HTTPRequest creates an HTTP request for the
+// RateInstallationUserUpdateRequest.
 func (r RateInstallationUserUpdateRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
 	uri := fmt.Sprintf("%s/projects/api/v3/rates/installation/users/%d.json", server, r.Path.UserID)
 
@@ -518,10 +545,12 @@ func (r RateInstallationUserUpdateRequest) HTTPRequest(ctx context.Context, serv
 	return req, nil
 }
 
-// RateInstallationUserUpdateResponse represents the response for updating an installation user rate.
+// RateInstallationUserUpdateResponse represents the response for updating an
+// installation user rate.
 type RateInstallationUserUpdateResponse struct{}
 
-// HandleHTTPResponse handles the HTTP response for the RateInstallationUserUpdateResponse.
+// HandleHTTPResponse handles the HTTP response for the
+// RateInstallationUserUpdateResponse.
 func (r *RateInstallationUserUpdateResponse) HandleHTTPResponse(resp *http.Response) error {
 	if resp.StatusCode != http.StatusCreated {
 		return twapi.NewHTTPError(resp, "failed to update installation user rate")
@@ -529,7 +558,8 @@ func (r *RateInstallationUserUpdateResponse) HandleHTTPResponse(resp *http.Respo
 	return nil
 }
 
-// RateInstallationUserUpdate updates an installation user rate using the provided request and returns the response.
+// RateInstallationUserUpdate updates an installation user rate using the
+// provided request and returns the response.
 func RateInstallationUserUpdate(
 	ctx context.Context,
 	engine *twapi.Engine,
@@ -538,7 +568,8 @@ func RateInstallationUserUpdate(
 	return twapi.Execute[RateInstallationUserUpdateRequest, *RateInstallationUserUpdateResponse](ctx, engine, req)
 }
 
-// RateInstallationUserBulkUpdateRequest represents the request for bulk updating installation user rates.
+// RateInstallationUserBulkUpdateRequest represents the request for bulk
+// updating installation user rates.
 type RateInstallationUserBulkUpdateRequest struct {
 	// All indicates whether to update all users.
 	All bool `json:"all,omitempty"`
@@ -549,17 +580,19 @@ type RateInstallationUserBulkUpdateRequest struct {
 	// ExcludeIDs contains user IDs to exclude (if All is true).
 	ExcludeIDs []int64 `json:"excludeIds,omitempty"`
 
-	// CurrencyID is the ID of the currency for the rate (optional, only used in multi-currency mode).
+	// CurrencyID is the ID of the currency for the rate (optional, only used in
+	// multi-currency mode).
 	CurrencyID *int64 `json:"currencyId,omitempty"`
 
-	// UserRate is the new rate for the users as a monetary amount in the
-	// smallest currency unit (e.g., cents). Use nil to clear/remove the rate.
+	// UserRate is the new rate for the users as a monetary amount in the smallest
+	// currency unit (e.g., cents). Use nil to clear/remove the rate.
 	UserRate *int64 `json:"userRate"`
 }
 
-// NewRateInstallationUserBulkUpdateRequest creates a new RateInstallationUserBulkUpdateRequest.
-// Rate should be provided in the smallest currency unit (e.g., cents). For
-// example, €10.00 is represented as 1000.
+// NewRateInstallationUserBulkUpdateRequest creates a new
+// RateInstallationUserBulkUpdateRequest. Rate should be provided in the
+// smallest currency unit (e.g., cents). For example, €10.00 is represented as
+// 1000.
 func NewRateInstallationUserBulkUpdateRequest(rate *int64) RateInstallationUserBulkUpdateRequest {
 	return RateInstallationUserBulkUpdateRequest{
 		UserRate: rate,
@@ -584,7 +617,8 @@ func (r RateInstallationUserBulkUpdateRequest) HTTPRequest(ctx context.Context, 
 	return req, nil
 }
 
-// RateInstallationUserBulkUpdateResponse represents the response for bulk updating installation user rates.
+// RateInstallationUserBulkUpdateResponse represents the response for bulk
+// updating installation user rates.
 type RateInstallationUserBulkUpdateResponse struct {
 	// All indicates whether all users were updated.
 	All bool `json:"all"`
@@ -600,7 +634,8 @@ type RateInstallationUserBulkUpdateResponse struct {
 	Rate int64 `json:"rate"`
 }
 
-// HandleHTTPResponse handles the HTTP response for the RateInstallationUserBulkUpdateResponse.
+// HandleHTTPResponse handles the HTTP response for the
+// RateInstallationUserBulkUpdateResponse.
 func (r *RateInstallationUserBulkUpdateResponse) HandleHTTPResponse(resp *http.Response) error {
 	if resp.StatusCode != http.StatusOK {
 		return twapi.NewHTTPError(resp, "failed to bulk update installation user rates")
@@ -612,8 +647,8 @@ func (r *RateInstallationUserBulkUpdateResponse) HandleHTTPResponse(resp *http.R
 	return nil
 }
 
-// RateInstallationUserBulkUpdate bulk updates installation user
-// rates using the provided request and returns the response.
+// RateInstallationUserBulkUpdate bulk updates installation user rates using the
+// provided request and returns the response.
 func RateInstallationUserBulkUpdate(
 	ctx context.Context,
 	engine *twapi.Engine,
@@ -622,13 +657,16 @@ func RateInstallationUserBulkUpdate(
 	return twapi.Execute[RateInstallationUserBulkUpdateRequest, *RateInstallationUserBulkUpdateResponse](ctx, engine, req)
 }
 
-// RateProjectGetRequestPath contains the path parameters for getting a project rate.
+// RateProjectGetRequestPath contains the path parameters for getting a project
+// rate.
 type RateProjectGetRequestPath struct {
-	// ProjectID is the unique identifier of the project whose rate is to be retrieved.
+	// ProjectID is the unique identifier of the project whose rate is to be
+	// retrieved.
 	ProjectID int64
 }
 
-// RateProjectGetRequestSideload specifies which related resources to include in the response.
+// RateProjectGetRequestSideload specifies which related resources to include in
+// the response.
 type RateProjectGetRequestSideload string
 
 const (
@@ -650,7 +688,8 @@ type RateProjectGetRequest struct {
 	Filters RateProjectGetRequestFilters
 }
 
-// NewRateProjectGetRequest creates a new RateProjectGetRequest with the provided project ID.
+// NewRateProjectGetRequest creates a new RateProjectGetRequest with the
+// provided project ID.
 func NewRateProjectGetRequest(projectID int64) RateProjectGetRequest {
 	return RateProjectGetRequest{
 		Path: RateProjectGetRequestPath{
@@ -706,7 +745,8 @@ func (r *RateProjectGetResponse) HandleHTTPResponse(resp *http.Response) error {
 	return nil
 }
 
-// RateProjectGet retrieves a project rate using the provided request and returns the response.
+// RateProjectGet retrieves a project rate using the provided request and
+// returns the response.
 func RateProjectGet(
 	ctx context.Context,
 	engine *twapi.Engine,
@@ -715,7 +755,8 @@ func RateProjectGet(
 	return twapi.Execute[RateProjectGetRequest, *RateProjectGetResponse](ctx, engine, req)
 }
 
-// RateProjectUpdateRequestPath contains the path parameters for updating a project rate.
+// RateProjectUpdateRequestPath contains the path parameters for updating a
+// project rate.
 type RateProjectUpdateRequestPath struct {
 	// ProjectID is the unique identifier of the project whose rate is to be updated.
 	ProjectID int64
@@ -771,7 +812,8 @@ func (r *RateProjectUpdateResponse) HandleHTTPResponse(resp *http.Response) erro
 	return nil
 }
 
-// RateProjectUpdate updates a project rate using the provided request and returns the response.
+// RateProjectUpdate updates a project rate using the provided request and
+// returns the response.
 func RateProjectUpdate(
 	ctx context.Context,
 	engine *twapi.Engine,
@@ -793,13 +835,15 @@ type ProjectUserRateRequest struct {
 	UserRate int64 `json:"userRate"`
 }
 
-// RateProjectAndUsersUpdateRequestPath contains the path parameters for updating a project and user rates.
+// RateProjectAndUsersUpdateRequestPath contains the path parameters for
+// updating a project and user rates.
 type RateProjectAndUsersUpdateRequestPath struct {
 	// ProjectID is the unique identifier of the project.
 	ProjectID int64
 }
 
-// RateProjectAndUsersUpdateRequest represents the request for updating a project rate and user rates.
+// RateProjectAndUsersUpdateRequest represents the request for updating a
+// project rate and user rates.
 type RateProjectAndUsersUpdateRequest struct {
 	// Path contains the path parameters for the request.
 	Path RateProjectAndUsersUpdateRequestPath `json:"-"`
@@ -813,8 +857,8 @@ type RateProjectAndUsersUpdateRequest struct {
 }
 
 // NewRateProjectAndUsersUpdateRequest creates a new request. Rate should be
-// provided in the smallest currency unit (e.g., cents). For example, €10.00
-// is 1000.
+// provided in the smallest currency unit (e.g., cents). For example, €10.00 is
+// 1000.
 func NewRateProjectAndUsersUpdateRequest(projectID int64, projectRate int64) RateProjectAndUsersUpdateRequest {
 	return RateProjectAndUsersUpdateRequest{
 		Path: RateProjectAndUsersUpdateRequestPath{
@@ -842,10 +886,12 @@ func (r RateProjectAndUsersUpdateRequest) HTTPRequest(ctx context.Context, serve
 	return req, nil
 }
 
-// RateProjectAndUsersUpdateResponse represents the response for updating a project rate and user rates.
+// RateProjectAndUsersUpdateResponse represents the response for updating a
+// project rate and user rates.
 type RateProjectAndUsersUpdateResponse struct{}
 
-// HandleHTTPResponse handles the HTTP response for the RateProjectAndUsersUpdateResponse.
+// HandleHTTPResponse handles the HTTP response for the
+// RateProjectAndUsersUpdateResponse.
 func (r *RateProjectAndUsersUpdateResponse) HandleHTTPResponse(resp *http.Response) error {
 	if resp.StatusCode != http.StatusNoContent {
 		return twapi.NewHTTPError(resp, "failed to update project and users rates")
@@ -853,7 +899,8 @@ func (r *RateProjectAndUsersUpdateResponse) HandleHTTPResponse(resp *http.Respon
 	return nil
 }
 
-// RateProjectAndUsersUpdate updates a project rate and user rates using the provided request and returns the response.
+// RateProjectAndUsersUpdate updates a project rate and user rates using the
+// provided request and returns the response.
 func RateProjectAndUsersUpdate(
 	ctx context.Context,
 	engine *twapi.Engine,
@@ -862,7 +909,8 @@ func RateProjectAndUsersUpdate(
 	return twapi.Execute[RateProjectAndUsersUpdateRequest, *RateProjectAndUsersUpdateResponse](ctx, engine, req)
 }
 
-// RateProjectUserListRequestPath contains the path parameters for listing project user rates.
+// RateProjectUserListRequestPath contains the path parameters for listing
+// project user rates.
 type RateProjectUserListRequestPath struct {
 	// ProjectID is the unique identifier of the project.
 	ProjectID int64
@@ -876,7 +924,8 @@ const (
 	RateProjectUserListRequestOrderByUsername RateProjectUserListRequestOrderBy = "name"
 )
 
-// RateProjectUserListRequestFilters contains the filters for listing project user rates.
+// RateProjectUserListRequestFilters contains the filters for listing project
+// user rates.
 type RateProjectUserListRequestFilters struct {
 	// SearchTerm is an optional search term to filter by first name or last name.
 	SearchTerm string
@@ -987,7 +1036,8 @@ type EffectiveUserProjectRate struct {
 	BillableRate *BillableRate `json:"billableRate,omitempty"`
 }
 
-// RateProjectUserListResponse represents the response for listing project user rates.
+// RateProjectUserListResponse represents the response for listing project user
+// rates.
 type RateProjectUserListResponse struct {
 	request RateProjectUserListRequest
 
@@ -1009,7 +1059,8 @@ type RateProjectUserListResponse struct {
 	} `json:"included"`
 }
 
-// HandleHTTPResponse handles the HTTP response for the RateProjectUserListResponse.
+// HandleHTTPResponse handles the HTTP response for the
+// RateProjectUserListResponse.
 func (r *RateProjectUserListResponse) HandleHTTPResponse(resp *http.Response) error {
 	if resp.StatusCode != http.StatusOK {
 		return twapi.NewHTTPError(resp, "failed to list project user rates")
@@ -1036,7 +1087,8 @@ func (r *RateProjectUserListResponse) Iterate() *RateProjectUserListRequest {
 	return &req
 }
 
-// RateProjectUserList retrieves project user rates using the provided request and returns the response.
+// RateProjectUserList retrieves project user rates using the provided request
+// and returns the response.
 func RateProjectUserList(
 	ctx context.Context,
 	engine *twapi.Engine,
@@ -1045,7 +1097,8 @@ func RateProjectUserList(
 	return twapi.Execute[RateProjectUserListRequest, *RateProjectUserListResponse](ctx, engine, req)
 }
 
-// RateProjectUserGetRequestPath contains the path parameters for getting a project user rate.
+// RateProjectUserGetRequestPath contains the path parameters for getting a
+// project user rate.
 type RateProjectUserGetRequestPath struct {
 	// ProjectID is the unique identifier of the project.
 	ProjectID int64
@@ -1054,20 +1107,23 @@ type RateProjectUserGetRequestPath struct {
 	UserID int64
 }
 
-// RateProjectUserGetRequestSideload specifies which related resources to include in the response.
+// RateProjectUserGetRequestSideload specifies which related resources to
+// include in the response.
 type RateProjectUserGetRequestSideload string
 
 const (
 	RateProjectUserGetRequestSideloadCurrencies RateProjectUserGetRequestSideload = "currencies"
 )
 
-// RateProjectUserGetRequestFilters contains the filters for getting a project user rate.
+// RateProjectUserGetRequestFilters contains the filters for getting a project
+// user rate.
 type RateProjectUserGetRequestFilters struct {
 	// Include specifies which related data to include.
 	Include []RateProjectUserGetRequestSideload
 }
 
-// RateProjectUserGetRequest represents the request for getting a project user rate.
+// RateProjectUserGetRequest represents the request for getting a project user
+// rate.
 type RateProjectUserGetRequest struct {
 	// Path contains the path parameters for the request.
 	Path RateProjectUserGetRequestPath
@@ -1106,13 +1162,14 @@ func (r RateProjectUserGetRequest) HTTPRequest(ctx context.Context, server strin
 	return req, nil
 }
 
-// RateProjectUserGetResponse represents the response for getting a project user rate.
+// RateProjectUserGetResponse represents the response for getting a project user
+// rate.
 type RateProjectUserGetResponse struct {
 	// UserRate is the user's rate.
 	UserRate *MultiCurrencyRate `json:"rate,omitempty"`
 
-	// Rate is the rate as a monetary amount in the smallest currency unit
-	// (e.g., cents).
+	// Rate is the rate as a monetary amount in the smallest currency unit (e.g.,
+	// cents).
 	Rate int64 `json:"userRate"`
 
 	// Included contains related data.
@@ -1121,7 +1178,8 @@ type RateProjectUserGetResponse struct {
 	} `json:"included"`
 }
 
-// HandleHTTPResponse handles the HTTP response for the RateProjectUserGetResponse.
+// HandleHTTPResponse handles the HTTP response for the
+// RateProjectUserGetResponse.
 func (r *RateProjectUserGetResponse) HandleHTTPResponse(resp *http.Response) error {
 	if resp.StatusCode != http.StatusOK {
 		return twapi.NewHTTPError(resp, "failed to get project user rate")
@@ -1133,7 +1191,8 @@ func (r *RateProjectUserGetResponse) HandleHTTPResponse(resp *http.Response) err
 	return nil
 }
 
-// RateProjectUserGet retrieves a project user rate using the provided request and returns the response.
+// RateProjectUserGet retrieves a project user rate using the provided request
+// and returns the response.
 func RateProjectUserGet(
 	ctx context.Context,
 	engine *twapi.Engine,
@@ -1142,7 +1201,8 @@ func RateProjectUserGet(
 	return twapi.Execute[RateProjectUserGetRequest, *RateProjectUserGetResponse](ctx, engine, req)
 }
 
-// RateProjectUserUpdateRequestPath contains the path parameters for updating a project user rate.
+// RateProjectUserUpdateRequestPath contains the path parameters for updating a
+// project user rate.
 type RateProjectUserUpdateRequestPath struct {
 	// ProjectID is the unique identifier of the project.
 	ProjectID int64
@@ -1151,21 +1211,24 @@ type RateProjectUserUpdateRequestPath struct {
 	UserID int64
 }
 
-// RateProjectUserUpdateRequest represents the request for updating a project user rate.
+// RateProjectUserUpdateRequest represents the request for updating a project
+// user rate.
 type RateProjectUserUpdateRequest struct {
 	// Path contains the path parameters for the request.
 	Path RateProjectUserUpdateRequestPath `json:"-"`
 
-	// CurrencyID is the ID of the currency for the rate (optional, only used in multi-currency mode).
+	// CurrencyID is the ID of the currency for the rate (optional, only used in
+	// multi-currency mode).
 	CurrencyID *int64 `json:"currencyId,omitempty"`
 
-	// UserRate is the new rate for the user as a monetary amount in the
-	// smallest currency unit (e.g., cents). Use nil to clear/remove the rate.
+	// UserRate is the new rate for the user as a monetary amount in the smallest
+	// currency unit (e.g., cents). Use nil to clear/remove the rate.
 	UserRate *int64 `json:"userRate"`
 }
 
-// NewRateProjectUserUpdateRequest creates a new request. Rate should be provided
-// in the smallest currency unit (e.g., cents). For example, €10.00 is 1000.
+// NewRateProjectUserUpdateRequest creates a new request. Rate should be
+// provided in the smallest currency unit (e.g., cents). For example, €10.00 is
+// 1000.
 func NewRateProjectUserUpdateRequest(projectID int64, userID int64, rate *int64) RateProjectUserUpdateRequest {
 	return RateProjectUserUpdateRequest{
 		Path: RateProjectUserUpdateRequestPath{
@@ -1194,21 +1257,9 @@ func (r RateProjectUserUpdateRequest) HTTPRequest(ctx context.Context, server st
 	return req, nil
 }
 
-// RateProjectUserUpdateResponse represents the response for updating a project user rate.
-type RateProjectUserUpdateResponse struct {
-	// UserRate is the user's updated rate as a monetary amount in the smallest
-	// currency unit (e.g., cents).
-	UserRate int64 `json:"userRate"`
-
-	// Rate is the rate as a monetary amount in the smallest currency unit
-	// (e.g., cents).
-	Rate int64 `json:"rate"`
-
-	// Included contains related data.
-	Included struct {
-		Currencies map[string]Currency `json:"currencies"`
-	} `json:"included"`
-}
+// RateProjectUserUpdateResponse represents the response for updating a project
+// user rate.
+type RateProjectUserUpdateResponse struct{}
 
 // HandleHTTPResponse handles the HTTP response for the RateProjectUserUpdateResponse.
 func (r *RateProjectUserUpdateResponse) HandleHTTPResponse(resp *http.Response) error {
@@ -1220,7 +1271,8 @@ func (r *RateProjectUserUpdateResponse) HandleHTTPResponse(resp *http.Response) 
 	return nil
 }
 
-// RateProjectUserUpdate updates a project user rate using the provided request and returns the response.
+// RateProjectUserUpdate updates a project user rate using the provided request
+// and returns the response.
 func RateProjectUserUpdate(
 	ctx context.Context,
 	engine *twapi.Engine,
@@ -1229,7 +1281,8 @@ func RateProjectUserUpdate(
 	return twapi.Execute[RateProjectUserUpdateRequest, *RateProjectUserUpdateResponse](ctx, engine, req)
 }
 
-// RateProjectUserHistoryGetRequestPath contains the path parameters for getting project user rate history.
+// RateProjectUserHistoryGetRequestPath contains the path parameters for getting
+// project user rate history.
 type RateProjectUserHistoryGetRequestPath struct {
 	// ProjectID is the unique identifier of the project.
 	ProjectID int64
@@ -1238,7 +1291,8 @@ type RateProjectUserHistoryGetRequestPath struct {
 	UserID int64
 }
 
-// RateProjectUserHistoryGetRequestSideload specifies which related resources to include in the response.
+// RateProjectUserHistoryGetRequestSideload specifies which related resources to
+// include in the response.
 type RateProjectUserHistoryGetRequestSideload string
 
 const (
@@ -1254,7 +1308,8 @@ const (
 	RateProjectUserHistoryGetRequestOrderByUsername RateProjectUserHistoryGetRequestOrderBy = "name"
 )
 
-// RateProjectUserHistoryGetRequestFilters contains the filters for getting project user rate history.
+// RateProjectUserHistoryGetRequestFilters contains the filters for getting
+// project user rate history.
 type RateProjectUserHistoryGetRequestFilters struct {
 	// SearchTerm is an optional search term to filter by first name or last name.
 	SearchTerm string
@@ -1275,7 +1330,8 @@ type RateProjectUserHistoryGetRequestFilters struct {
 	Include []RateProjectUserHistoryGetRequestSideload
 }
 
-// RateProjectUserHistoryGetRequest represents the request for getting project user rate history.
+// RateProjectUserHistoryGetRequest represents the request for getting project
+// user rate history.
 type RateProjectUserHistoryGetRequest struct {
 	// Path contains the path parameters for the request.
 	Path RateProjectUserHistoryGetRequestPath
@@ -1284,7 +1340,8 @@ type RateProjectUserHistoryGetRequest struct {
 	Filters RateProjectUserHistoryGetRequestFilters
 }
 
-// NewRateProjectUserHistoryGetRequest creates a new RateProjectUserHistoryGetRequest.
+// NewRateProjectUserHistoryGetRequest creates a new
+// RateProjectUserHistoryGetRequest.
 func NewRateProjectUserHistoryGetRequest(projectID int64, userID int64) RateProjectUserHistoryGetRequest {
 	return RateProjectUserHistoryGetRequest{
 		Path: RateProjectUserHistoryGetRequestPath{
@@ -1353,7 +1410,8 @@ type UserRateHistory struct {
 	UpdatedAt *time.Time `json:"updatedAt"`
 }
 
-// RateProjectUserHistoryGetResponse represents the response for getting project user rate history.
+// RateProjectUserHistoryGetResponse represents the response for getting project
+// user rate history.
 type RateProjectUserHistoryGetResponse struct {
 	request RateProjectUserHistoryGetRequest
 
@@ -1374,7 +1432,8 @@ type RateProjectUserHistoryGetResponse struct {
 	} `json:"included"`
 }
 
-// HandleHTTPResponse handles the HTTP response for the RateProjectUserHistoryGetResponse.
+// HandleHTTPResponse handles the HTTP response for the
+// RateProjectUserHistoryGetResponse.
 func (r *RateProjectUserHistoryGetResponse) HandleHTTPResponse(resp *http.Response) error {
 	if resp.StatusCode != http.StatusOK {
 		return twapi.NewHTTPError(resp, "failed to get project user rate history")
@@ -1401,7 +1460,8 @@ func (r *RateProjectUserHistoryGetResponse) Iterate() *RateProjectUserHistoryGet
 	return &req
 }
 
-// RateProjectUserHistoryGet retrieves project user rate history using the provided request and returns the response.
+// RateProjectUserHistoryGet retrieves project user rate history using the
+// provided request and returns the response.
 func RateProjectUserHistoryGet(
 	ctx context.Context,
 	engine *twapi.Engine,
