@@ -451,6 +451,23 @@ func createNotebook(t testEngine, projectID int64) (int64, func(), error) {
 	}, nil
 }
 
+func createSkill(t testEngine) (int64, func(), error) {
+	skillResponse, err := projects.SkillCreate(t.Context(), engine, projects.NewSkillCreateRequest(
+		fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
+	))
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to create notebook for test: %w", err)
+	}
+	id := skillResponse.Skill.ID
+	return id, func() {
+		ctx := context.Background() // t.Context is always canceled in cleanup
+		_, err := projects.SkillDelete(ctx, engine, projects.NewSkillDeleteRequest(id))
+		if err != nil {
+			t.Errorf("failed to delete skill after test: %s", err)
+		}
+	}, nil
+}
+
 type testEngine interface {
 	Context() context.Context
 	Errorf(string, ...any)
