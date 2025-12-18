@@ -468,6 +468,23 @@ func createSkill(t testEngine) (int64, func(), error) {
 	}, nil
 }
 
+func createJobRole(t testEngine) (int64, func(), error) {
+	jobRoleResponse, err := projects.JobRoleCreate(t.Context(), engine, projects.NewJobRoleCreateRequest(
+		fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
+	))
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to create job role for test: %w", err)
+	}
+	id := jobRoleResponse.JobRole.ID
+	return id, func() {
+		ctx := context.Background() // t.Context is always canceled in cleanup
+		_, err := projects.JobRoleDelete(ctx, engine, projects.NewJobRoleDeleteRequest(id))
+		if err != nil {
+			t.Errorf("failed to delete job role after test: %s", err)
+		}
+	}, nil
+}
+
 type testEngine interface {
 	Context() context.Context
 	Errorf(string, ...any)
