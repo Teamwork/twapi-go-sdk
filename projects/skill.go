@@ -359,10 +359,20 @@ func SkillGet(
 // skills.
 type SkillListRequestPath struct{}
 
+// SkillListRequestSideload contains the possible sideload options when loading
+// multiple skills.
+type SkillListRequestSideload string
+
+// List of possible sideload options for SkillListRequestSideload.
+const (
+	SkillListRequestSideloadUsers SkillListRequestSideload = "users"
+)
+
 // SkillListRequestFilters contains the filters for loading multiple
 // skills.
 type SkillListRequestFilters struct {
-	// SearchTerm is an optional search term to filter skills by name or e-mail.
+	// SearchTerm is an optional search term to filter skills by name or assigned
+	// users' names.
 	SearchTerm string
 
 	// Page is the page number to retrieve. Defaults to 1.
@@ -373,7 +383,7 @@ type SkillListRequestFilters struct {
 
 	// Include contains additional related information to include in the response
 	// as a sideload.
-	Include []string
+	Include []SkillListRequestSideload
 }
 
 // SkillListRequest represents the request body for loading multiple skills.
@@ -417,7 +427,11 @@ func (s SkillListRequest) HTTPRequest(ctx context.Context, server string) (*http
 		query.Set("pageSize", strconv.FormatInt(s.Filters.PageSize, 10))
 	}
 	if len(s.Filters.Include) > 0 {
-		query.Set("include", strings.Join(s.Filters.Include, ","))
+		var include []string
+		for _, sideload := range s.Filters.Include {
+			include = append(include, string(sideload))
+		}
+		query.Set("include", strings.Join(include, ","))
 	}
 	req.URL.RawQuery = query.Encode()
 
