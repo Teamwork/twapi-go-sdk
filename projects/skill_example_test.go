@@ -113,7 +113,7 @@ func ExampleSkillList() {
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
 	skillsRequest := projects.NewSkillListRequest()
-	skillsRequest.Filters.SearchTerm = "John"
+	skillsRequest.Filters.SearchTerm = "Software Development"
 
 	skillsResponse, err := projects.SkillList(ctx, engine, skillsRequest)
 	if err != nil {
@@ -169,11 +169,6 @@ func startSkillServer() (string, func(), error) {
 			http.Error(w, "Not Found", http.StatusNotFound)
 			return
 		}
-		w.WriteHeader(http.StatusOK)
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = fmt.Fprintln(w, `{"skill":{"id":12345}}`)
-	})
-	mux.HandleFunc("GET /projects/api/v3/me", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = fmt.Fprintln(w, `{"skill":{"id":12345}}`)
