@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -85,7 +86,16 @@ func (d *Date) UnmarshalJSON(data []byte) error {
 
 // MarshalText encodes the Date as a string in the format "2006-01-02".
 func (d Date) MarshalText() ([]byte, error) {
-	return d.MarshalJSON()
+	quotedValue, err := d.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	// it is expected that encoding.TextMarshaler does not return quotes.
+	value, err := strconv.Unquote(string(quotedValue))
+	if err != nil {
+		return nil, err
+	}
+	return []byte(value), nil
 }
 
 // UnmarshalText decodes a text string into a Date type. This is required when
@@ -124,7 +134,16 @@ func (t *Time) UnmarshalJSON(data []byte) error {
 
 // MarshalText encodes the Time as a string in the format "15:04:05".
 func (t Time) MarshalText() ([]byte, error) {
-	return t.MarshalJSON()
+	quotedValue, err := t.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+	// it is expected that encoding.TextMarshaler does not return quotes.
+	value, err := strconv.Unquote(string(quotedValue))
+	if err != nil {
+		return nil, err
+	}
+	return []byte(value), nil
 }
 
 // UnmarshalText decodes a text string into a Time type. This is required when
