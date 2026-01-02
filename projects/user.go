@@ -76,6 +76,16 @@ type User struct {
 	// Skills are the skills assigned to the user.
 	Skills []twapi.Relationship `json:"skills,omitempty"`
 
+	// WorkingHour is the working hour scheme assigned to the user.
+	WorkingHour *twapi.Relationship `json:"workingHour"`
+
+	// LengthOfDay is the number of working hours in a day for the user.
+	//
+	// Deprecated: This field is deprecated and will be removed in future
+	// versions. Use the WorkingHour relationship to retrieve detailed working
+	// hour information.
+	LengthOfDay float64 `json:"lengthOfDay"`
+
 	// Deleted indicates whether the user has been deleted.
 	Deleted bool `json:"deleted"`
 
