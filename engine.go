@@ -108,7 +108,7 @@ func NewEngine(session Session, opts ...EngineOption) *Engine {
 // response using the provided responser.
 func Execute[R HTTPRequester, T HTTPResponser](ctx context.Context, engine *Engine, requester R) (T, error) {
 	var responser T
-	if rt := reflect.TypeOf(responser); rt.Kind() == reflect.Ptr {
+	if rt := reflect.TypeOf(responser); rt.Kind() == reflect.Pointer {
 		responser = reflect.New(rt.Elem()).Interface().(T)
 	}
 
