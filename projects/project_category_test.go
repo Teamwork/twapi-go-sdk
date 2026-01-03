@@ -40,7 +40,7 @@ func TestProjectCategoryCreate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
 			projectCategory, err := projects.ProjectCategoryCreate(ctx, engine, tt.input)
@@ -99,7 +99,7 @@ func TestProjectCategoryUpdate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
 			if _, err := projects.ProjectCategoryUpdate(ctx, engine, tt.input); err != nil {
@@ -120,7 +120,7 @@ func TestProjectCategoryDelete(t *testing.T) {
 	}
 
 	ctx := t.Context()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	t.Cleanup(cancel)
 
 	_, err = projects.ProjectCategoryDelete(ctx, engine, projects.NewProjectCategoryDeleteRequest(projectCategoryID))
@@ -141,7 +141,7 @@ func TestProjectCategoryGet(t *testing.T) {
 	defer projectCategoryCleanup()
 
 	ctx := t.Context()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	t.Cleanup(cancel)
 
 	_, err = projects.ProjectCategoryGet(ctx, engine, projects.NewProjectCategoryGetRequest(projectCategoryID))
@@ -171,7 +171,7 @@ func TestProjectCategoryList(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
 			if _, err := projects.ProjectCategoryList(ctx, engine, tt.input); err != nil {

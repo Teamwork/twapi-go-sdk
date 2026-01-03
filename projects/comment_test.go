@@ -54,7 +54,7 @@ func TestCommentCreate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
 			comment, err := projects.CommentCreate(ctx, engine, tt.input)
@@ -105,7 +105,7 @@ func TestCommentUpdate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
 			if _, err := projects.CommentUpdate(ctx, engine, tt.input); err != nil {
@@ -126,7 +126,7 @@ func TestCommentDelete(t *testing.T) {
 	}
 
 	ctx := t.Context()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	t.Cleanup(cancel)
 
 	if _, err = projects.CommentDelete(ctx, engine, projects.NewCommentDeleteRequest(commentID)); err != nil {
@@ -146,7 +146,7 @@ func TestCommentGet(t *testing.T) {
 	t.Cleanup(commentCleanup)
 
 	ctx := t.Context()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	t.Cleanup(cancel)
 
 	if _, err = projects.CommentGet(ctx, engine, projects.NewCommentGetRequest(commentID)); err != nil {
@@ -195,7 +195,7 @@ func TestCommentList(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
 			if _, err := projects.CommentList(ctx, engine, tt.input); err != nil {

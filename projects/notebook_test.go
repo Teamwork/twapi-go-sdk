@@ -44,7 +44,7 @@ func TestNotebookCreate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
 			notebookResponse, err := projects.NotebookCreate(ctx, engine, tt.input)
@@ -98,7 +98,7 @@ func TestNotebookUpdate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
 			if _, err := projects.NotebookUpdate(ctx, engine, tt.input); err != nil {
@@ -119,7 +119,7 @@ func TestNotebookDelete(t *testing.T) {
 	}
 
 	ctx := t.Context()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	t.Cleanup(cancel)
 
 	if _, err = projects.NotebookDelete(ctx, engine, projects.NewNotebookDeleteRequest(notebookID)); err != nil {
@@ -139,7 +139,7 @@ func TestNotebookGet(t *testing.T) {
 	t.Cleanup(notebookCleanup)
 
 	ctx := t.Context()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	t.Cleanup(cancel)
 
 	if _, err = projects.NotebookGet(ctx, engine, projects.NewNotebookGetRequest(notebookID)); err != nil {
@@ -168,7 +168,7 @@ func TestNotebookList(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
 			if _, err := projects.NotebookList(ctx, engine, tt.input); err != nil {

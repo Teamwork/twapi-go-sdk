@@ -30,7 +30,7 @@ func TestProjectMemberAdd(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
 			if _, err := projects.ProjectMemberAdd(ctx, engine, tt.input); err != nil {

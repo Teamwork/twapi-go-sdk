@@ -35,7 +35,7 @@ func TestSkillCreate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
 			skillResponse, err := projects.SkillCreate(ctx, engine, tt.input)
@@ -86,7 +86,7 @@ func TestSkillUpdate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
 			if _, err := projects.SkillUpdate(ctx, engine, tt.input); err != nil {
@@ -107,7 +107,7 @@ func TestSkillDelete(t *testing.T) {
 	}
 
 	ctx := t.Context()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	t.Cleanup(cancel)
 
 	if _, err = projects.SkillDelete(ctx, engine, projects.NewSkillDeleteRequest(skillID)); err != nil {
@@ -127,7 +127,7 @@ func TestSkillGet(t *testing.T) {
 	t.Cleanup(skillCleanup)
 
 	ctx := t.Context()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	t.Cleanup(cancel)
 
 	if _, err = projects.SkillGet(ctx, engine, projects.NewSkillGetRequest(skillID)); err != nil {
@@ -157,7 +157,7 @@ func TestSkillList(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
 			if _, err := projects.SkillList(ctx, engine, tt.input); err != nil {

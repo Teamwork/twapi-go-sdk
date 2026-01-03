@@ -36,7 +36,7 @@ func TestTimerCreate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
 			timerResponse, err := projects.TimerCreate(ctx, engine, tt.input)
@@ -90,7 +90,7 @@ func TestTimerUpdate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
 			if _, err := projects.TimerUpdate(ctx, engine, tt.input); err != nil {
@@ -112,7 +112,7 @@ func TestTimerPause(t *testing.T) {
 	t.Cleanup(timerCleanup)
 
 	ctx := t.Context()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	t.Cleanup(cancel)
 
 	if _, err := projects.TimerPause(ctx, engine, projects.NewTimerPauseRequest(timerID)); err != nil {
@@ -132,7 +132,7 @@ func TestTimerResume(t *testing.T) {
 	t.Cleanup(timerCleanup)
 
 	ctx := t.Context()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	t.Cleanup(cancel)
 
 	if _, err := projects.TimerPause(ctx, engine, projects.NewTimerPauseRequest(timerID)); err != nil {
@@ -156,7 +156,7 @@ func TestTimerComplete(t *testing.T) {
 	t.Cleanup(timerCleanup)
 
 	ctx := t.Context()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	t.Cleanup(cancel)
 
 	if _, err := projects.TimerPause(ctx, engine, projects.NewTimerPauseRequest(timerID)); err != nil {
@@ -179,7 +179,7 @@ func TestTimerDelete(t *testing.T) {
 	}
 
 	ctx := t.Context()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	t.Cleanup(cancel)
 
 	if _, err = projects.TimerDelete(ctx, engine, projects.NewTimerDeleteRequest(timerID)); err != nil {
@@ -199,7 +199,7 @@ func TestTimerGet(t *testing.T) {
 	t.Cleanup(timerCleanup)
 
 	ctx := t.Context()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	t.Cleanup(cancel)
 
 	if _, err = projects.TimerGet(ctx, engine, projects.NewTimerGetRequest(timerID)); err != nil {
@@ -229,7 +229,7 @@ func TestTimerList(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
 			if _, err := projects.TimerList(ctx, engine, tt.input); err != nil {

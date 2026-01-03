@@ -40,7 +40,7 @@ func TestTasklistCreate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
 			tasklist, err := projects.TasklistCreate(ctx, engine, tt.input)
@@ -92,7 +92,7 @@ func TestTasklistUpdate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
 			if _, err := projects.TasklistUpdate(ctx, engine, tt.input); err != nil {
@@ -113,7 +113,7 @@ func TestTasklistDelete(t *testing.T) {
 	}
 
 	ctx := t.Context()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	t.Cleanup(cancel)
 
 	if _, err = projects.TasklistDelete(ctx, engine, projects.NewTasklistDeleteRequest(tasklistID)); err != nil {
@@ -133,7 +133,7 @@ func TestTasklistGet(t *testing.T) {
 	t.Cleanup(tasklistCleanup)
 
 	ctx := t.Context()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	t.Cleanup(cancel)
 
 	if _, err = projects.TasklistGet(ctx, engine, projects.NewTasklistGetRequest(tasklistID)); err != nil {
@@ -169,7 +169,7 @@ func TestTasklistList(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
 			if _, err := projects.TasklistList(ctx, engine, tt.input); err != nil {

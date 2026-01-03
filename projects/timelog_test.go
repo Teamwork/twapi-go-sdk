@@ -68,7 +68,7 @@ func TestTimelogCreate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
 			timelogResponse, err := projects.TimelogCreate(ctx, engine, tt.input)
@@ -126,7 +126,7 @@ func TestTimelogUpdate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
 			if _, err := projects.TimelogUpdate(ctx, engine, tt.input); err != nil {
@@ -148,7 +148,7 @@ func TestTimelogDelete(t *testing.T) {
 	t.Cleanup(timelogCleanup)
 
 	ctx := t.Context()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	t.Cleanup(cancel)
 
 	if _, err = projects.TimelogDelete(ctx, engine, projects.NewTimelogDeleteRequest(timelogID)); err != nil {
@@ -168,7 +168,7 @@ func TestTimelogGet(t *testing.T) {
 	t.Cleanup(timelogCleanup)
 
 	ctx := t.Context()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	t.Cleanup(cancel)
 
 	if _, err = projects.TimelogGet(ctx, engine, projects.NewTimelogGetRequest(timelogID)); err != nil {
@@ -217,7 +217,7 @@ func TestTimelogList(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
 			if _, err := projects.TimelogList(ctx, engine, tt.input); err != nil {

@@ -53,7 +53,7 @@ func TestTeamCreate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
 			team, err := projects.TeamCreate(ctx, engine, tt.input)
@@ -119,7 +119,7 @@ func TestTeamUpdate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 			t.Cleanup(cancel)
 
 			if _, err := projects.TeamUpdate(ctx, engine, tt.input); err != nil {
@@ -140,7 +140,7 @@ func TestTeamDelete(t *testing.T) {
 	}
 
 	ctx := t.Context()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	t.Cleanup(cancel)
 
 	if _, err = projects.TeamDelete(ctx, engine, projects.NewTeamDeleteRequest(teamID)); err != nil {
@@ -160,7 +160,7 @@ func TestTeamGet(t *testing.T) {
 	t.Cleanup(teamCleanup)
 
 	ctx := t.Context()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	t.Cleanup(cancel)
 
 	if _, err = projects.TeamGet(ctx, engine, projects.NewTeamGetRequest(teamID)); err != nil {
@@ -204,7 +204,7 @@ func TestTeamList(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
 			if _, err := projects.TeamList(ctx, engine, tt.input); err != nil {

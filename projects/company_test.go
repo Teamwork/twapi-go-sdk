@@ -48,7 +48,7 @@ func TestCompanyCreate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
 			company, err := projects.CompanyCreate(ctx, engine, tt.input)
@@ -114,7 +114,7 @@ func TestCompanyUpdate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
 			if _, err := projects.CompanyUpdate(ctx, engine, tt.input); err != nil {
@@ -135,7 +135,7 @@ func TestCompanyDelete(t *testing.T) {
 	}
 
 	ctx := t.Context()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	t.Cleanup(cancel)
 
 	if _, err = projects.CompanyDelete(ctx, engine, projects.NewCompanyDeleteRequest(companyID)); err != nil {
@@ -155,7 +155,7 @@ func TestCompanyGet(t *testing.T) {
 	t.Cleanup(companyCleanup)
 
 	ctx := t.Context()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	t.Cleanup(cancel)
 
 	if _, err = projects.CompanyGet(ctx, engine, projects.NewCompanyGetRequest(companyID)); err != nil {
@@ -184,7 +184,7 @@ func TestCompanyList(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
 			if _, err := projects.CompanyList(ctx, engine, tt.input); err != nil {

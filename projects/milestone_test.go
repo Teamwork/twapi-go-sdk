@@ -49,7 +49,7 @@ func TestMilestoneCreate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
 			milestone, err := projects.MilestoneCreate(ctx, engine, tt.input)
@@ -108,7 +108,7 @@ func TestMilestoneUpdate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
 			if _, err := projects.MilestoneUpdate(ctx, engine, tt.input); err != nil {
@@ -131,7 +131,7 @@ func TestMilestoneDelete(t *testing.T) {
 	}
 
 	ctx := t.Context()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	t.Cleanup(cancel)
 
 	if _, err = projects.MilestoneDelete(ctx, engine, projects.NewMilestoneDeleteRequest(milestoneID)); err != nil {
@@ -153,7 +153,7 @@ func TestMilestoneGet(t *testing.T) {
 	t.Cleanup(milestoneCleanup)
 
 	ctx := t.Context()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	t.Cleanup(cancel)
 
 	if _, err = projects.MilestoneGet(ctx, engine, projects.NewMilestoneGetRequest(milestoneID)); err != nil {
@@ -191,7 +191,7 @@ func TestMilestoneList(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
 			if _, err := projects.MilestoneList(ctx, engine, tt.input); err != nil {

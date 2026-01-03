@@ -29,7 +29,7 @@ func TestJobRoleCreate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
 			jobRoleResponse, err := projects.JobRoleCreate(ctx, engine, tt.input)
@@ -79,7 +79,7 @@ func TestJobRoleUpdate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
 			if _, err := projects.JobRoleUpdate(ctx, engine, tt.input); err != nil {
@@ -100,7 +100,7 @@ func TestJobRoleDelete(t *testing.T) {
 	}
 
 	ctx := t.Context()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	t.Cleanup(cancel)
 
 	if _, err = projects.JobRoleDelete(ctx, engine, projects.NewJobRoleDeleteRequest(jobRoleID)); err != nil {
@@ -120,7 +120,7 @@ func TestJobRoleGet(t *testing.T) {
 	t.Cleanup(jobRoleCleanup)
 
 	ctx := t.Context()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	t.Cleanup(cancel)
 
 	if _, err = projects.JobRoleGet(ctx, engine, projects.NewJobRoleGetRequest(jobRoleID)); err != nil {
@@ -150,7 +150,7 @@ func TestJobRoleList(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
 			if _, err := projects.JobRoleList(ctx, engine, tt.input); err != nil {

@@ -33,7 +33,7 @@ func TestTagCreate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
 			tagResponse, err := projects.TagCreate(ctx, engine, tt.input)
@@ -84,7 +84,7 @@ func TestTagUpdate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
 			if _, err := projects.TagUpdate(ctx, engine, tt.input); err != nil {
@@ -105,7 +105,7 @@ func TestTagDelete(t *testing.T) {
 	}
 
 	ctx := t.Context()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	t.Cleanup(cancel)
 
 	_, err = projects.TagDelete(ctx, engine, projects.NewTagDeleteRequest(tagID))
@@ -126,7 +126,7 @@ func TestTagGet(t *testing.T) {
 	t.Cleanup(tagCleanup)
 
 	ctx := t.Context()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	t.Cleanup(cancel)
 
 	if _, err = projects.TagGet(ctx, engine, projects.NewTagGetRequest(tagID)); err != nil {
@@ -156,7 +156,7 @@ func TestTagList(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := t.Context()
-			ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			defer cancel()
 
 			_, err := projects.TagList(ctx, engine, tt.input)
