@@ -226,9 +226,6 @@ type CalendarListResponse struct {
 			HasMore    bool  `json:"hasMore"`
 		} `json:"page"`
 	} `json:"meta"`
-
-	// Included contains any included related resources.
-	Included map[string]interface{} `json:"included"`
 }
 
 // HandleHTTPResponse handles the HTTP response for the CalendarListResponse.
@@ -423,6 +420,11 @@ type CalendarEventListResponse struct {
 
 	// SlimEvents contains reduced event data when requested.
 	SlimEvents []SlimCalendarEvent `json:"slimEvents,omitempty"`
+
+	Included struct {
+		Users           map[string]User          `json:"users,omitempty"`
+		MasterInstances map[string]CalendarEvent `json:"masterInstances,omitempty"`
+	} `json:"included"`
 }
 
 // HandleHTTPResponse handles the HTTP response for the CalendarEventListResponse.
