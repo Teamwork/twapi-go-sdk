@@ -2,6 +2,7 @@ package projects_test
 
 import (
 	"context"
+	"net/http"
 	"testing"
 	"time"
 
@@ -21,10 +22,12 @@ func TestCalendarList(t *testing.T) {
 	resp, err := projects.CalendarList(ctx, engine, req)
 	if err != nil {
 		t.Errorf("unexpected error: %s", err)
+		return
 	}
 
 	if resp == nil {
 		t.Error("expected a non-nil response")
+		return
 	}
 
 	// Note: We can't assert specific calendars exist since this depends on
@@ -48,10 +51,12 @@ func TestCalendarListPagination(t *testing.T) {
 	resp, err := projects.CalendarList(ctx, engine, req)
 	if err != nil {
 		t.Errorf("unexpected error: %s", err)
+		return
 	}
 
 	if resp == nil {
 		t.Error("expected a non-nil response")
+		return
 	}
 
 	// If there are multiple calendars, test iteration
@@ -100,10 +105,12 @@ func TestCalendarEventList(t *testing.T) {
 	resp, err := projects.CalendarEventList(ctx, engine, req)
 	if err != nil {
 		t.Errorf("unexpected error: %s", err)
+		return
 	}
 
 	if resp == nil {
 		t.Error("expected a non-nil response")
+		return
 	}
 
 	if resp.STATUS != "OK" {
@@ -180,10 +187,12 @@ func TestCalendarEventListWithFilters(t *testing.T) {
 			resp, err := projects.CalendarEventList(ctx, engine, req)
 			if err != nil {
 				t.Errorf("unexpected error: %s", err)
+				return
 			}
 
 			if resp == nil {
 				t.Error("expected a non-nil response")
+				return
 			}
 		})
 	}
@@ -204,7 +213,7 @@ func TestCalendarEventListRequestHTTPRequest(t *testing.T) {
 		t.Fatalf("unexpected error creating HTTP request: %s", err)
 	}
 
-	if httpReq.Method != "GET" {
+	if httpReq.Method != http.MethodGet {
 		t.Errorf("expected GET method, got %s", httpReq.Method)
 	}
 
@@ -241,7 +250,7 @@ func TestCalendarListRequestHTTPRequest(t *testing.T) {
 		t.Fatalf("unexpected error creating HTTP request: %s", err)
 	}
 
-	if httpReq.Method != "GET" {
+	if httpReq.Method != http.MethodGet {
 		t.Errorf("expected GET method, got %s", httpReq.Method)
 	}
 

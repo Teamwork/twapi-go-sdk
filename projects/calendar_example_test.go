@@ -50,7 +50,9 @@ func ExampleCalendarList_pagination() {
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
 	// Create an iterator to fetch all calendars across multiple pages
-	iterator, err := twapi.Iterate[projects.CalendarListRequest, *projects.CalendarListResponse](ctx, engine, projects.NewCalendarListRequest())
+	iterator, err := twapi.Iterate[projects.CalendarListRequest, *projects.CalendarListResponse](
+		ctx, engine, projects.NewCalendarListRequest(),
+	)
 	if err != nil {
 		fmt.Printf("failed to create iterator: %s", err)
 		return
@@ -151,7 +153,7 @@ func startCalendarServer() (string, func(), error) {
 	mux := http.NewServeMux()
 
 	// Calendar list endpoint
-	mux.HandleFunc("GET /projects/api/v3/calendars", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("GET /projects/api/v3/calendars", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = fmt.Fprintln(w, `{
