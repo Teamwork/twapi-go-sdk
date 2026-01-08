@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"time"
 
 	twapi "github.com/teamwork/twapi-go-sdk"
 	"github.com/teamwork/twapi-go-sdk/projects"
@@ -99,15 +100,19 @@ func ExampleCalendarEventList() {
 	if err != nil {
 		fmt.Printf("failed to list calendar events: %s", err)
 	} else {
-		fmt.Printf("retrieved %d calendar events\n", len(eventResponse.Tasks))
-		for _, event := range eventResponse.Tasks {
-			fmt.Printf("event: %s (start: %s, due: %s)\n", event.Name, event.StartDate, event.DueDate)
+		fmt.Printf("retrieved %d calendar events\n", len(eventResponse.Events))
+		for _, event := range eventResponse.Events {
+			summary := "(no summary)"
+			if event.Summary != nil {
+				summary = *event.Summary
+			}
+			fmt.Printf("event: %s (start: %s, end: %s)\n", summary, event.Start.DateTime.Format(time.RFC3339), event.End.DateTime.Format(time.RFC3339))
 		}
 	}
 
 	// Output: retrieved 2 calendar events
-	// event: Planning (start: 20250613, due: 20250613)
-	// event: Development (start: 20250614, due: 20250615)
+	// event: Planning (start: 2025-06-13T10:00:00Z, end: 2025-06-13T11:00:00Z)
+	// event: Development (start: 2025-06-14T12:00:00Z, end: 2025-06-15T12:00:00Z)
 }
 
 func ExampleCalendarEventList_withFilters() {
@@ -138,7 +143,7 @@ func ExampleCalendarEventList_withFilters() {
 	if err != nil {
 		fmt.Printf("failed to list calendar events: %s", err)
 	} else {
-		fmt.Printf("retrieved %d calendar events with filters\n", len(eventResponse.Tasks))
+		fmt.Printf("retrieved %d calendar events with filters\n", len(eventResponse.Events))
 	}
 
 	// Output: retrieved 2 calendar events with filters
@@ -197,48 +202,60 @@ func startCalendarServer() (string, func(), error) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = fmt.Fprintln(w, `{
 			"STATUS": "OK",
-			"tasks": [
+			"events": [
 				{
-					"id": 24413522,
-					"name": "Planning",
-					"priority": "",
-					"status": "new",
+					"id": "24413522",
+					"iCalUID": "uid-24413522",
+					"status": "confirmed",
+					"htmlLink": "https://calendar.test/events/24413522",
+					"createdAt": "2025-03-27T15:06:32Z",
+					"updatedAt": "2025-04-03T13:50:00Z",
+					"summary": "Planning",
 					"description": "",
-					"descriptionContentType": "TEXT",
-					"startDate": "20250613",
-					"dueDate": "20250613",
-					"projectId": 38791,
-					"taskListId": 1705643,
-					"progress": 0,
-					"dateCreated": "2025-03-27T15:06:32Z",
-					"dateChanged": "2025-04-03T13:50:00Z",
-					"dateLastModified": "2025-10-06T09:37:58Z",
-					"numComments": 0,
-					"numAttachments": 0,
-					"isPrivate": false,
-					"canEdit": true,
-					"canComplete": true
+					"color": "#ff0000",
+					"calendar": {"id": 281, "type": "calendar"},
+					"createdBy": {"id": 1, "type": "user"},
+					"organizer": {"user": {"id": 2, "type": "user"}, "email": "organizer@example.com", "fullName": "Organizer"},
+					"eventCreator": {"user": {"id": 2, "type": "user"}, "email": "organizer@example.com", "fullName": "Organizer"},
+					"start": {"dateTime": "2025-06-13T10:00:00Z", "timeZone": "UTC"},
+					"end": {"dateTime": "2025-06-13T11:00:00Z", "timeZone": "UTC"},
+					"allDay": false,
+					"attendees": [],
+					"attendeesOmitted": false,
+					"location": "Board Room",
+					"type": "default",
+					"isModified": false,
+					"guestsCanInviteOthers": true,
+					"guestsCanModify": true,
+					"guestsCanSeeOtherGuests": true,
+					"calOwnerCanEdit": true
 				},
 				{
-					"id": 24413523,
-					"name": "Development",
-					"priority": "high",
-					"status": "new",
+					"id": "24413523",
+					"iCalUID": "uid-24413523",
+					"status": "confirmed",
+					"htmlLink": "https://calendar.test/events/24413523",
+					"createdAt": "2025-03-27T15:06:32Z",
+					"updatedAt": "2025-04-03T13:50:00Z",
+					"summary": "Development",
 					"description": "Dev work",
-					"descriptionContentType": "TEXT",
-					"startDate": "20250614",
-					"dueDate": "20250615",
-					"projectId": 38791,
-					"taskListId": 1705643,
-					"progress": 0,
-					"dateCreated": "2025-03-27T15:06:32Z",
-					"dateChanged": "2025-04-03T13:50:00Z",
-					"dateLastModified": "2025-10-06T09:37:58Z",
-					"numComments": 5,
-					"numAttachments": 2,
-					"isPrivate": false,
-					"canEdit": true,
-					"canComplete": true
+					"color": "#00ff00",
+					"calendar": {"id": 281, "type": "calendar"},
+					"createdBy": {"id": 1, "type": "user"},
+					"organizer": {"user": {"id": 3, "type": "user"}, "email": "dev@example.com", "fullName": "Dev"},
+					"eventCreator": {"user": {"id": 3, "type": "user"}, "email": "dev@example.com", "fullName": "Dev"},
+					"start": {"dateTime": "2025-06-14T12:00:00Z", "timeZone": "UTC"},
+					"end": {"dateTime": "2025-06-15T12:00:00Z", "timeZone": "UTC"},
+					"allDay": false,
+					"attendees": [],
+					"attendeesOmitted": false,
+					"location": "Main Office",
+					"type": "default",
+					"isModified": false,
+					"guestsCanInviteOthers": true,
+					"guestsCanModify": true,
+					"guestsCanSeeOtherGuests": true,
+					"calOwnerCanEdit": true
 				}
 			]
 		}`)
