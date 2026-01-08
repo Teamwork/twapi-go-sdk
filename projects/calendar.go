@@ -269,6 +269,34 @@ func CalendarList(
 	return twapi.Execute[CalendarListRequest, *CalendarListResponse](ctx, engine, req)
 }
 
+// CalendarEventListRequestSideload contains the possible sideload options when
+// loading calendar events.
+type CalendarEventListRequestSideload string
+
+// List of possible sideload options for CalendarEventListRequestSideload.
+//
+//nolint:lll
+const (
+	CalendarEventListRequestSideloadUsers                        CalendarEventListRequestSideload = "users"
+	CalendarEventListRequestSideloadMasterInstances              CalendarEventListRequestSideload = "masterInstances"
+	CalendarEventListRequestSideloadTimeblocks                   CalendarEventListRequestSideload = "timeblocks"
+	CalendarEventListRequestSideloadTimeblocksMasterInstances    CalendarEventListRequestSideload = "timeblocks.masterInstances"
+	CalendarEventListRequestSideloadTimeblockProjects            CalendarEventListRequestSideload = "timeblocks.projects"
+	CalendarEventListRequestSideloadTimeblockProjectsPermissions CalendarEventListRequestSideload = "timeblocks.projects.permissions"
+	CalendarEventListRequestSideloadTimeblocksTasks              CalendarEventListRequestSideload = "timeblocks.tasks"
+	CalendarEventListRequestSideloadTimeblockTasksTasklists      CalendarEventListRequestSideload = "timeblocks.tasks.tasklists"
+	CalendarEventListRequestSideloadTimeblockProjectsCompanies   CalendarEventListRequestSideload = "timeblocks.projects.companies"
+	CalendarEventListRequestSideloadTimeblockTimelogs            CalendarEventListRequestSideload = "timeblocks.timelogs"
+	CalendarEventListRequestSideloadTimeblockTimelogsTags        CalendarEventListRequestSideload = "timeblocks.timelogs.tags"
+	CalendarEventListRequestSideloadTimelogs                     CalendarEventListRequestSideload = "timelogs"
+	CalendarEventListRequestSideloadTimelogsTags                 CalendarEventListRequestSideload = "timelogs.tags"
+	CalendarEventListRequestSideloadTimelogsTasks                CalendarEventListRequestSideload = "timelogs.tasks"
+	CalendarEventListRequestSideloadTimelogsTasksTasklists       CalendarEventListRequestSideload = "timelogs.tasks.tasklists"
+	CalendarEventListRequestSideloadTimelogsProjects             CalendarEventListRequestSideload = "timelogs.projects"
+	CalendarEventListRequestSideloadTimelogsProjectsPermissions  CalendarEventListRequestSideload = "timelogs.projects.prermissions"
+	CalendarEventListRequestSideloadTimelogsProjectsCompanies    CalendarEventListRequestSideload = "timelogs.projects.companies"
+)
+
 // CalendarEventListRequestPath contains the path parameters for loading
 // calendar events.
 type CalendarEventListRequestPath struct {
@@ -285,7 +313,7 @@ type CalendarEventListRequestFilters struct {
 	EndedBeforeDate string
 
 	// Include specifies related resources to include (comma-separated).
-	// e.g., "users,masterInstances,timelogs,timelogs.tags,timelogs.projects.permissions,timelogs.projects"
+	// Use CalendarEventListRequestSideload constants to build this value.
 	Include string
 
 	// IncludeMasterInstances indicates whether to include master instances.
