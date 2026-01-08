@@ -18,6 +18,27 @@ var (
 	_ twapi.HTTPResponser = (*CalendarEventListResponse)(nil)
 )
 
+// HexColor defines a hexadecimal color (e.g., "#ff0000").
+type HexColor string
+
+// CalendarAttendeeReminderMethod represents the reminder delivery method.
+type CalendarAttendeeReminderMethod string
+
+// CalendarAttendeeStatus represents an attendee's status.
+type CalendarAttendeeStatus string
+
+// CalendarEventStatus represents the event status.
+type CalendarEventStatus string
+
+// CalendarEventType represents the event type.
+type CalendarEventType string
+
+// CalendarEventTransparency represents visibility in calendars.
+type CalendarEventTransparency string
+
+// CalendarEventVisibility represents visibility restrictions.
+type CalendarEventVisibility string
+
 // Calendar represents a calendar in Teamwork. Calendars can be of different
 // types such as Google calendars, blocked time calendars, or other integrated
 // calendar services.
@@ -41,105 +62,102 @@ type Calendar struct {
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 
-// CalendarEvent represents an event (task) from a calendar. Note that the API
-// returns calendar events in a task-like format.
+// CalendarUser contains information returned for a calendar user.
+type CalendarUser struct {
+	User     *twapi.Relationship `json:"user"`
+	Email    *string             `json:"email"`
+	FullName *string             `json:"fullName"`
+}
+
+// CalendarAttendeeReminder contains reminder details for an attendee.
+type CalendarAttendeeReminder struct {
+	Method  CalendarAttendeeReminderMethod `json:"method"`
+	Minutes int64                          `json:"minute"`
+}
+
+// CalendarAttendeeReminders is a collection of attendee reminders.
+type CalendarAttendeeReminders []CalendarAttendeeReminder
+
+// CalendarAttendee contains all information about an event attendee.
+type CalendarAttendee struct {
+	User      CalendarUser               `json:"user"`
+	Status    CalendarAttendeeStatus     `json:"status"`
+	CanEdit   bool                       `json:"canEdit"`
+	IsSelf    bool                       `json:"isSelf"`
+	Reminders []CalendarAttendeeReminder `json:"reminders"`
+}
+
+// CalendarEventDate represents a date/time with timezone for an event.
+type CalendarEventDate struct {
+	DateTime time.Time `json:"dateTime"`
+	TimeZone string    `json:"timeZone"`
+}
+
+// TimeblockSequence holds ordering information for a timeblock.
+type TimeblockSequence struct {
+	Position int64 `json:"position"`
+	Total    int64 `json:"total"`
+}
+
+// Timeblock holds details about a timeblock linked to an event.
+type Timeblock struct {
+	Project  twapi.Relationship  `json:"project"`
+	Task     *twapi.Relationship `json:"task"`
+	Sequence *TimeblockSequence  `json:"sequence,omitempty"`
+	Timelog  *twapi.Relationship `json:"timelog"`
+}
+
+// CalendarEvent contains all the information returned from an event.
 type CalendarEvent struct {
-	// ID is the unique identifier of the event.
-	ID int64 `json:"id"`
-
-	// Name is the name/title of the event.
-	Name string `json:"name"`
-
-	// Description is the description of the event.
-	Description string `json:"description"`
-
-	// DescriptionContentType is the content type of the description.
-	DescriptionContentType string `json:"descriptionContentType"`
-
-	// Priority is the priority of the event.
-	Priority string `json:"priority"`
-
-	// Status is the status of the event.
-	Status string `json:"status"`
-
-	// StartDate is the start date of the event in YYYYMMDD format.
-	StartDate string `json:"startDate"`
-
-	// DueDate is the due date of the event in YYYYMMDD format.
-	DueDate string `json:"dueDate"`
-
-	// DateCreated is when the event was created.
-	DateCreated time.Time `json:"dateCreated"`
-
-	// DateChanged is when the event was changed.
-	DateChanged time.Time `json:"dateChanged"`
-
-	// DateLastModified is when the event was last modified.
-	DateLastModified time.Time `json:"dateLastModified"`
-
-	// ProjectID is the ID of the project this event belongs to.
-	ProjectID int64 `json:"projectId"`
-
-	// TaskListID is the ID of the task list this event belongs to.
-	TaskListID int64 `json:"taskListId"`
-
-	// CreatedBy contains information about the user who created the event.
-	CreatedBy *EventUser `json:"createdBy,omitempty"`
-
-	// UpdatedBy contains information about the user who last updated the event.
-	UpdatedBy *EventUser `json:"updatedBy,omitempty"`
-
-	// AssignedTo contains information about users assigned to the event.
-	AssignedTo []EventUser `json:"assignedTo,omitempty"`
-
-	// AssignedToTeams contains information about teams assigned to the event.
-	AssignedToTeams []EventTeam `json:"assignedToTeams,omitempty"`
-
-	// Tags contains tags associated with the event.
-	Tags []EventTag `json:"tags,omitempty"`
-
-	// Progress is the completion progress of the event (0-100).
-	Progress int64 `json:"progress"`
-
-	// NumComments is the number of comments on the event.
-	NumComments int64 `json:"numComments"`
-
-	// NumAttachments is the number of attachments on the event.
-	NumAttachments int64 `json:"numAttachments"`
-
-	// IsPrivate indicates if the event is private.
-	IsPrivate bool `json:"isPrivate"`
-
-	// CanEdit indicates if the current user can edit the event.
-	CanEdit bool `json:"canEdit"`
-
-	// CanComplete indicates if the current user can complete the event.
-	CanComplete bool `json:"canComplete"`
+	ID                      string                     `json:"id"`
+	ICalUID                 string                     `json:"iCalUID"`
+	Status                  CalendarEventStatus        `json:"status"`
+	HTMLLink                *string                    `json:"htmlLink"`
+	CreatedAt               time.Time                  `json:"createdAt"`
+	UpdatedAt               *time.Time                 `json:"updatedAt"`
+	Summary                 *string                    `json:"summary"`
+	Description             *string                    `json:"description"`
+	Color                   *HexColor                  `json:"color"`
+	Calendar                *twapi.Relationship        `json:"calendar"`
+	CreatedBy               twapi.Relationship         `json:"createdBy"`
+	Organizer               CalendarUser               `json:"organizer"`
+	EventCreator            CalendarUser               `json:"eventCreator"`
+	Start                   CalendarEventDate          `json:"start"`
+	End                     CalendarEventDate          `json:"end"`
+	AllDay                  bool                       `json:"allDay"`
+	Attendees               []CalendarAttendee         `json:"attendees"`
+	AttendeesOmitted        bool                       `json:"attendeesOmitted"`
+	Location                *string                    `json:"location"`
+	Type                    *CalendarEventType         `json:"type"`
+	IsModified              *bool                      `json:"isModified"`
+	Position                *int64                     `json:"position"`
+	RecurringEventID        *int64                     `json:"recurringEventId"`
+	OriginalStartTime       *CalendarEventDate         `json:"originalStartTime"`
+	Recurrence              *string                    `json:"recurrence"`
+	GuestsCanInviteOthers   bool                       `json:"guestsCanInviteOthers"`
+	GuestsCanModify         bool                       `json:"guestsCanModify"`
+	GuestsCanSeeOtherGuests bool                       `json:"guestsCanSeeOtherGuests"`
+	Transparency            *CalendarEventTransparency `json:"transparency"`
+	Visibility              *CalendarEventVisibility   `json:"visibility"`
+	VideoCallLink           *string                    `json:"videoCallLink"`
+	CalOwnerCanEdit         bool                       `json:"calOwnerCanEdit"`
+	Timeblock               *Timeblock                 `json:"timeblock,omitempty"`
+	ExDate                  *string                    `json:"exDate,omitempty"`
+	Timelog                 *twapi.Relationship        `json:"timelog,omitempty"`
 }
 
-// EventUser represents a user associated with a calendar event.
-type EventUser struct {
-	ID        int64  `json:"id"`
-	FirstName string `json:"firstName"`
-	LastName  string `json:"lastName"`
-	AvatarURL string `json:"avatarUrl"`
-}
-
-// EventTeam represents a team assigned to a calendar event.
-type EventTeam struct {
-	TeamID        int64  `json:"teamId"`
-	TeamName      string `json:"teamName"`
-	TeamLogo      string `json:"teamLogo"`
-	TeamLogoIcon  string `json:"teamLogoIcon"`
-	TeamLogoColor string `json:"teamLogoColor"`
-}
-
-// EventTag represents a tag associated with a calendar event.
-type EventTag struct {
-	ID        int64  `json:"id"`
-	Name      string `json:"name"`
-	Color     string `json:"color"`
-	ProjectID int64  `json:"projectId"`
+// SlimCalendarEvent contains a reduced set of event fields.
+type SlimCalendarEvent struct {
+	ID               string             `json:"id"`
+	Start            CalendarEventDate  `json:"start"`
+	End              CalendarEventDate  `json:"end"`
+	HoursPerDay      float64            `json:"hoursPerDay,omitempty"`
+	TotalTime        float64            `json:"totalTime,omitempty"`
+	AllDay           bool               `json:"allDay"`
+	Attendee         twapi.Relationship `json:"attendee"`
+	CalendarID       *int64             `json:"calendarId"`
+	CalendarSyncName string             `json:"syncName,omitempty"`
+	EventTypeName    string             `json:"eventTypeName,omitempty"`
 }
 
 // CalendarListRequestFilters contains filters for loading calendars.
@@ -400,8 +418,11 @@ type CalendarEventListResponse struct {
 	// STATUS indicates the status of the response.
 	STATUS string `json:"STATUS"`
 
-	// Tasks contains the calendar events (returned as tasks).
-	Tasks []CalendarEvent `json:"tasks"`
+	// Events contains the calendar events.
+	Events []CalendarEvent `json:"events"`
+
+	// SlimEvents contains reduced event data when requested.
+	SlimEvents []SlimCalendarEvent `json:"slimEvents,omitempty"`
 }
 
 // HandleHTTPResponse handles the HTTP response for the CalendarEventListResponse.

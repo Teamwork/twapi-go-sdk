@@ -119,7 +119,7 @@ func TestCalendarEventList(t *testing.T) {
 
 	// Note: We can't assert specific events exist since this depends on
 	// the test environment setup, but we can verify the structure works
-	t.Logf("Retrieved %d calendar events from calendar %d", len(resp.Tasks), calendarID)
+	t.Logf("Retrieved %d calendar events from calendar %d", len(resp.Events), calendarID)
 }
 
 func TestCalendarEventListWithFilters(t *testing.T) {
