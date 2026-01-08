@@ -1,3 +1,4 @@
+//nolint:lll
 package projects_test
 
 import (
@@ -106,7 +107,10 @@ func ExampleCalendarEventList() {
 			if event.Summary != nil {
 				summary = *event.Summary
 			}
-			fmt.Printf("event: %s (start: %s, end: %s)\n", summary, event.Start.DateTime.Format(time.RFC3339), event.End.DateTime.Format(time.RFC3339))
+			fmt.Printf("event: %s (start: %s, end: %s)\n",
+				summary, event.Start.DateTime.Format(time.RFC3339),
+				event.End.DateTime.Format(time.RFC3339),
+			)
 		}
 	}
 
