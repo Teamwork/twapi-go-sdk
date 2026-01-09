@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"time"
 
@@ -16,6 +18,7 @@ func main() {
 	clientID := flag.String("client-id", "", "OAuth2 Client ID")
 	clientSecret := flag.String("client-secret", "", "OAuth2 Client Secret")
 	callbackServerAddr := flag.String("callback-server-addr", "127.0.0.1:6275", "OAuth2 callback server address")
+	verifyTLS := flag.Bool("verify-tls", true, "Verify TLS certificates")
 	server := flag.String("server", "https://teamwork.com", "Teamwork server URL")
 	flag.Parse()
 
@@ -28,6 +31,13 @@ func main() {
 	session := session.NewOAuth2(*clientID, *clientSecret,
 		session.WithOAuth2Server(*server),
 		session.WithOAuth2CallbackServerAddr(*callbackServerAddr),
+		session.WithOAuth2Client(&http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: !*verifyTLS,
+				},
+			},
+		}),
 	)
 	engine := twapi.NewEngine(session)
 
