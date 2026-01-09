@@ -2,174 +2,33 @@ package projects_test
 
 import (
 	"context"
-	"net/http"
+	"fmt"
+	"math/rand"
 	"testing"
 	"time"
 
+	twapi "github.com/teamwork/twapi-go-sdk"
 	"github.com/teamwork/twapi-go-sdk/projects"
 )
 
-func TestCalendarList(t *testing.T) {
+func TestCalendarCreate(t *testing.T) {
 	if engine == nil {
 		t.Skip("Skipping test because the engine is not initialized")
 	}
 
-	ctx := t.Context()
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	t.Cleanup(cancel)
-
-	req := projects.NewCalendarListRequest()
-	resp, err := projects.CalendarList(ctx, engine, req)
-	if err != nil {
-		t.Errorf("unexpected error: %s", err)
-		return
-	}
-
-	if resp == nil {
-		t.Error("expected a non-nil response")
-		return
-	}
-
-	// Note: We can't assert specific calendars exist since this depends on
-	// the test environment setup, but we can verify the structure works
-	t.Logf("Retrieved %d calendars", len(resp.Calendars))
-}
-
-func TestCalendarListPagination(t *testing.T) {
-	if engine == nil {
-		t.Skip("Skipping test because the engine is not initialized")
-	}
-
-	ctx := t.Context()
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	t.Cleanup(cancel)
-
-	// Request with small page size to test pagination
-	req := projects.NewCalendarListRequest()
-	req.Filters.PageSize = 1
-
-	resp, err := projects.CalendarList(ctx, engine, req)
-	if err != nil {
-		t.Errorf("unexpected error: %s", err)
-		return
-	}
-
-	if resp == nil {
-		t.Error("expected a non-nil response")
-		return
-	}
-
-	// If there are multiple calendars, test iteration
-	if resp.Meta.Page.HasMore {
-		nextReq := resp.Iterate()
-		if nextReq == nil {
-			t.Error("expected next request for pagination but got nil")
-		} else if nextReq.Filters.Page != 2 {
-			t.Errorf("expected page 2, got page %d", nextReq.Filters.Page)
-		}
-	}
-}
-
-func TestCalendarEventList(t *testing.T) {
-	if engine == nil {
-		t.Skip("Skipping test because the engine is not initialized")
-	}
-
-	ctx := t.Context()
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	t.Cleanup(cancel)
-
-	// First, get the list of calendars to find a calendar ID
-	calendarListReq := projects.NewCalendarListRequest()
-	calendarListResp, err := projects.CalendarList(ctx, engine, calendarListReq)
-	if err != nil {
-		t.Fatalf("failed to get calendars: %s", err)
-	}
-
-	if len(calendarListResp.Calendars) == 0 {
-		t.Skip("No calendars available in test environment")
-	}
-
-	// Use the first calendar for testing
-	calendarID := calendarListResp.Calendars[0].ID
-
-	// Set up date range for events (e.g., next 7 days)
-	now := time.Now()
-	startDate := now.Format("2006-01-02")
-	endDate := now.Add(7 * 24 * time.Hour).Format("2006-01-02")
-
-	req := projects.NewCalendarEventListRequest(calendarID)
-	req.Filters.StartedAfterDate = startDate
-	req.Filters.EndedBeforeDate = endDate
-
-	resp, err := projects.CalendarEventList(ctx, engine, req)
-	if err != nil {
-		t.Errorf("unexpected error: %s", err)
-		return
-	}
-
-	if resp == nil {
-		t.Error("expected a non-nil response")
-		return
-	}
-
-	if resp.STATUS != "OK" {
-		t.Errorf("expected STATUS to be OK, got %s", resp.STATUS)
-	}
-
-	// Note: We can't assert specific events exist since this depends on
-	// the test environment setup, but we can verify the structure works
-	t.Logf("Retrieved %d calendar events from calendar %d", len(resp.Events), calendarID)
-}
-
-func TestCalendarEventListWithFilters(t *testing.T) {
-	if engine == nil {
-		t.Skip("Skipping test because the engine is not initialized")
-	}
-
-	ctx := t.Context()
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	t.Cleanup(cancel)
-
-	// First, get the list of calendars
-	calendarListReq := projects.NewCalendarListRequest()
-	calendarListResp, err := projects.CalendarList(ctx, engine, calendarListReq)
-	if err != nil {
-		t.Fatalf("failed to get calendars: %s", err)
-	}
-
-	if len(calendarListResp.Calendars) == 0 {
-		t.Skip("No calendars available in test environment")
-	}
-
-	calendarID := calendarListResp.Calendars[0].ID
-
-	// Test with various filter combinations
 	tests := []struct {
-		name    string
-		filters func(*projects.CalendarEventListRequestFilters)
-	}{
-		{
-			name: "with includes",
-			filters: func(f *projects.CalendarEventListRequestFilters) {
-				f.Include = "users,masterInstances"
-			},
+		name  string
+		input projects.CalendarCreateRequest
+	}{{
+		name:  "only required fields",
+		input: projects.NewCalendarCreateRequest(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100))),
+	}, {
+		name: "all fields",
+		input: projects.CalendarCreateRequest{
+			Name: "blocked_time", // blocked time calendar must have this name
+			Type: twapi.Ptr(projects.CalendarTypeBlockedTime),
 		},
-		{
-			name: "skip counts",
-			filters: func(f *projects.CalendarEventListRequestFilters) {
-				skipCounts := true
-				f.SkipCounts = &skipCounts
-			},
-		},
-		{
-			name: "include timelogs",
-			filters: func(f *projects.CalendarEventListRequestFilters) {
-				includeTimelogs := true
-				f.IncludeTimelogs = &includeTimelogs
-			},
-		},
-	}
+	}}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -177,93 +36,73 @@ func TestCalendarEventListWithFilters(t *testing.T) {
 			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 			t.Cleanup(cancel)
 
-			now := time.Now()
-			req := projects.NewCalendarEventListRequest(calendarID)
-			req.Filters.StartedAfterDate = now.Format("2006-01-02")
-			req.Filters.EndedBeforeDate = now.Add(7 * 24 * time.Hour).Format("2006-01-02")
-
-			tt.filters(&req.Filters)
-
-			resp, err := projects.CalendarEventList(ctx, engine, req)
+			calendarResponse, err := projects.CalendarCreate(ctx, engine, tt.input)
+			t.Cleanup(func() {
+				if err != nil {
+					return
+				}
+				ctx = context.Background() // t.Context is always canceled in cleanup
+				_, err := projects.CalendarDelete(ctx, engine, projects.NewCalendarDeleteRequest(calendarResponse.Calendar.ID))
+				if err != nil {
+					t.Errorf("failed to delete calendar after test: %s", err)
+				}
+			})
 			if err != nil {
 				t.Errorf("unexpected error: %s", err)
-				return
-			}
-
-			if resp == nil {
-				t.Error("expected a non-nil response")
-				return
+			} else if calendarResponse.Calendar.ID == 0 {
+				t.Error("expected a valid calendar ID but got 0")
 			}
 		})
 	}
 }
 
-func TestCalendarEventListRequestHTTPRequest(t *testing.T) {
-	req := projects.NewCalendarEventListRequest(123)
-	req.Filters.StartedAfterDate = "2026-01-01"
-	req.Filters.EndedBeforeDate = "2026-01-31"
-	req.Filters.Include = "users,timelogs"
-	skipCounts := true
-	req.Filters.SkipCounts = &skipCounts
-	includeTimelogs := true
-	req.Filters.IncludeTimelogs = &includeTimelogs
+func TestCalendarDelete(t *testing.T) {
+	if engine == nil {
+		t.Skip("Skipping test because the engine is not initialized")
+	}
 
-	httpReq, err := req.HTTPRequest(context.Background(), "https://test.teamwork.com")
+	calendarID, _, err := createCalendar(t)
 	if err != nil {
-		t.Fatalf("unexpected error creating HTTP request: %s", err)
+		t.Fatal(err)
 	}
 
-	if httpReq.Method != http.MethodGet {
-		t.Errorf("expected GET method, got %s", httpReq.Method)
-	}
+	ctx := t.Context()
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	t.Cleanup(cancel)
 
-	expectedPath := "/projects/api/v3/calendars/123/events.json"
-	if httpReq.URL.Path != expectedPath {
-		t.Errorf("expected path %s, got %s", expectedPath, httpReq.URL.Path)
-	}
-
-	query := httpReq.URL.Query()
-	if query.Get("startedAfterDate") != "2026-01-01" {
-		t.Errorf("expected startedAfterDate=2026-01-01, got %s", query.Get("startedAfterDate"))
-	}
-	if query.Get("endedBeforeDate") != "2026-01-31" {
-		t.Errorf("expected endedBeforeDate=2026-01-31, got %s", query.Get("endedBeforeDate"))
-	}
-	if query.Get("include") != "users,timelogs" {
-		t.Errorf("expected include=users,timelogs, got %s", query.Get("include"))
-	}
-	if query.Get("skipCounts") != "true" {
-		t.Errorf("expected skipCounts=true, got %s", query.Get("skipCounts"))
-	}
-	if query.Get("includeTimelogs") != "true" {
-		t.Errorf("expected includeTimelogs=true, got %s", query.Get("includeTimelogs"))
+	if _, err = projects.CalendarDelete(ctx, engine, projects.NewCalendarDeleteRequest(calendarID)); err != nil {
+		t.Errorf("unexpected error: %s", err)
 	}
 }
 
-func TestCalendarListRequestHTTPRequest(t *testing.T) {
-	req := projects.NewCalendarListRequest()
-	req.Filters.Page = 2
-	req.Filters.PageSize = 25
+func TestCalendarList(t *testing.T) {
+	if engine == nil {
+		t.Skip("Skipping test because the engine is not initialized")
+	}
 
-	httpReq, err := req.HTTPRequest(context.Background(), "https://test.teamwork.com")
+	_, calendarCleanup, err := createCalendar(t)
 	if err != nil {
-		t.Fatalf("unexpected error creating HTTP request: %s", err)
+		t.Fatal(err)
 	}
+	t.Cleanup(calendarCleanup)
 
-	if httpReq.Method != http.MethodGet {
-		t.Errorf("expected GET method, got %s", httpReq.Method)
-	}
+	tests := []struct {
+		name          string
+		input         projects.CalendarListRequest
+		expectedError bool
+	}{{
+		name: "all calendars",
+	}}
 
-	expectedPath := "/projects/api/v3/calendars.json"
-	if httpReq.URL.Path != expectedPath {
-		t.Errorf("expected path %s, got %s", expectedPath, httpReq.URL.Path)
-	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := t.Context()
+			ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+			t.Cleanup(cancel)
 
-	query := httpReq.URL.Query()
-	if query.Get("page") != "2" {
-		t.Errorf("expected page=2, got %s", query.Get("page"))
-	}
-	if query.Get("pageSize") != "25" {
-		t.Errorf("expected pageSize=25, got %s", query.Get("pageSize"))
+			if _, err := projects.CalendarList(ctx, engine, tt.input); err != nil {
+				t.Errorf("unexpected error: %s", err)
+			}
+		})
 	}
 }

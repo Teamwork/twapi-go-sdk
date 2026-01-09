@@ -485,6 +485,23 @@ func createJobRole(t testEngine) (int64, func(), error) {
 	}, nil
 }
 
+func createCalendar(t testEngine) (int64, func(), error) {
+	calendarResponse, err := projects.CalendarCreate(t.Context(), engine, projects.NewCalendarCreateRequest(
+		fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
+	))
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to create calendar for test: %w", err)
+	}
+	id := calendarResponse.Calendar.ID
+	return id, func() {
+		ctx := context.Background() // t.Context is always canceled in cleanup
+		_, err := projects.CalendarDelete(ctx, engine, projects.NewCalendarDeleteRequest(id))
+		if err != nil {
+			t.Errorf("failed to delete calendar after test: %s", err)
+		}
+	}, nil
+}
+
 type testEngine interface {
 	Context() context.Context
 	Errorf(string, ...any)
