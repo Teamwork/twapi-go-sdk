@@ -104,6 +104,11 @@ func (d *Date) UnmarshalText(text []byte) error {
 	return d.UnmarshalJSON(text)
 }
 
+// IsZero reports whether the Date is zero.
+func (d Date) IsZero() bool {
+	return time.Time(d).IsZero()
+}
+
 // String returns the string representation of the Date in the format
 // "2006-01-02".
 func (d Date) String() string {
