@@ -63,7 +63,7 @@ type Calendar struct {
 
 // CalendarCreateRequest represents the request to create a new calendar.
 //
-// https://apidocs.teamwork.com/docs/teamwork/v3/calendars/post-calendars-json
+// https://apidocs.teamwork.com/docs/teamwork/v3/calendars/post-projects-api-v3-calendars-json
 type CalendarCreateRequest struct {
 	// Name is the name of the calendar.
 	Name string `json:"name"`
@@ -104,7 +104,7 @@ func (c CalendarCreateRequest) HTTPRequest(ctx context.Context, server string) (
 
 // CalendarCreateResponse contains the response for creating a calendar.
 //
-// https://apidocs.teamwork.com/docs/teamwork/v3/calendars/post-calendars-json
+// https://apidocs.teamwork.com/docs/teamwork/v3/calendars/post-projects-api-v3-calendars-json
 type CalendarCreateResponse struct {
 	// Calendar is the created calendar.
 	Calendar Calendar `json:"calendar"`
@@ -143,7 +143,7 @@ type CalendarDeleteRequestPath struct {
 
 // CalendarDeleteRequest represents the request to delete a calendar.
 //
-// https://apidocs.teamwork.com/docs/teamwork/v3/calendars/delete-calendars-id-json
+// https://apidocs.teamwork.com/docs/teamwork/v3/calendars/delete-projects-api-v3-calendars-id-json
 type CalendarDeleteRequest struct {
 	Path CalendarDeleteRequestPath
 }
@@ -172,7 +172,7 @@ func (c CalendarDeleteRequest) HTTPRequest(ctx context.Context, server string) (
 
 // CalendarDeleteResponse contains the response for deleting a calendar.
 //
-// https://apidocs.teamwork.com/docs/teamwork/v3/calendars/delete-calendars-id-json
+// https://apidocs.teamwork.com/docs/teamwork/v3/calendars/delete-projects-api-v3-calendars-id-json
 type CalendarDeleteResponse struct{}
 
 // HandleHTTPResponse handles the HTTP response for the CalendarDeleteResponse.
@@ -206,7 +206,7 @@ type CalendarListRequestFilters struct {
 
 // CalendarListRequest represents the request for loading calendars.
 //
-// https://apidocs.teamwork.com/docs/teamwork/v3/calendars/get-calendars-json
+// https://apidocs.teamwork.com/docs/teamwork/v3/calendars/get-projects-api-v3-calendars-json
 type CalendarListRequest struct {
 	// Filters contains the filters for loading calendars.
 	Filters CalendarListRequestFilters
@@ -245,7 +245,7 @@ func (c CalendarListRequest) HTTPRequest(ctx context.Context, server string) (*h
 
 // CalendarListResponse contains the response for loading calendars.
 //
-// https://apidocs.teamwork.com/docs/teamwork/v3/calendars/get-calendars-json
+// https://apidocs.teamwork.com/docs/teamwork/v3/calendars/get-projects-api-v3-calendars-json
 type CalendarListResponse struct {
 	request CalendarListRequest
 
