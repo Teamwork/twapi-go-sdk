@@ -47,7 +47,7 @@ func ExampleTeamUpdate() {
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
 	teamRequest := projects.NewTeamUpdateRequest(12345)
-	teamRequest.Description = twapi.Ptr("This is an updated team description.")
+	teamRequest.Description = new("This is an updated team description.")
 
 	_, err = projects.TeamUpdate(ctx, engine, teamRequest)
 	if err != nil {

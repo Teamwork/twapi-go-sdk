@@ -24,7 +24,7 @@ func ExampleCommentCreate() {
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
 	commentRequest := projects.NewCommentCreateRequestInTask(777, "<h1>New Comment</h1>")
-	commentRequest.ContentType = twapi.Ptr("HTML")
+	commentRequest.ContentType = new("HTML")
 
 	commentResponse, err := projects.CommentCreate(ctx, engine, commentRequest)
 	if err != nil {

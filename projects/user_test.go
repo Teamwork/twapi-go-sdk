@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/teamwork/twapi-go-sdk"
 	"github.com/teamwork/twapi-go-sdk/projects"
 )
 
@@ -31,10 +30,10 @@ func TestUserCreate(t *testing.T) {
 		input: projects.UserCreateRequest{
 			FirstName: fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
 			LastName:  fmt.Sprintf("user%d%d", time.Now().UnixNano(), rand.Intn(100)),
-			Title:     twapi.Ptr("Test User"),
+			Title:     new("Test User"),
 			Email:     fmt.Sprintf("email%d%d@example.com", time.Now().UnixNano(), rand.Intn(100)),
-			Admin:     twapi.Ptr(true),
-			Type:      twapi.Ptr("account"),
+			Admin:     new(true),
+			Type:      new("account"),
 			CompanyID: &testResources.CompanyID,
 		},
 	}}
@@ -85,12 +84,12 @@ func TestUserUpdate(t *testing.T) {
 			Path: projects.UserUpdateRequestPath{
 				ID: userID,
 			},
-			FirstName: twapi.Ptr(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100))),
-			LastName:  twapi.Ptr(fmt.Sprintf("user%d%d", time.Now().UnixNano(), rand.Intn(100))),
-			Title:     twapi.Ptr("Test User"),
-			Email:     twapi.Ptr(fmt.Sprintf("email%d%d@example.com", time.Now().UnixNano(), rand.Intn(100))),
-			Admin:     twapi.Ptr(true),
-			Type:      twapi.Ptr("account"),
+			FirstName: new(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100))),
+			LastName:  new(fmt.Sprintf("user%d%d", time.Now().UnixNano(), rand.Intn(100))),
+			Title:     new("Test User"),
+			Email:     new(fmt.Sprintf("email%d%d@example.com", time.Now().UnixNano(), rand.Intn(100))),
+			Admin:     new(true),
+			Type:      new("account"),
 			CompanyID: &testResources.CompanyID,
 		},
 	}}

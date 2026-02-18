@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/teamwork/twapi-go-sdk"
 	"github.com/teamwork/twapi-go-sdk/projects"
 )
 
@@ -72,7 +71,7 @@ func TestJobRoleUpdate(t *testing.T) {
 			Path: projects.JobRoleUpdateRequestPath{
 				ID: jobRoleID,
 			},
-			Name: twapi.Ptr(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100))),
+			Name: new(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100))),
 		},
 	}}
 

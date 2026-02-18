@@ -24,7 +24,7 @@ func ExampleCompanyCreate() {
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
 	companyRequest := projects.NewCompanyCreateRequest("Test Company")
-	companyRequest.Profile = twapi.Ptr("A company created via the API.")
+	companyRequest.Profile = new("A company created via the API.")
 
 	companyResponse, err := projects.CompanyCreate(ctx, engine, companyRequest)
 	if err != nil {
@@ -48,7 +48,7 @@ func ExampleCompanyUpdate() {
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
 	companyRequest := projects.NewCompanyUpdateRequest(12345)
-	companyRequest.Profile = twapi.Ptr("Updated profile")
+	companyRequest.Profile = new("Updated profile")
 
 	_, err = projects.CompanyUpdate(ctx, engine, companyRequest)
 	if err != nil {

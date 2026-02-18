@@ -25,7 +25,7 @@ func ExampleTimelogCreate() {
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
 	timelogRequest := projects.NewTimelogCreateRequestInTask(777, time.Now(), 30*time.Minute)
-	timelogRequest.Description = twapi.Ptr("This is a new timelog created via the API.")
+	timelogRequest.Description = new("This is a new timelog created via the API.")
 
 	timelogResponse, err := projects.TimelogCreate(ctx, engine, timelogRequest)
 	if err != nil {
@@ -49,7 +49,7 @@ func ExampleTimelogUpdate() {
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
 	timelogRequest := projects.NewTimelogUpdateRequest(12345)
-	timelogRequest.Description = twapi.Ptr("This is an updated description.")
+	timelogRequest.Description = new("This is an updated description.")
 
 	_, err = projects.TimelogUpdate(ctx, engine, timelogRequest)
 	if err != nil {

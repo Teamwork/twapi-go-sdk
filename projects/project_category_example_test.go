@@ -24,8 +24,8 @@ func ExampleProjectCategoryCreate() {
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
 	projectCategoryRequest := projects.NewProjectCategoryCreateRequest("New Project Category")
-	projectCategoryRequest.ParentID = twapi.Ptr(int64(12345))
-	projectCategoryRequest.Color = twapi.Ptr("#ff0000")
+	projectCategoryRequest.ParentID = new(int64(12345))
+	projectCategoryRequest.Color = new("#ff0000")
 
 	projectCategoryResponse, err := projects.ProjectCategoryCreate(ctx, engine, projectCategoryRequest)
 	if err != nil {
@@ -49,7 +49,7 @@ func ExampleProjectCategoryUpdate() {
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
 	projectCategoryRequest := projects.NewProjectCategoryUpdateRequest(12345)
-	projectCategoryRequest.Color = twapi.Ptr("#aaaaaa")
+	projectCategoryRequest.Color = new("#aaaaaa")
 
 	_, err = projects.ProjectCategoryUpdate(ctx, engine, projectCategoryRequest)
 	if err != nil {

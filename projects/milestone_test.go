@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/teamwork/twapi-go-sdk"
 	"github.com/teamwork/twapi-go-sdk/projects"
 )
 
@@ -36,7 +35,7 @@ func TestMilestoneCreate(t *testing.T) {
 				ProjectID: testResources.ProjectID,
 			},
 			Name:        fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
-			Description: twapi.Ptr("This is a test milestone"),
+			Description: new("This is a test milestone"),
 			DueAt:       projects.NewLegacyDate(time.Now().Add(48 * time.Hour)),
 			TasklistIDs: []int64{testResources.TasklistID},
 			TagIDs:      []int64{testResources.TagID},
@@ -94,9 +93,9 @@ func TestMilestoneUpdate(t *testing.T) {
 			Path: projects.MilestoneUpdateRequestPath{
 				ID: milestoneID,
 			},
-			Name:        twapi.Ptr(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100))),
-			Description: twapi.Ptr("This is a test milestone"),
-			DueAt:       twapi.Ptr(projects.NewLegacyDate(time.Now().Add(48 * time.Hour))),
+			Name:        new(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100))),
+			Description: new("This is a test milestone"),
+			DueAt:       new(projects.NewLegacyDate(time.Now().Add(48 * time.Hour))),
 			TasklistIDs: []int64{testResources.TasklistID},
 			TagIDs:      []int64{testResources.TagID},
 			Assignees: &projects.LegacyUserGroups{

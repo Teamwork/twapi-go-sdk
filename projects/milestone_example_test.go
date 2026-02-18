@@ -29,7 +29,7 @@ func ExampleMilestoneCreate() {
 			UserIDs: []int64{456, 789},
 		},
 	)
-	milestoneRequest.Description = twapi.Ptr("This is a new milestone created via the API.")
+	milestoneRequest.Description = new("This is a new milestone created via the API.")
 
 	milestoneResponse, err := projects.MilestoneCreate(ctx, engine, milestoneRequest)
 	if err != nil {
@@ -53,7 +53,7 @@ func ExampleMilestoneUpdate() {
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
 	milestoneRequest := projects.NewMilestoneUpdateRequest(12345)
-	milestoneRequest.Description = twapi.Ptr("This is an updated description.")
+	milestoneRequest.Description = new("This is an updated description.")
 
 	_, err = projects.MilestoneUpdate(ctx, engine, milestoneRequest)
 	if err != nil {

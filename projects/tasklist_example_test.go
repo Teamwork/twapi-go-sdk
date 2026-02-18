@@ -24,7 +24,7 @@ func ExampleTasklistCreate() {
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
 	tasklistRequest := projects.NewTasklistCreateRequest(777, "New Tasklist")
-	tasklistRequest.Description = twapi.Ptr("This is a new tasklist created via the API.")
+	tasklistRequest.Description = new("This is a new tasklist created via the API.")
 
 	tasklistResponse, err := projects.TasklistCreate(ctx, engine, tasklistRequest)
 	if err != nil {
@@ -48,7 +48,7 @@ func ExampleTasklistUpdate() {
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
 	tasklistRequest := projects.NewTasklistUpdateRequest(12345)
-	tasklistRequest.Description = twapi.Ptr("This is an updated description.")
+	tasklistRequest.Description = new("This is an updated description.")
 
 	_, err = projects.TasklistUpdate(ctx, engine, tasklistRequest)
 	if err != nil {

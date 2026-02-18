@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/teamwork/twapi-go-sdk"
 	"github.com/teamwork/twapi-go-sdk/projects"
 )
 
@@ -26,9 +25,9 @@ func TestProjectCreate(t *testing.T) {
 		name: "all fields",
 		input: projects.ProjectCreateRequest{
 			Name:        fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
-			Description: twapi.Ptr("This is a test project"),
-			StartAt:     twapi.Ptr(projects.NewLegacyDate(time.Now().Add(24 * time.Hour))),
-			EndAt:       twapi.Ptr(projects.NewLegacyDate(time.Now().Add(48 * time.Hour))),
+			Description: new("This is a test project"),
+			StartAt:     new(projects.NewLegacyDate(time.Now().Add(24 * time.Hour))),
+			EndAt:       new(projects.NewLegacyDate(time.Now().Add(48 * time.Hour))),
 			CategoryID:  &testResources.ProjectCategoryID,
 			CompanyID:   testResources.CompanyID,
 			OwnerID:     &testResources.UserID,
@@ -82,10 +81,10 @@ func TestProjectUpdate(t *testing.T) {
 			Path: projects.ProjectUpdateRequestPath{
 				ID: projectID,
 			},
-			Name:        twapi.Ptr(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100))),
-			Description: twapi.Ptr("This is a test project"),
-			StartAt:     twapi.Ptr(projects.NewLegacyDate(time.Now().Add(24 * time.Hour))),
-			EndAt:       twapi.Ptr(projects.NewLegacyDate(time.Now().Add(48 * time.Hour))),
+			Name:        new(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100))),
+			Description: new("This is a test project"),
+			StartAt:     new(projects.NewLegacyDate(time.Now().Add(24 * time.Hour))),
+			EndAt:       new(projects.NewLegacyDate(time.Now().Add(48 * time.Hour))),
 			CategoryID:  &testResources.ProjectCategoryID,
 			CompanyID:   &testResources.CompanyID,
 			OwnerID:     &testResources.UserID,

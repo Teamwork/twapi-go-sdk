@@ -25,7 +25,7 @@ func ExampleNotebookCreate() {
 
 	notebookRequest :=
 		projects.NewNotebookCreateRequest(777, "New Notebook", "An amazing content", projects.NotebookTypeMarkdown)
-	notebookRequest.Description = twapi.Ptr("This is a new notebook created via the API.")
+	notebookRequest.Description = new("This is a new notebook created via the API.")
 
 	notebookResponse, err := projects.NotebookCreate(ctx, engine, notebookRequest)
 	if err != nil {
@@ -49,7 +49,7 @@ func ExampleNotebookUpdate() {
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
 	notebookRequest := projects.NewNotebookUpdateRequest(12345)
-	notebookRequest.Description = twapi.Ptr("This is an updated description.")
+	notebookRequest.Description = new("This is an updated description.")
 
 	_, err = projects.NotebookUpdate(ctx, engine, notebookRequest)
 	if err != nil {

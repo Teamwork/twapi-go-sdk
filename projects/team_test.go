@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/teamwork/twapi-go-sdk"
 	"github.com/teamwork/twapi-go-sdk/projects"
 )
 
@@ -32,8 +31,8 @@ func TestTeamCreate(t *testing.T) {
 		name: "all fields for company",
 		input: projects.TeamCreateRequest{
 			Name:         fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
-			Handle:       twapi.Ptr(fmt.Sprintf("testhandle%d%d", time.Now().UnixNano(), rand.Intn(100))),
-			Description:  twapi.Ptr("This is a test team."),
+			Handle:       new(fmt.Sprintf("testhandle%d%d", time.Now().UnixNano(), rand.Intn(100))),
+			Description:  new("This is a test team."),
 			ParentTeamID: &parentTeamID,
 			CompanyID:    &testResources.CompanyID,
 			UserIDs:      []int64{testResources.UserID},
@@ -42,8 +41,8 @@ func TestTeamCreate(t *testing.T) {
 		name: "all fields for project",
 		input: projects.TeamCreateRequest{
 			Name:         fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
-			Handle:       twapi.Ptr(fmt.Sprintf("testhandle%d%d", time.Now().UnixNano(), rand.Intn(100))),
-			Description:  twapi.Ptr("This is a test team."),
+			Handle:       new(fmt.Sprintf("testhandle%d%d", time.Now().UnixNano(), rand.Intn(100))),
+			Description:  new("This is a test team."),
 			ParentTeamID: &parentTeamID,
 			ProjectID:    &testResources.ProjectID,
 			UserIDs:      []int64{testResources.UserID},
@@ -96,9 +95,9 @@ func TestTeamUpdate(t *testing.T) {
 			Path: projects.TeamUpdateRequestPath{
 				ID: teamID,
 			},
-			Name:        twapi.Ptr(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100))),
-			Handle:      twapi.Ptr(fmt.Sprintf("testhandle%d%d", time.Now().UnixNano(), rand.Intn(100))),
-			Description: twapi.Ptr("This is a test team."),
+			Name:        new(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100))),
+			Handle:      new(fmt.Sprintf("testhandle%d%d", time.Now().UnixNano(), rand.Intn(100))),
+			Description: new("This is a test team."),
 			CompanyID:   &testResources.CompanyID,
 			UserIDs:     []int64{testResources.UserID},
 		},
@@ -108,9 +107,9 @@ func TestTeamUpdate(t *testing.T) {
 			Path: projects.TeamUpdateRequestPath{
 				ID: teamID,
 			},
-			Name:        twapi.Ptr(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100))),
-			Handle:      twapi.Ptr(fmt.Sprintf("testhandle%d%d", time.Now().UnixNano(), rand.Intn(100))),
-			Description: twapi.Ptr("This is a test team."),
+			Name:        new(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100))),
+			Handle:      new(fmt.Sprintf("testhandle%d%d", time.Now().UnixNano(), rand.Intn(100))),
+			Description: new("This is a test team."),
 			ProjectID:   &testResources.ProjectID,
 			UserIDs:     []int64{testResources.UserID},
 		},

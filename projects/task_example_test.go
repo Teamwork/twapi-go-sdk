@@ -24,7 +24,7 @@ func ExampleTaskCreate() {
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
 	taskRequest := projects.NewTaskCreateRequest(777, "New Task")
-	taskRequest.Description = twapi.Ptr("This is a new task created via the API.")
+	taskRequest.Description = new("This is a new task created via the API.")
 
 	taskResponse, err := projects.TaskCreate(ctx, engine, taskRequest)
 	if err != nil {
@@ -48,7 +48,7 @@ func ExampleTaskUpdate() {
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
 	taskRequest := projects.NewTaskUpdateRequest(12345)
-	taskRequest.Description = twapi.Ptr("This is an updated description.")
+	taskRequest.Description = new("This is an updated description.")
 
 	_, err = projects.TaskUpdate(ctx, engine, taskRequest)
 	if err != nil {
