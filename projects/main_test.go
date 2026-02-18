@@ -173,7 +173,7 @@ func createProject(t testEngine) (int64, func(), error) {
 func createProjectCategory(t testEngine) (int64, func(), error) {
 	projectCategory, err := projects.ProjectCategoryCreate(t.Context(), engine, projects.ProjectCategoryCreateRequest{
 		Name:  fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
-		Color: twapi.Ptr("#00ff00"),
+		Color: new("#00ff00"),
 	})
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed to create project category for test: %w", err)
@@ -334,7 +334,7 @@ func createCommentInTask(t testEngine, taskID int64) (int64, func(), error) {
 			TaskID: taskID,
 		},
 		Body:        "<h1>This is a test comment</h1>",
-		ContentType: twapi.Ptr("HTML"),
+		ContentType: new("HTML"),
 	})
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed to create comment for test: %w", err)
@@ -355,7 +355,7 @@ func createCommentInMilestone(t testEngine, milestoneID int64) (int64, func(), e
 			MilestoneID: milestoneID,
 		},
 		Body:        "<h1>This is a test comment</h1>",
-		ContentType: twapi.Ptr("HTML"),
+		ContentType: new("HTML"),
 	})
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed to create comment for test: %w", err)

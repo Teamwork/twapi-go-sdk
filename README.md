@@ -2,7 +2,7 @@
 
 # 🚀 Teamwork.com API - Go SDK
 
-[![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?style=for-the-badge&logo=go)](https://golang.org/)
+[![Go Version](https://img.shields.io/badge/Go-1.26+-00ADD8?style=for-the-badge&logo=go)](https://golang.org/)
 [![Go Reference](https://img.shields.io/badge/Go-Reference-00ADD8?style=for-the-badge&logo=go)](https://pkg.go.dev/github.com/Teamwork/twapi-go-sdk)
 [![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/teamwork/twapi-go-sdk?style=for-the-badge)](https://goreportcard.com/report/github.com/teamwork/twapi-go-sdk)
@@ -35,7 +35,7 @@ go get github.com/teamwork/twapi-go-sdk
 ```
 
 **Requirements:**
-- Go 1.24 or later
+- Go 1.26 or later
 - A Teamwork.com account with API access
 
 ## 🔐 Authentication
@@ -480,7 +480,7 @@ go tool cover -html=coverage.out
 
 ## 📋 Requirements
 
-- **Go Version:** 1.24 or later
+- **Go Version:** 1.26 or later
 - **Dependencies:** Minimal external dependencies (see `go.mod`)
 - **Teamwork Account:** Valid Teamwork.com account with API access
 

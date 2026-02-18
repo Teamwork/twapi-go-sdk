@@ -25,12 +25,12 @@ func ExampleProjectCreate() {
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
 	projectRequest := projects.NewProjectCreateRequest("New Project")
-	projectRequest.Description = twapi.Ptr("This is a new project created via the API.")
-	projectRequest.StartAt = twapi.Ptr(projects.LegacyDate(time.Now().AddDate(0, 0, 1)))
-	projectRequest.EndAt = twapi.Ptr(projects.LegacyDate(time.Now().AddDate(0, 0, 30)))
-	projectRequest.CategoryID = twapi.Ptr(int64(54321))
+	projectRequest.Description = new("This is a new project created via the API.")
+	projectRequest.StartAt = new(projects.LegacyDate(time.Now().AddDate(0, 0, 1)))
+	projectRequest.EndAt = new(projects.LegacyDate(time.Now().AddDate(0, 0, 30)))
+	projectRequest.CategoryID = new(int64(54321))
 	projectRequest.CompanyID = 12345
-	projectRequest.OwnerID = twapi.Ptr(int64(67890))
+	projectRequest.OwnerID = new(int64(67890))
 	projectRequest.TagIDs = []int64{11111, 22222}
 
 	projectResponse, err := projects.ProjectCreate(ctx, engine, projectRequest)
@@ -55,7 +55,7 @@ func ExampleProjectUpdate() {
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
 	projectRequest := projects.NewProjectUpdateRequest(12345)
-	projectRequest.Description = twapi.Ptr("This is an updated description.")
+	projectRequest.Description = new("This is an updated description.")
 
 	_, err = projects.ProjectUpdate(ctx, engine, projectRequest)
 	if err != nil {

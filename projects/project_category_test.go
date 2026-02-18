@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/teamwork/twapi-go-sdk"
 	"github.com/teamwork/twapi-go-sdk/projects"
 )
 
@@ -33,7 +32,7 @@ func TestProjectCategoryCreate(t *testing.T) {
 		input: projects.ProjectCategoryCreateRequest{
 			Name:     fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
 			ParentID: &parentProjectCategoryID,
-			Color:    twapi.Ptr("#ff0000"),
+			Color:    new("#ff0000"),
 		},
 	}}
 
@@ -90,9 +89,9 @@ func TestProjectCategoryUpdate(t *testing.T) {
 			Path: projects.ProjectCategoryUpdateRequestPath{
 				ID: projectCategoryID,
 			},
-			Name:     twapi.Ptr(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100))),
+			Name:     new(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100))),
 			ParentID: &parentProjectCategoryID,
-			Color:    twapi.Ptr("#aaaaaa"),
+			Color:    new("#aaaaaa"),
 		},
 	}}
 

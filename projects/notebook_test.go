@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/teamwork/twapi-go-sdk"
 	"github.com/teamwork/twapi-go-sdk/projects"
 )
 
@@ -34,7 +33,7 @@ func TestNotebookCreate(t *testing.T) {
 				ProjectID: testResources.ProjectID,
 			},
 			Name:        fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
-			Description: twapi.Ptr("This is a test notebook"),
+			Description: new("This is a test notebook"),
 			Contents:    "An amazing content",
 			Type:        projects.NotebookTypeMarkdown,
 			TagIDs:      []int64{testResources.TagID},
@@ -87,10 +86,10 @@ func TestNotebookUpdate(t *testing.T) {
 			Path: projects.NotebookUpdateRequestPath{
 				ID: notebookID,
 			},
-			Name:        twapi.Ptr(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100))),
-			Description: twapi.Ptr("This is a test notebook"),
-			Contents:    twapi.Ptr("<h1>An amazing content updated</h1>"),
-			Type:        twapi.Ptr(projects.NotebookTypeHTML),
+			Name:        new(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100))),
+			Description: new("This is a test notebook"),
+			Contents:    new("<h1>An amazing content updated</h1>"),
+			Type:        new(projects.NotebookTypeHTML),
 			TagIDs:      []int64{testResources.TagID},
 		},
 	}}

@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/teamwork/twapi-go-sdk"
 	"github.com/teamwork/twapi-go-sdk/projects"
 )
 
@@ -32,7 +31,7 @@ func TestTasklistCreate(t *testing.T) {
 				ProjectID: testResources.ProjectID,
 			},
 			Name:        fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
-			Description: twapi.Ptr("This is a test tasklist"),
+			Description: new("This is a test tasklist"),
 			MilestoneID: &testResources.MilestoneID,
 		},
 	}}
@@ -83,8 +82,8 @@ func TestTasklistUpdate(t *testing.T) {
 			Path: projects.TasklistUpdateRequestPath{
 				ID: tasklistID,
 			},
-			Name:        twapi.Ptr(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100))),
-			Description: twapi.Ptr("This is a test tasklist"),
+			Name:        new(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100))),
+			Description: new("This is a test tasklist"),
 			MilestoneID: &testResources.MilestoneID,
 		},
 	}}

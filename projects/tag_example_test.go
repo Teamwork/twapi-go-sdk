@@ -45,7 +45,7 @@ func ExampleTagUpdate() {
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
 	tagRequest := projects.NewTagUpdateRequest(12345)
-	tagRequest.Name = twapi.Ptr("Updated tag")
+	tagRequest.Name = new("Updated tag")
 
 	_, err = projects.TagUpdate(ctx, engine, tagRequest)
 	if err != nil {

@@ -47,7 +47,7 @@ func ExampleUserUpdate() {
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
 	userRequest := projects.NewUserUpdateRequest(12345)
-	userRequest.Title = twapi.Ptr("Software Engineer")
+	userRequest.Title = new("Software Engineer")
 
 	_, err = projects.UserUpdate(ctx, engine, userRequest)
 	if err != nil {

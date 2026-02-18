@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	twapi "github.com/teamwork/twapi-go-sdk"
 	"github.com/teamwork/twapi-go-sdk/projects"
 )
 
@@ -26,7 +25,7 @@ func TestCalendarCreate(t *testing.T) {
 		name: "all fields",
 		input: projects.CalendarCreateRequest{
 			Name: "blocked_time", // blocked time calendar must have this name
-			Type: twapi.Ptr(projects.CalendarTypeBlockedTime),
+			Type: new(projects.CalendarTypeBlockedTime),
 		},
 	}}
 

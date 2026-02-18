@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/teamwork/twapi-go-sdk"
 	"github.com/teamwork/twapi-go-sdk/projects"
 )
 
@@ -38,7 +37,7 @@ func TestCommentCreate(t *testing.T) {
 				MilestoneID: testResources.MilestoneID,
 			},
 			Body:        "<h1>This is a test comment</h1>",
-			ContentType: twapi.Ptr("HTML"),
+			ContentType: new("HTML"),
 		},
 	}, {
 		name: "all fields for task",
@@ -47,7 +46,7 @@ func TestCommentCreate(t *testing.T) {
 				TaskID: testResources.TaskID,
 			},
 			Body:        "<h1>This is a test comment</h1>",
-			ContentType: twapi.Ptr("HTML"),
+			ContentType: new("HTML"),
 		},
 	}}
 
@@ -98,7 +97,7 @@ func TestCommentUpdate(t *testing.T) {
 				ID: commentID,
 			},
 			Body:        "<h1>Updated comment</h1>",
-			ContentType: twapi.Ptr("HTML"),
+			ContentType: new("HTML"),
 		},
 	}}
 

@@ -24,7 +24,7 @@ func ExampleTimerCreate() {
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
 	timerRequest := projects.NewTimerCreateRequest(777)
-	timerRequest.Description = twapi.Ptr("This is a new timer created via the API.")
+	timerRequest.Description = new("This is a new timer created via the API.")
 
 	timerResponse, err := projects.TimerCreate(ctx, engine, timerRequest)
 	if err != nil {
@@ -48,7 +48,7 @@ func ExampleTimerUpdate() {
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
 	timerRequest := projects.NewTimerUpdateRequest(12345)
-	timerRequest.Description = twapi.Ptr("This is an updated description.")
+	timerRequest.Description = new("This is an updated description.")
 
 	_, err = projects.TimerUpdate(ctx, engine, timerRequest)
 	if err != nil {

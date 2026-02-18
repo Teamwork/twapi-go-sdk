@@ -47,7 +47,7 @@ func ExampleJobRoleUpdate() {
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
 	jobRoleRequest := projects.NewJobRoleUpdateRequest(12345)
-	jobRoleRequest.Name = twapi.Ptr("Senior Project Manager")
+	jobRoleRequest.Name = new("Senior Project Manager")
 
 	_, err = projects.JobRoleUpdate(ctx, engine, jobRoleRequest)
 	if err != nil {

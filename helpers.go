@@ -2,11 +2,6 @@ package twapi
 
 import "context"
 
-// Ptr returns a pointer to the value v.
-func Ptr[T any](v T) *T {
-	return &v
-}
-
 // Iterate allows scanning through paginated results from the Teamwork API.
 func Iterate[T HTTPRequester, R interface {
 	HTTPResponser

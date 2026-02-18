@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/teamwork/twapi-go-sdk"
 	"github.com/teamwork/twapi-go-sdk/projects"
 )
 
@@ -23,11 +22,11 @@ func TestTimerCreate(t *testing.T) {
 	}, {
 		name: "all fields",
 		input: projects.TimerCreateRequest{
-			Description:       twapi.Ptr("This is a test timer"),
-			Billable:          twapi.Ptr(true),
-			Running:           twapi.Ptr(true),
-			Seconds:           twapi.Ptr(int64(3600)), // 1 hour in seconds
-			StopRunningTimers: twapi.Ptr(true),
+			Description:       new("This is a test timer"),
+			Billable:          new(true),
+			Running:           new(true),
+			Seconds:           new(int64(3600)), // 1 hour in seconds
+			StopRunningTimers: new(true),
 			ProjectID:         testResources.ProjectID,
 			TaskID:            &testResources.TaskID,
 		},
@@ -79,9 +78,9 @@ func TestTimerUpdate(t *testing.T) {
 			Path: projects.TimerUpdateRequestPath{
 				ID: timerID,
 			},
-			Description: twapi.Ptr("Updated description"),
-			Billable:    twapi.Ptr(true),
-			Running:     twapi.Ptr(true),
+			Description: new("Updated description"),
+			Billable:    new(true),
+			Running:     new(true),
 			ProjectID:   &testResources.ProjectID,
 			TaskID:      &testResources.TaskID,
 		},
