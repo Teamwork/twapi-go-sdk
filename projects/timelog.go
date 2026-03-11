@@ -65,6 +65,10 @@ type Timelog struct {
 	// categorize or label the timelog for easier filtering and searching.
 	Tags []twapi.Relationship `json:"tags,omitempty"`
 
+	// DeskTicketID is the desk ticket associated with the timelog. It can be
+	// nil if the timelog is not associated with a desk ticket.
+	DeskTicketID *int64 `json:"deskTicketId,omitempty"`
+
 	// CreatedAt is the date and time when the timelog was created.
 	CreatedAt time.Time `json:"createdAt"`
 
