@@ -536,6 +536,11 @@ type TimelogListRequestFilters struct {
 	// teams will be returned.
 	AssignedToTeamIDs []int64
 
+	// DeskTicketIDs is an optional list of desk ticket IDs to filter the
+	// timelogs by. If provided, only timelogs associated with these desk
+	// tickets will be returned.
+	DeskTicketIDs []int64
+
 	// Page is the page number to retrieve. Defaults to 1.
 	Page int64
 
@@ -620,6 +625,13 @@ func (t TimelogListRequest) HTTPRequest(ctx context.Context, server string) (*ht
 			assignedToTeamIDs[i] = strconv.FormatInt(id, 10)
 		}
 		query.Set("assignedToTeamIds", strings.Join(assignedToTeamIDs, ","))
+	}
+	if len(t.Filters.DeskTicketIDs) > 0 {
+		deskTicketIDs := make([]string, len(t.Filters.DeskTicketIDs))
+		for i, id := range t.Filters.DeskTicketIDs {
+			deskTicketIDs[i] = strconv.FormatInt(id, 10)
+		}
+		query.Set("deskTicketIds", strings.Join(deskTicketIDs, ","))
 	}
 	if t.Filters.Page > 0 {
 		query.Set("page", strconv.FormatInt(t.Filters.Page, 10))
