@@ -29,7 +29,7 @@ type ProjectBudget struct {
 	Type BudgetType `json:"type"`
 
 	// Status is the current project budget status.
-	Status string `json:"status"`
+	Status ProjectBudgetStatus `json:"status"`
 
 	// Capacity is the total budget capacity.
 	Capacity int64 `json:"capacity"`
