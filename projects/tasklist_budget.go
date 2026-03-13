@@ -18,12 +18,12 @@ var (
 	_ twapi.HTTPResponser = (*ProjectBudgetTasklistBudgetListResponse)(nil)
 )
 
-type TasklistBudgetType string
+type BudgetType string
 
 const (
-	TasklistBudgetTypeAll       TasklistBudgetType = "ALL"
-	TasklistBudgetTypeFinancial TasklistBudgetType = "FINANCIAL"
-	TasklistBudgetTypeTime      TasklistBudgetType = "TIME"
+	TasklistBudgetTypeAll       BudgetType = "ALL"
+	TasklistBudgetTypeFinancial BudgetType = "FINANCIAL"
+	TasklistBudgetTypeTime      BudgetType = "TIME"
 )
 
 // TasklistBudget represents a budget item attached to a tasklist.
@@ -32,7 +32,7 @@ type TasklistBudget struct {
 	ID int64 `json:"id"`
 
 	// Type is the budget type.
-	Type TasklistBudgetType `json:"type"`
+	Type BudgetType `json:"type"`
 
 	// Capacity is the budget capacity in the smallest unit supported by the API.
 	Capacity int64 `json:"capacity"`
@@ -83,89 +83,26 @@ const (
 	ProjectBudgetExpenseTypeNonBillable ProjectBudgetExpenseType = "NON-BILLABLE"
 )
 
-// ProjectBudget contains project budget data exposed in included sideloads.
-type ProjectBudget struct {
-	// ID is the unique identifier of the project budget.
-	ID int64 `json:"id"`
+type ProjectBudgetRepeatUnit string
 
-	// ProjectID is the identifier of the parent project.
-	ProjectID int64 `json:"projectId"`
+const (
+	ProjectBudgetRepeatUnitNone    ProjectBudgetRepeatUnit = ""
+	ProjectBudgetRepeatUnitDay     ProjectBudgetRepeatUnit = "DAY"
+	ProjectBudgetRepeatUnitWeek    ProjectBudgetRepeatUnit = "WEEK"
+	ProjectBudgetRepeatUnitMonth   ProjectBudgetRepeatUnit = "MONTH"
+	ProjectBudgetRepeatUnitQuarter ProjectBudgetRepeatUnit = "QUARTER"
+	ProjectBudgetRepeatUnitYear    ProjectBudgetRepeatUnit = "YEAR"
+)
 
-	// Type is the project budget type.
-	Type TasklistBudgetType `json:"type"`
+type ProjectBudgetTimelogType string
 
-	// Status is the current project budget status.
-	Status string `json:"status"`
-
-	// Capacity is the total budget capacity.
-	Capacity int64 `json:"capacity"`
-
-	// CapacityUsed is the consumed amount of budget capacity.
-	CapacityUsed int64 `json:"capacityUsed"`
-
-	// OriginatorBudgetID points to the originating budget in repeating sequences.
-	OriginatorBudgetID *int64 `json:"originatorBudgetId"`
-
-	// IsRepeating indicates whether this budget repeats.
-	IsRepeating bool `json:"isRepeating"`
-
-	// RepeatPeriod defines how often the budget repeats.
-	RepeatPeriod *int64 `json:"repeatPeriod"`
-
-	// RepeatUnit defines the repeat unit (for example "month").
-	RepeatUnit *string `json:"repeatUnit"`
-
-	// RepeatsRemaining is the remaining repeat count.
-	RepeatsRemaining *int64 `json:"repeatsRemaining"`
-
-	// SequenceNumber is the position in a repeated sequence.
-	SequenceNumber *int64 `json:"sequenceNumber"`
-
-	// StartDateTime is the budget period start date and time.
-	StartDateTime *time.Time `json:"startDateTime"`
-
-	// EndDateTime is the budget period end date and time.
-	EndDateTime *time.Time `json:"endDateTime"`
-
-	// CurrencyCode is the currency used by this budget.
-	CurrencyCode *string `json:"currencyCode"`
-
-	// TimelogType is the timelog calculation mode used by this budget.
-	TimelogType *string `json:"timelogType"`
-
-	// ExpenseType is the expense calculation mode used by this budget.
-	ExpenseType *ProjectBudgetExpenseType `json:"expenseType"`
-
-	// DefaultRate is the default rate applied by this budget.
-	DefaultRate *float64 `json:"defaultRate"`
-
-	// NotificationIDs are identifiers of notifications associated with this budget.
-	NotificationIDs []int64 `json:"notificationIds"`
-
-	// CreatedBy is the identifier of the user who created this budget.
-	CreatedBy *int64 `json:"createdByUserId"`
-
-	// CreatedAt is the date and time when this budget was created.
-	CreatedAt *time.Time `json:"dateCreated"`
-
-	// UpdatedBy is the identifier of the user who last updated this budget.
-	UpdatedBy *int64 `json:"updatedUserId"`
-
-	// UpdatedAt is the date and time when this budget was last updated.
-	UpdatedAt *time.Time `json:"dateUpdated"`
-
-	// CompletedBy is the identifier of the user who completed this budget.
-	CompletedBy *int64 `json:"completedByUserId"`
-
-	// CompletedAt is the date and time when this budget was completed.
-	CompletedAt *time.Time `json:"dateCompleted"`
-
-	// DeletedBy is the identifier of the user who deleted this budget.
-	DeletedBy *int64 `json:"deletedByUserId"`
-
-	// DeletedAt is the date and time when this budget was deleted.
-	DeletedAt *time.Time `json:"dateDeleted"`
-}
+const (
+	ProjectBudgetTimelogTypeAll         ProjectBudgetTimelogType = "ALL"
+	ProjectBudgetTimelogTypeBilled      ProjectBudgetTimelogType = "BILLED"
+	ProjectBudgetTimelogTypeUnbilled    ProjectBudgetTimelogType = "UNBILLED"
+	ProjectBudgetTimelogTypeBillable    ProjectBudgetTimelogType = "BILLABLE"
+	ProjectBudgetTimelogTypeNonBillable ProjectBudgetTimelogType = "NON-BILLABLE"
+)
 
 // TasklistBudgetNotification contains notification details for a tasklist
 // budget.
