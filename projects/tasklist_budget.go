@@ -142,29 +142,29 @@ type ProjectBudget struct {
 	// NotificationIDs are identifiers of notifications associated with this budget.
 	NotificationIDs []int64 `json:"notificationIds"`
 
-	// CreatedByUserID is the identifier of the user who created this budget.
-	CreatedByUserID *int64 `json:"createdByUserId"`
+	// CreatedBy is the identifier of the user who created this budget.
+	CreatedBy *int64 `json:"createdByUserId"`
 
-	// DateCreated is the date and time when this budget was created.
-	DateCreated *time.Time `json:"dateCreated"`
+	// CreatedAt is the date and time when this budget was created.
+	CreatedAt *time.Time `json:"dateCreated"`
 
-	// UpdatedUserID is the identifier of the user who last updated this budget.
-	UpdatedUserID *int64 `json:"updatedUserId"`
+	// UpdatedBy is the identifier of the user who last updated this budget.
+	UpdatedBy *int64 `json:"updatedUserId"`
 
-	// DateUpdated is the date and time when this budget was last updated.
-	DateUpdated *time.Time `json:"dateUpdated"`
+	// UpdatedAt is the date and time when this budget was last updated.
+	UpdatedAt *time.Time `json:"dateUpdated"`
 
-	// CompletedByUserID is the identifier of the user who completed this budget.
-	CompletedByUserID *int64 `json:"completedByUserId"`
+	// CompletedBy is the identifier of the user who completed this budget.
+	CompletedBy *int64 `json:"completedByUserId"`
 
-	// DateCompleted is the date and time when this budget was completed.
-	DateCompleted *time.Time `json:"dateCompleted"`
+	// CompletedAt is the date and time when this budget was completed.
+	CompletedAt *time.Time `json:"dateCompleted"`
 
-	// DeletedByUserID is the identifier of the user who deleted this budget.
-	DeletedByUserID *int64 `json:"deletedByUserId"`
+	// DeletedBy is the identifier of the user who deleted this budget.
+	DeletedBy *int64 `json:"deletedByUserId"`
 
-	// DateDeleted is the date and time when this budget was deleted.
-	DateDeleted *time.Time `json:"dateDeleted"`
+	// DeletedAt is the date and time when this budget was deleted.
+	DeletedAt *time.Time `json:"dateDeleted"`
 }
 
 // TasklistBudgetNotification contains notification details for a tasklist
