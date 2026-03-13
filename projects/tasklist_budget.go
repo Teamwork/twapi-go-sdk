@@ -346,12 +346,9 @@ type ProjectBudgetTasklistBudgetListResponse struct {
 	TasklistBudgets []TasklistBudget `json:"tasklistBudgets"`
 
 	Included struct {
-		Companies      map[string]Company                    `json:"companies,omitempty"`
 		Notifications  map[string]TasklistBudgetNotification `json:"notifications,omitempty"`
 		ProjectBudgets map[string]ProjectBudget              `json:"projectBudgets,omitempty"`
 		Tasklists      map[string]Tasklist                   `json:"tasklists,omitempty"`
-		Teams          map[string]Team                       `json:"teams,omitempty"`
-		Users          map[string]User                       `json:"users,omitempty"`
 	} `json:"included"`
 }
 
