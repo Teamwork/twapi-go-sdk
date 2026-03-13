@@ -75,35 +75,6 @@ type TasklistBudget struct {
 	DeletedBy *int64 `json:"deletedBy"`
 }
 
-type ProjectBudgetExpenseType string
-
-const (
-	ProjectBudgetExpenseTypeAll         ProjectBudgetExpenseType = "ALL"
-	ProjectBudgetExpenseTypeBillable    ProjectBudgetExpenseType = "BILLABLE"
-	ProjectBudgetExpenseTypeNonBillable ProjectBudgetExpenseType = "NON-BILLABLE"
-)
-
-type ProjectBudgetRepeatUnit string
-
-const (
-	ProjectBudgetRepeatUnitNone    ProjectBudgetRepeatUnit = ""
-	ProjectBudgetRepeatUnitDay     ProjectBudgetRepeatUnit = "DAY"
-	ProjectBudgetRepeatUnitWeek    ProjectBudgetRepeatUnit = "WEEK"
-	ProjectBudgetRepeatUnitMonth   ProjectBudgetRepeatUnit = "MONTH"
-	ProjectBudgetRepeatUnitQuarter ProjectBudgetRepeatUnit = "QUARTER"
-	ProjectBudgetRepeatUnitYear    ProjectBudgetRepeatUnit = "YEAR"
-)
-
-type ProjectBudgetTimelogType string
-
-const (
-	ProjectBudgetTimelogTypeAll         ProjectBudgetTimelogType = "ALL"
-	ProjectBudgetTimelogTypeBilled      ProjectBudgetTimelogType = "BILLED"
-	ProjectBudgetTimelogTypeUnbilled    ProjectBudgetTimelogType = "UNBILLED"
-	ProjectBudgetTimelogTypeBillable    ProjectBudgetTimelogType = "BILLABLE"
-	ProjectBudgetTimelogTypeNonBillable ProjectBudgetTimelogType = "NON-BILLABLE"
-)
-
 // TasklistBudgetNotification contains notification details for a tasklist
 // budget.
 type TasklistBudgetNotification struct {

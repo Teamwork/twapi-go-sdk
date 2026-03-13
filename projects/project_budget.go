@@ -17,6 +17,35 @@ var (
 	_ twapi.HTTPResponser = (*ProjectBudgetListResponse)(nil)
 )
 
+type ProjectBudgetExpenseType string
+
+const (
+	ProjectBudgetExpenseTypeAll         ProjectBudgetExpenseType = "ALL"
+	ProjectBudgetExpenseTypeBillable    ProjectBudgetExpenseType = "BILLABLE"
+	ProjectBudgetExpenseTypeNonBillable ProjectBudgetExpenseType = "NON-BILLABLE"
+)
+
+type ProjectBudgetRepeatUnit string
+
+const (
+	ProjectBudgetRepeatUnitNone    ProjectBudgetRepeatUnit = ""
+	ProjectBudgetRepeatUnitDay     ProjectBudgetRepeatUnit = "DAY"
+	ProjectBudgetRepeatUnitWeek    ProjectBudgetRepeatUnit = "WEEK"
+	ProjectBudgetRepeatUnitMonth   ProjectBudgetRepeatUnit = "MONTH"
+	ProjectBudgetRepeatUnitQuarter ProjectBudgetRepeatUnit = "QUARTER"
+	ProjectBudgetRepeatUnitYear    ProjectBudgetRepeatUnit = "YEAR"
+)
+
+type ProjectBudgetTimelogType string
+
+const (
+	ProjectBudgetTimelogTypeAll         ProjectBudgetTimelogType = "ALL"
+	ProjectBudgetTimelogTypeBilled      ProjectBudgetTimelogType = "BILLED"
+	ProjectBudgetTimelogTypeUnbilled    ProjectBudgetTimelogType = "UNBILLED"
+	ProjectBudgetTimelogTypeBillable    ProjectBudgetTimelogType = "BILLABLE"
+	ProjectBudgetTimelogTypeNonBillable ProjectBudgetTimelogType = "NON-BILLABLE"
+)
+
 // ProjectBudget contains project budget data exposed in included sideloads.
 type ProjectBudget struct {
 	// ID is the unique identifier of the project budget.
