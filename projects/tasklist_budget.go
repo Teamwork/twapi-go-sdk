@@ -18,13 +18,21 @@ var (
 	_ twapi.HTTPResponser = (*ProjectBudgetTasklistBudgetListResponse)(nil)
 )
 
+type TasklistBudgetType string
+
+const (
+	TasklistBudgetTypeAll       TasklistBudgetType = "ALL"
+	TasklistBudgetTypeFinancial TasklistBudgetType = "FINANCIAL"
+	TasklistBudgetTypeTime      TasklistBudgetType = "TIME"
+)
+
 // TasklistBudget represents a budget item attached to a tasklist.
 type TasklistBudget struct {
 	// ID is the unique identifier of the tasklist budget.
 	ID int64 `json:"id"`
 
 	// Type is the budget type.
-	Type string `json:"type"`
+	Type TasklistBudgetType `json:"type"`
 
 	// Capacity is the budget capacity in the smallest unit supported by the API.
 	Capacity int64 `json:"capacity"`
@@ -32,20 +40,11 @@ type TasklistBudget struct {
 	// CapacityUsed is the consumed budget capacity.
 	CapacityUsed int64 `json:"capacityUsed"`
 
-	// InstallationID is the unique identifier of the Teamwork installation.
-	InstallationID int64 `json:"installationId"`
-
 	// ProjectID is the parent project identifier.
 	ProjectID int64 `json:"projectId"`
 
-	// ProjectBudgetID is the parent project budget identifier.
-	ProjectBudgetID int64 `json:"projectBudgetId"`
-
 	// ProjectBudget is the relationship to the parent project budget.
 	ProjectBudget twapi.Relationship `json:"projectbudget"`
-
-	// TasklistID is the identifier of the associated tasklist.
-	TasklistID int64 `json:"tasklistId"`
 
 	// Tasklist is the relationship to the tasklist associated with this budget.
 	Tasklist twapi.Relationship `json:"tasklist"`
@@ -53,9 +52,6 @@ type TasklistBudget struct {
 	// Milestone is the relationship to the milestone associated with this budget,
 	// when available.
 	Milestone *twapi.Relationship `json:"milestone"`
-
-	// NotificationIDs are identifiers of notifications associated with this budget.
-	NotificationIDs []int64 `json:"notificationIds"`
 
 	// Notifications are relationships to the budget notifications.
 	Notifications []twapi.Relationship `json:"notifications"`
@@ -79,6 +75,14 @@ type TasklistBudget struct {
 	DeletedBy *int64 `json:"deletedBy"`
 }
 
+type ProjectBudgetExpenseType string
+
+const (
+	ProjectBudgetExpenseTypeAll         ProjectBudgetExpenseType = "ALL"
+	ProjectBudgetExpenseTypeBillable    ProjectBudgetExpenseType = "BILLABLE"
+	ProjectBudgetExpenseTypeNonBillable ProjectBudgetExpenseType = "NON-BILLABLE"
+)
+
 // ProjectBudget contains project budget data exposed in included sideloads.
 type ProjectBudget struct {
 	// ID is the unique identifier of the project budget.
@@ -88,7 +92,7 @@ type ProjectBudget struct {
 	ProjectID int64 `json:"projectId"`
 
 	// Type is the project budget type.
-	Type string `json:"type"`
+	Type TasklistBudgetType `json:"type"`
 
 	// Status is the current project budget status.
 	Status string `json:"status"`
@@ -130,7 +134,7 @@ type ProjectBudget struct {
 	TimelogType *string `json:"timelogType"`
 
 	// ExpenseType is the expense calculation mode used by this budget.
-	ExpenseType *string `json:"expenseType"`
+	ExpenseType *ProjectBudgetExpenseType `json:"expenseType"`
 
 	// DefaultRate is the default rate applied by this budget.
 	DefaultRate *float64 `json:"defaultRate"`
