@@ -26,6 +26,30 @@ var (
 	_ twapi.HTTPResponser = (*ProjectListResponse)(nil)
 )
 
+// ProjectStatus represents the status of a project. It can be "active",
+// "archived" (also seen as "inactive") or "deleted". For update operations,
+// only "active" and "archived" are valid values, as "deleted" is used to
+// indicate a deleted project in the response.
+type ProjectStatus string
+
+const (
+	// ProjectStatusActive indicates that the project is active and ongoing.
+	ProjectStatusActive ProjectStatus = "active"
+
+	// ProjectStatusArchived indicates that the project is archived and no longer
+	// active, but still exists in the system.
+	ProjectStatusArchived ProjectStatus = "archived"
+
+	// ProjectStatusInactive is an alias for ProjectStatusArchived, as the API may
+	// return either "archived" or "inactive" to indicate an archived project.
+	ProjectStatusInactive ProjectStatus = "inactive"
+
+	// ProjectStatusDeleted is only used in responses to indicate a deleted
+	// project. It cannot be set in update requests, as deletion is performed
+	// using the delete endpoint.
+	ProjectStatusDeleted ProjectStatus = "deleted"
+)
+
 // Project serves as the central workspace for organizing and managing a
 // specific piece of work or initiative. Each project provides a dedicated area
 // where teams can plan tasks, assign responsibilities, set deadlines, and track
@@ -84,9 +108,9 @@ type Project struct {
 	// CompletedBy is the ID of the user who completed the project.
 	CompletedBy *int64 `json:"completedBy"`
 
-	// Status is the status of the project. It can be "active", "inactive"
-	// (archived) or "deleted".
-	Status string `json:"status"`
+	// Status is the status of the project. It can be "active", "archived" or
+	// "deleted".
+	Status ProjectStatus `json:"status"`
 
 	// Type is the type of the project. It can be "normal", "tasklists-template",
 	// "projects-template", "personal", "holder-project", "tentative" or
@@ -229,6 +253,11 @@ type ProjectUpdateRequest struct {
 
 	// TagIDs is the list of tag IDs associated with the project.
 	TagIDs []int64 `json:"tagIds,omitempty"`
+
+	// Status is the status of the project. It can be "active" or "archived". The
+	// "deleted" status is not allowed in update requests, as deletion is
+	// performed using the delete endpoint.
+	Status *ProjectStatus `json:"status,omitempty"`
 }
 
 // NewProjectUpdateRequest creates a new ProjectUpdateRequest with the
