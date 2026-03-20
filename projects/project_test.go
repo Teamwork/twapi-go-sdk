@@ -89,6 +89,7 @@ func TestProjectUpdate(t *testing.T) {
 			CompanyID:   &testResources.CompanyID,
 			OwnerID:     &testResources.UserID,
 			TagIDs:      []int64{testResources.TagID},
+			Status:      new(projects.ProjectStatusArchived),
 		},
 	}}
 
