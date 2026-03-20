@@ -17,32 +17,89 @@ var (
 	_ twapi.HTTPResponser = (*ProjectBudgetListResponse)(nil)
 )
 
+// BudgetType represents the type of a budget.
+type BudgetType string
+
+const (
+	// BudgetTypeAll represents all budget types.
+	BudgetTypeAll BudgetType = "ALL"
+
+	// BudgetTypeFinancial represents financial budgets.
+	BudgetTypeFinancial BudgetType = "FINANCIAL"
+
+	// BudgetTypeTime represents time budgets.
+	BudgetTypeTime BudgetType = "TIME"
+)
+
+// ProjectBudgetStatus is the status filter value for project budgets.
+type ProjectBudgetStatus string
+
+const (
+	// ProjectBudgetStatusUpcoming represents an upcoming project budget.
+	ProjectBudgetStatusUpcoming ProjectBudgetStatus = "upcoming"
+
+	// ProjectBudgetStatusActive represents an active project budget.
+	ProjectBudgetStatusActive ProjectBudgetStatus = "active"
+
+	// ProjectBudgetStatusComplete represents a completed project budget.
+	ProjectBudgetStatusComplete ProjectBudgetStatus = "complete"
+)
+
+// ProjectBudgetExpenseType represents the type of expense for a project budget.
 type ProjectBudgetExpenseType string
 
 const (
-	ProjectBudgetExpenseTypeAll         ProjectBudgetExpenseType = "ALL"
-	ProjectBudgetExpenseTypeBillable    ProjectBudgetExpenseType = "BILLABLE"
+	// ProjectBudgetExpenseTypeAll represents all expense types.
+	ProjectBudgetExpenseTypeAll ProjectBudgetExpenseType = "ALL"
+
+	// ProjectBudgetExpenseTypeBillable represents billable expenses.
+	ProjectBudgetExpenseTypeBillable ProjectBudgetExpenseType = "BILLABLE"
+
+	// ProjectBudgetExpenseTypeNonBillable represents non-billable expenses.
 	ProjectBudgetExpenseTypeNonBillable ProjectBudgetExpenseType = "NON-BILLABLE"
 )
 
+// ProjectBudgetRepeatUnit represents the unit of repetition for a project
+// budget.
 type ProjectBudgetRepeatUnit string
 
 const (
-	ProjectBudgetRepeatUnitNone    ProjectBudgetRepeatUnit = ""
-	ProjectBudgetRepeatUnitDay     ProjectBudgetRepeatUnit = "DAY"
-	ProjectBudgetRepeatUnitWeek    ProjectBudgetRepeatUnit = "WEEK"
-	ProjectBudgetRepeatUnitMonth   ProjectBudgetRepeatUnit = "MONTH"
+	// ProjectBudgetRepeatUnitNone represents a non-repeating budget.
+	ProjectBudgetRepeatUnitNone ProjectBudgetRepeatUnit = ""
+
+	// ProjectBudgetRepeatUnitDay represents a daily repeating budget.
+	ProjectBudgetRepeatUnitDay ProjectBudgetRepeatUnit = "DAY"
+
+	// ProjectBudgetRepeatUnitWeek represents a weekly repeating budget.
+	ProjectBudgetRepeatUnitWeek ProjectBudgetRepeatUnit = "WEEK"
+
+	// ProjectBudgetRepeatUnitMonth represents a monthly repeating budget.
+	ProjectBudgetRepeatUnitMonth ProjectBudgetRepeatUnit = "MONTH"
+
+	// ProjectBudgetRepeatUnitQuarter represents a quarterly repeating budget.
 	ProjectBudgetRepeatUnitQuarter ProjectBudgetRepeatUnit = "QUARTER"
-	ProjectBudgetRepeatUnitYear    ProjectBudgetRepeatUnit = "YEAR"
+
+	// ProjectBudgetRepeatUnitYear represents a yearly repeating budget.
+	ProjectBudgetRepeatUnitYear ProjectBudgetRepeatUnit = "YEAR"
 )
 
+// ProjectBudgetTimelogType represents the type of timelog for a project budget.
 type ProjectBudgetTimelogType string
 
 const (
-	ProjectBudgetTimelogTypeAll         ProjectBudgetTimelogType = "ALL"
-	ProjectBudgetTimelogTypeBilled      ProjectBudgetTimelogType = "BILLED"
-	ProjectBudgetTimelogTypeUnbilled    ProjectBudgetTimelogType = "UNBILLED"
-	ProjectBudgetTimelogTypeBillable    ProjectBudgetTimelogType = "BILLABLE"
+	// ProjectBudgetTimelogTypeAll represents all timelog types.
+	ProjectBudgetTimelogTypeAll ProjectBudgetTimelogType = "ALL"
+
+	// ProjectBudgetTimelogTypeBilled represents billed timelogs.
+	ProjectBudgetTimelogTypeBilled ProjectBudgetTimelogType = "BILLED"
+
+	// ProjectBudgetTimelogTypeUnbilled represents unbilled timelogs.
+	ProjectBudgetTimelogTypeUnbilled ProjectBudgetTimelogType = "UNBILLED"
+
+	// ProjectBudgetTimelogTypeBillable represents billable timelogs.
+	ProjectBudgetTimelogTypeBillable ProjectBudgetTimelogType = "BILLABLE"
+
+	// ProjectBudgetTimelogTypeNonBillable represents non-billable timelogs.
 	ProjectBudgetTimelogTypeNonBillable ProjectBudgetTimelogType = "NON-BILLABLE"
 )
 
@@ -129,16 +186,6 @@ type ProjectBudget struct {
 	// DeletedAt is the date and time when this budget was deleted.
 	DeletedAt *time.Time `json:"dateDeleted"`
 }
-
-// ProjectBudgetStatus is the status filter value for project budgets.
-type ProjectBudgetStatus string
-
-// Project budget status values.
-const (
-	ProjectBudgetStatusUpcoming ProjectBudgetStatus = "upcoming"
-	ProjectBudgetStatusActive   ProjectBudgetStatus = "active"
-	ProjectBudgetStatusComplete ProjectBudgetStatus = "complete"
-)
 
 // ProjectBudgetListRequestFilters contains filters for listing project budgets.
 type ProjectBudgetListRequestFilters struct {

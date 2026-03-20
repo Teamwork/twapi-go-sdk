@@ -9,16 +9,16 @@ import (
 	"github.com/teamwork/twapi-go-sdk/projects"
 )
 
-func TestProjectBudgetTasklistBudgetListRequestGeneration(t *testing.T) {
-	req := projects.NewProjectBudgetTasklistBudgetListRequest(123)
+func TestTasklistBudgetListRequestGeneration(t *testing.T) {
+	req := projects.NewTasklistBudgetListRequest(123)
 	req.Filters.OrderMode = twapi.OrderModeDescending
-	req.Filters.OrderBy = projects.ProjectBudgetTasklistBudgetListRequestOrderByDateCreated
+	req.Filters.OrderBy = projects.TasklistBudgetListRequestOrderByDateCreated
 	req.Filters.ProjectBudgetID = 123
 	req.Filters.Page = 2
 	req.Filters.PageSize = 25
-	req.Filters.Include = []projects.ProjectBudgetTasklistBudgetListRequestSideload{
-		projects.ProjectBudgetTasklistBudgetListRequestSideloadTasklists,
-		projects.ProjectBudgetTasklistBudgetListRequestSideloadProjectBudgets,
+	req.Filters.Include = []projects.TasklistBudgetListRequestSideload{
+		projects.TasklistBudgetListRequestSideloadTasklists,
+		projects.TasklistBudgetListRequestSideloadProjectBudgets,
 	}
 	req.Filters.Fields.Tasklists = []string{"id", "name"}
 	req.Filters.Fields.TasklistBudgetNotifications = []string{"id", "projectId"}
@@ -70,9 +70,9 @@ func TestProjectBudgetTasklistBudgetListRequestGeneration(t *testing.T) {
 	}
 }
 
-func TestProjectBudgetTasklistBudgetListIterate(t *testing.T) {
-	resp := &projects.ProjectBudgetTasklistBudgetListResponse{}
-	req := projects.NewProjectBudgetTasklistBudgetListRequest(987)
+func TestTasklistBudgetListIterate(t *testing.T) {
+	resp := &projects.TasklistBudgetListResponse{}
+	req := projects.NewTasklistBudgetListRequest(987)
 	req.Filters.Page = 3
 
 	resp.SetRequest(req)

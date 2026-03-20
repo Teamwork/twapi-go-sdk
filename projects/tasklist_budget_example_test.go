@@ -13,7 +13,7 @@ import (
 	"github.com/teamwork/twapi-go-sdk/session"
 )
 
-func ExampleProjectBudgetTasklistBudgetList() {
+func ExampleTasklistBudgetList() {
 	address, stop, err := startTasklistBudgetServer() // mock server for demonstration purposes
 	if err != nil {
 		fmt.Printf("failed to start server: %s", err)
@@ -24,13 +24,13 @@ func ExampleProjectBudgetTasklistBudgetList() {
 	ctx := context.Background()
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
-	req := projects.NewProjectBudgetTasklistBudgetListRequest(12345)
+	req := projects.NewTasklistBudgetListRequest(12345)
 	req.Filters.PageSize = 1
-	req.Filters.Include = []projects.ProjectBudgetTasklistBudgetListRequestSideload{
-		projects.ProjectBudgetTasklistBudgetListRequestSideloadTasklists,
+	req.Filters.Include = []projects.TasklistBudgetListRequestSideload{
+		projects.TasklistBudgetListRequestSideloadTasklists,
 	}
 
-	resp, err := projects.ProjectBudgetTasklistBudgetList(ctx, engine, req)
+	resp, err := projects.TasklistBudgetList(ctx, engine, req)
 	if err != nil {
 		fmt.Printf("failed to list tasklist budgets: %s", err)
 		return

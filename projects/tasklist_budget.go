@@ -14,16 +14,8 @@ import (
 )
 
 var (
-	_ twapi.HTTPRequester = (*ProjectBudgetTasklistBudgetListRequest)(nil)
-	_ twapi.HTTPResponser = (*ProjectBudgetTasklistBudgetListResponse)(nil)
-)
-
-type BudgetType string
-
-const (
-	TasklistBudgetTypeAll       BudgetType = "ALL"
-	TasklistBudgetTypeFinancial BudgetType = "FINANCIAL"
-	TasklistBudgetTypeTime      BudgetType = "TIME"
+	_ twapi.HTTPRequester = (*TasklistBudgetListRequest)(nil)
+	_ twapi.HTTPResponser = (*TasklistBudgetListResponse)(nil)
 )
 
 // TasklistBudget represents a budget item attached to a tasklist.
@@ -100,34 +92,36 @@ type TasklistBudgetNotification struct {
 	CompanyID *int64 `json:"companyId"`
 }
 
-// ProjectBudgetTasklistBudgetListRequestPath contains the path parameters for
-// listing tasklist budgets in a project budget.
-type ProjectBudgetTasklistBudgetListRequestPath struct {
+// TasklistBudgetListRequestPath contains the path parameters for listing
+// tasklist budgets in a project budget.
+type TasklistBudgetListRequestPath struct {
 	// ProjectBudgetID is the unique identifier of the parent project budget.
 	ProjectBudgetID int64
 }
 
-// ProjectBudgetTasklistBudgetListRequestSideload represents related objects
-// that can be included in the response.
-type ProjectBudgetTasklistBudgetListRequestSideload string
+// TasklistBudgetListRequestSideload represents related objects that can be
+// included in the response.
+type TasklistBudgetListRequestSideload string
 
+// List of valid sideload values for TasklistBudgetListRequest.
 const (
-	ProjectBudgetTasklistBudgetListRequestSideloadTasklists                   ProjectBudgetTasklistBudgetListRequestSideload = "tasklists"
-	ProjectBudgetTasklistBudgetListRequestSideloadProjectBudgets              ProjectBudgetTasklistBudgetListRequestSideload = "projectBudgets"
-	ProjectBudgetTasklistBudgetListRequestSideloadTasklistBudgetNotifications ProjectBudgetTasklistBudgetListRequestSideload = "tasklistBudgetNotifications"
+	TasklistBudgetListRequestSideloadTasklists                   TasklistBudgetListRequestSideload = "tasklists"
+	TasklistBudgetListRequestSideloadProjectBudgets              TasklistBudgetListRequestSideload = "projectBudgets"
+	TasklistBudgetListRequestSideloadTasklistBudgetNotifications TasklistBudgetListRequestSideload = "tasklistBudgetNotifications"
 )
 
-// ProjectBudgetTasklistBudgetListRequestOrderBy defines sortable fields for
-// tasklist budget listings.
-type ProjectBudgetTasklistBudgetListRequestOrderBy string
+// TasklistBudgetListRequestOrderBy defines sortable fields for tasklist budget
+// listings.
+type TasklistBudgetListRequestOrderBy string
 
+// List of valid order by values for TasklistBudgetListRequest.
 const (
-	ProjectBudgetTasklistBudgetListRequestOrderByDateCreated ProjectBudgetTasklistBudgetListRequestOrderBy = "dateCreated"
+	TasklistBudgetListRequestOrderByDateCreated TasklistBudgetListRequestOrderBy = "dateCreated"
 )
 
-// ProjectBudgetTasklistBudgetListRequestFields contains field selectors for
-// sideloaded entities.
-type ProjectBudgetTasklistBudgetListRequestFields struct {
+// TasklistBudgetListRequestFields contains field selectors for sideloaded
+// entities.
+type TasklistBudgetListRequestFields struct {
 	// Tasklists limits fields returned for sideloaded tasklists.
 	Tasklists []string
 
@@ -139,14 +133,14 @@ type ProjectBudgetTasklistBudgetListRequestFields struct {
 	ProjectBudgets []string
 }
 
-// ProjectBudgetTasklistBudgetListRequestFilters contains filters for listing
-// tasklist budgets in a project budget.
-type ProjectBudgetTasklistBudgetListRequestFilters struct {
+// TasklistBudgetListRequestFilters contains filters for listing tasklist
+// budgets in a project budget.
+type TasklistBudgetListRequestFilters struct {
 	// OrderMode specifies sort direction. Allowed values are "asc" and "desc".
 	OrderMode twapi.OrderMode
 
 	// OrderBy specifies the field used for sorting.
-	OrderBy ProjectBudgetTasklistBudgetListRequestOrderBy
+	OrderBy TasklistBudgetListRequestOrderBy
 
 	// ProjectBudgetID is an optional explicit project budget filter. It usually
 	// matches the project budget identifier in the request path.
@@ -159,41 +153,40 @@ type ProjectBudgetTasklistBudgetListRequestFilters struct {
 	PageSize int64
 
 	// Include specifies sideloaded entities to include in the response.
-	Include []ProjectBudgetTasklistBudgetListRequestSideload
+	Include []TasklistBudgetListRequestSideload
 
 	// Fields specifies field filtering for sideloaded entities.
-	Fields ProjectBudgetTasklistBudgetListRequestFields
+	Fields TasklistBudgetListRequestFields
 }
 
-// ProjectBudgetTasklistBudgetListRequest represents the request for listing
-// tasklist budgets under a project budget.
+// TasklistBudgetListRequest represents the request for listing tasklist budgets
+// under a project budget.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/budgets/get-projects-api-v3-projects-budgets-id-tasklists-budgets-json
-type ProjectBudgetTasklistBudgetListRequest struct {
+type TasklistBudgetListRequest struct {
 	// Path contains path parameters for the request.
-	Path ProjectBudgetTasklistBudgetListRequestPath
+	Path TasklistBudgetListRequestPath
 
 	// Filters contains query string filters for the request.
-	Filters ProjectBudgetTasklistBudgetListRequestFilters
+	Filters TasklistBudgetListRequestFilters
 }
 
-// NewProjectBudgetTasklistBudgetListRequest creates a new
-// ProjectBudgetTasklistBudgetListRequest with default values.
-func NewProjectBudgetTasklistBudgetListRequest(projectBudgetID int64) ProjectBudgetTasklistBudgetListRequest {
-	return ProjectBudgetTasklistBudgetListRequest{
-		Path: ProjectBudgetTasklistBudgetListRequestPath{ProjectBudgetID: projectBudgetID},
-		Filters: ProjectBudgetTasklistBudgetListRequestFilters{
+// NewTasklistBudgetListRequest creates a new TasklistBudgetListRequest with
+// default values.
+func NewTasklistBudgetListRequest(projectBudgetID int64) TasklistBudgetListRequest {
+	return TasklistBudgetListRequest{
+		Path: TasklistBudgetListRequestPath{ProjectBudgetID: projectBudgetID},
+		Filters: TasklistBudgetListRequestFilters{
 			OrderMode: twapi.OrderModeAscending,
-			OrderBy:   ProjectBudgetTasklistBudgetListRequestOrderByDateCreated,
+			OrderBy:   TasklistBudgetListRequestOrderByDateCreated,
 			Page:      1,
 			PageSize:  50,
 		},
 	}
 }
 
-// HTTPRequest creates an HTTP request for the
-// ProjectBudgetTasklistBudgetListRequest.
-func (p ProjectBudgetTasklistBudgetListRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
+// HTTPRequest creates an HTTP request for the TasklistBudgetListRequest.
+func (p TasklistBudgetListRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
 	uri := fmt.Sprintf("%s/projects/api/v3/projects/budgets/%d/tasklists/budgets.json", server, p.Path.ProjectBudgetID)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, uri, nil)
@@ -238,12 +231,12 @@ func (p ProjectBudgetTasklistBudgetListRequest) HTTPRequest(ctx context.Context,
 	return req, nil
 }
 
-// ProjectBudgetTasklistBudgetListResponse contains a collection of tasklist
-// budgets for a project budget.
+// TasklistBudgetListResponse contains a collection of tasklist budgets for a
+// project budget.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/budgets/get-projects-api-v3-projects-budgets-id-tasklists-budgets-json
-type ProjectBudgetTasklistBudgetListResponse struct {
-	request ProjectBudgetTasklistBudgetListRequest
+type TasklistBudgetListResponse struct {
+	request TasklistBudgetListRequest
 
 	Meta struct {
 		Page struct {
@@ -261,8 +254,8 @@ type ProjectBudgetTasklistBudgetListResponse struct {
 }
 
 // HandleHTTPResponse handles the HTTP response for the
-// ProjectBudgetTasklistBudgetListResponse.
-func (p *ProjectBudgetTasklistBudgetListResponse) HandleHTTPResponse(resp *http.Response) error {
+// TasklistBudgetListResponse.
+func (p *TasklistBudgetListResponse) HandleHTTPResponse(resp *http.Response) error {
 	if resp.StatusCode != http.StatusOK {
 		return twapi.NewHTTPError(resp, "failed to list project budget tasklist budgets")
 	}
@@ -275,13 +268,13 @@ func (p *ProjectBudgetTasklistBudgetListResponse) HandleHTTPResponse(resp *http.
 
 // SetRequest sets the request used to load this response. This is used for
 // pagination purposes, so the Iterate method can return the next page.
-func (p *ProjectBudgetTasklistBudgetListResponse) SetRequest(req ProjectBudgetTasklistBudgetListRequest) {
+func (p *TasklistBudgetListResponse) SetRequest(req TasklistBudgetListRequest) {
 	p.request = req
 }
 
 // Iterate returns the request set to the next page, if available. If there
 // are no more pages, a nil request is returned.
-func (p *ProjectBudgetTasklistBudgetListResponse) Iterate() *ProjectBudgetTasklistBudgetListRequest {
+func (p *TasklistBudgetListResponse) Iterate() *TasklistBudgetListRequest {
 	if !p.Meta.Page.HasMore {
 		return nil
 	}
@@ -290,12 +283,12 @@ func (p *ProjectBudgetTasklistBudgetListResponse) Iterate() *ProjectBudgetTaskli
 	return &req
 }
 
-// ProjectBudgetTasklistBudgetList retrieves tasklist budgets for a project
-// budget using the provided request and returns the response.
-func ProjectBudgetTasklistBudgetList(
+// TasklistBudgetList retrieves tasklist budgets for a project budget using the
+// provided request and returns the response.
+func TasklistBudgetList(
 	ctx context.Context,
 	engine *twapi.Engine,
-	req ProjectBudgetTasklistBudgetListRequest,
-) (*ProjectBudgetTasklistBudgetListResponse, error) {
-	return twapi.Execute[ProjectBudgetTasklistBudgetListRequest, *ProjectBudgetTasklistBudgetListResponse](ctx, engine, req)
+	req TasklistBudgetListRequest,
+) (*TasklistBudgetListResponse, error) {
+	return twapi.Execute[TasklistBudgetListRequest, *TasklistBudgetListResponse](ctx, engine, req)
 }
