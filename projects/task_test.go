@@ -37,6 +37,9 @@ func TestTaskCreate(t *testing.T) {
 			Path: projects.TaskCreateRequestPath{
 				TasklistID: testResources.TasklistID,
 			},
+			Options: projects.TaskOptions{
+				Notify: true,
+			},
 			Name:             fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
 			Description:      new("This is a test task"),
 			Priority:         new("high"),
@@ -106,6 +109,9 @@ func TestTaskUpdate(t *testing.T) {
 		input: projects.TaskUpdateRequest{
 			Path: projects.TaskUpdateRequestPath{
 				ID: taskID,
+			},
+			Options: projects.TaskOptions{
+				Notify: true,
 			},
 			Name:             new(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100))),
 			Description:      new("This is a test task"),

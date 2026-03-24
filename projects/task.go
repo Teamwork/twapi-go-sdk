@@ -117,6 +117,13 @@ type Task struct {
 	Status string `json:"status"`
 }
 
+// TaskOptions contains extra behaviour parameters when creating or updating a
+// task.
+type TaskOptions struct {
+	// Notify enables notifications for the task actions.
+	Notify bool `json:"notify"`
+}
+
 // TaskPredecessorType defines the predecessor constraint type
 type TaskPredecessorType string
 
@@ -154,6 +161,10 @@ type TaskCreateRequestPath struct {
 type TaskCreateRequest struct {
 	// Path contains the path parameters for the request.
 	Path TaskCreateRequestPath `json:"-"`
+
+	// Options contains extra behaviour parameters for creating a task, such as
+	// enabling notifications for the task actions.
+	Options TaskOptions `json:"-"`
 
 	// Name is the name of the task
 	Name string `json:"name"`
@@ -209,9 +220,11 @@ func (t TaskCreateRequest) HTTPRequest(ctx context.Context, server string) (*htt
 
 	payload := struct {
 		Task         TaskCreateRequest `json:"task"`
+		Options      TaskOptions       `json:"taskOptions"`
 		Predecessors []TaskPredecessor `json:"predecessors,omitempty"`
 	}{
 		Task:         t,
+		Options:      t.Options,
 		Predecessors: t.Predecessors,
 	}
 
@@ -278,6 +291,10 @@ type TaskUpdateRequest struct {
 	// Path contains the path parameters for the request.
 	Path TaskUpdateRequestPath `json:"-"`
 
+	// Options contains extra behaviour parameters for updating a task, such as
+	// enabling notifications for the task actions.
+	Options TaskOptions `json:"-"`
+
 	// Name is the name of the task
 	Name *string `json:"name,omitempty"`
 
@@ -335,9 +352,11 @@ func (t TaskUpdateRequest) HTTPRequest(ctx context.Context, server string) (*htt
 
 	payload := struct {
 		Task         TaskUpdateRequest `json:"task"`
+		Options      TaskOptions       `json:"taskOptions"`
 		Predecessors []TaskPredecessor `json:"predecessors,omitempty"`
 	}{
 		Task:         t,
+		Options:      t.Options,
 		Predecessors: t.Predecessors,
 	}
 
