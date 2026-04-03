@@ -384,6 +384,217 @@ func ProjectDelete(
 	return twapi.Execute[ProjectDeleteRequest, *ProjectDeleteResponse](ctx, engine, req)
 }
 
+// ProjectCloneRequestPath contains the path parameters for cloning a project.
+type ProjectCloneRequestPath struct {
+	// ID is the unique identifier of the project to be cloned.
+	ID int64
+}
+
+// ProjectCloneAction represents the action to perform when cloning a project.
+type ProjectCloneAction string
+
+const (
+	// ProjectCloneActionCopy indicates that the project should be copied,
+	// creating a new project with the same details.
+	ProjectCloneActionCopy ProjectCloneAction = "COPY"
+
+	// ProjectCloneActionMove indicates that the project should be moved,
+	// effectively renaming it and keeping the same project ID.
+	ProjectCloneActionMove ProjectCloneAction = "MOVE"
+)
+
+// ProjectCloneRequest represents the request body for copying/moving a project.
+//
+// https://apidocs.teamwork.com/docs/teamwork/v1/projects/post-projects-id-clone-json
+type ProjectCloneRequest struct {
+	// Path contains the path parameters for the request.
+	Path ProjectCloneRequestPath
+
+	// Name for the new cloned project. If not provided the new project will have
+	// the same name as the original project with an incremental number suffix.
+	Name *string `json:"cloneProjectName,omitempty"`
+
+	// Action to perform when cloning a project. By default, the project will be
+	// copied.
+	Action *ProjectCloneAction `json:"cloneProjectAction,omitempty"`
+
+	// Description is an optional description for the new cloned project. If not
+	// provided, the new project will have the same description as the original
+	// project.
+	Description *string `json:"description,omitempty"`
+
+	// CompanyID is an optional ID of the company/client associated with the new
+	// cloned project. By default it will be the same as the original project.
+	CompanyID *int64 `json:"companyId,omitempty"`
+
+	// CopyFiles indicates whether to copy the files from the original project to
+	// the new project. By default it is set to false.
+	CopyFiles *bool `json:"copyFiles,omitempty"`
+
+	// CopyMessages indicates whether to copy the messages from the original
+	// project to the new project. By default it is set to false.
+	CopyMessages *bool `json:"copyMessages,omitempty"`
+
+	// CopyMilestones indicates whether to copy the milestones from the original
+	// project to the new project. By default it is set to false.
+	CopyMilestones *bool `json:"copyMilestones,omitempty"`
+
+	// CopyTasks indicates whether to copy the tasks from the original project to
+	// the new project. By default it is set to false.
+	CopyTasks *bool `json:"copyTasks,omitempty"`
+
+	// CopyTasklists indicates whether to copy the tasklists from the original
+	// project to the new project. By default it is set to false.
+	CopyTasklists *bool `json:"copyTasklists,omitempty"`
+
+	// CopyNotebooks indicates whether to copy the notebooks from the original
+	// project to the new project. By default it is set to false.
+	CopyNotebooks *bool `json:"copyNotebooks,omitempty"`
+
+	// CopyLinks indicates whether to copy the links from the original project to
+	// the new project. By default it is set to false.
+	CopyLinks *bool `json:"copyLinks,omitempty"`
+
+	// CopyComments indicates whether to copy the comments from the original
+	// project to the new project. By default it is set to false.
+	CopyComments *bool `json:"copyComments,omitempty"`
+
+	// CopyFollowers indicates whether to copy the followers from the original
+	// project to the new project. By default it is set to false.
+	CopyFollowers *bool `json:"copyFollowers,omitempty"`
+
+	// CopyInvoices indicates whether to copy the invoices from the original
+	// project to the new project. By default it is set to false.
+	CopyInvoices *bool `json:"copyInvoices,omitempty"`
+
+	// CopyTimelogs indicates whether to copy the timelogs from the original
+	// project to the new project. By default it is set to false.
+	CopyTimelogs *bool `json:"copyTimelogs,omitempty"`
+
+	// CopyExpenses indicates whether to copy the expenses from the original
+	// project to the new project. By default it is set to false.
+	CopyExpenses *bool `json:"copyExpenses,omitempty"`
+
+	// CopyWebhooks indicates whether to copy the webhooks from the original
+	// project to the new project. By default it is set to false.
+	CopyWebhooks *bool `json:"copyWebhooks,omitempty"`
+
+	// CopyProjectRoles indicates whether to copy the project roles from the
+	// original project to the new project. By default it is set to false.
+	CopyProjectRoles *bool `json:"copyProjectRoles,omitempty"`
+
+	// CopyCustomFields indicates whether to copy the custom fields from the
+	// original project to the new project. By default it is set to true.
+	CopyCustomFields *bool `json:"copyCustomFields,omitempty"`
+
+	// CopyCustomItems indicates whether to copy the custom items from the
+	// original project to the new project. By default it is set to false.
+	CopyCustomItems *bool `json:"copyCustomItems,omitempty"`
+
+	// CopyProjectUpdates indicates whether to copy the project updates from the
+	// original project to the new project. By default it is set to false.
+	CopyProjectUpdates *bool `json:"copyProjectUpdates,omitempty"`
+
+	// CopyRisks indicates whether to copy the risks from the original project to
+	// the new project. By default it is set to false.
+	CopyRisks *bool `json:"copyRisks,omitempty"`
+
+	// CopyForms indicates whether to copy the forms from the original project to
+	// the new project. By default it is set to false.
+	CopyForms *bool `json:"copyForms,omitempty"`
+
+	// CopyAutomations indicates whether to copy the automations from the original
+	// project to the new project. By default it is set to false.
+	CopyAutomations *bool `json:"copyAutomations,omitempty"`
+
+	// CopyPeople indicates whether to copy the people from the original project
+	// to the new project. By default it is set to false.
+	CopyPeople *bool `json:"copyPeople,omitempty"`
+
+	// CopyProjectPrivacy indicates whether to copy the project privacy settings
+	// from the original project to the new project. By default it is set to false.
+	CopyProjectPrivacy *bool `json:"copyProjectPrivacy,omitempty"`
+
+	// CopyBudgets indicates whether to copy the budgets from the original project
+	// to the new project. By default it is set to false.
+	CopyBudgets *bool `json:"copyBudgets,omitempty"`
+
+	// CopyAllocations indicates whether to copy the allocations from the original
+	// project to the new project. By default it is set to false.
+	CopyAllocations *bool `json:"copyAllocations,omitempty"`
+
+	// CopyLogo indicates whether to copy the logo from the original project to
+	// the new project. By default it is set to false.
+	CopyLogo *bool `json:"copyLogo,omitempty"`
+
+	// CopyProjectPreferences indicates whether to copy the project preferences
+	// from the original project to the new project. By default it is set to
+	// false.
+	CopyProjectPreferences *bool `json:"copyProjectPrefs,omitempty"`
+}
+
+// NewProjectCloneRequest creates a new ProjectCloneRequest with the provided project
+// ID. The ID is required to clone a project.
+func NewProjectCloneRequest(projectID int64) ProjectCloneRequest {
+	return ProjectCloneRequest{
+		Path: ProjectCloneRequestPath{
+			ID: projectID,
+		},
+	}
+}
+
+// HTTPRequest creates an HTTP request for the ProjectCloneRequest.
+func (p ProjectCloneRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
+	uri := server + "/projects/" + strconv.FormatInt(p.Path.ID, 10) + "/clone.json"
+
+	var body bytes.Buffer
+	if err := json.NewEncoder(&body).Encode(p); err != nil {
+		return nil, fmt.Errorf("failed to encode clone project request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, uri, &body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	return req, nil
+}
+
+// ProjectCloneResponse represents the response body for cloning a project.
+//
+// https://apidocs.teamwork.com/docs/teamwork/v1/projects/post-projects-id-clone-json
+type ProjectCloneResponse struct {
+	// ID is the unique identifier of the cloned project.
+	ID LegacyNumber `json:"projectId"`
+}
+
+// HandleHTTPResponse handles the HTTP response for the ProjectCloneResponse. If
+// some unexpected HTTP status code is returned by the API, a twapi.HTTPError is
+// returned.
+func (p *ProjectCloneResponse) HandleHTTPResponse(resp *http.Response) error {
+	if resp.StatusCode != http.StatusOK {
+		return twapi.NewHTTPError(resp, "failed to clone project")
+	}
+	if err := json.NewDecoder(resp.Body).Decode(p); err != nil {
+		return fmt.Errorf("failed to decode clone project response: %w", err)
+	}
+	if p.ID == 0 {
+		return fmt.Errorf("clone project response does not contain a valid identifier")
+	}
+	return nil
+}
+
+// ProjectClone clones a project using the provided request and returns the
+// response.
+func ProjectClone(
+	ctx context.Context,
+	engine *twapi.Engine,
+	req ProjectCloneRequest,
+) (*ProjectCloneResponse, error) {
+	return twapi.Execute[ProjectCloneRequest, *ProjectCloneResponse](ctx, engine, req)
+}
+
 // ProjectGetRequestPath contains the path parameters for loading a single
 // project.
 type ProjectGetRequestPath struct {

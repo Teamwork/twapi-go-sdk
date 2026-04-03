@@ -125,6 +125,26 @@ func TestProjectDelete(t *testing.T) {
 	}
 }
 
+func TestProjectClone(t *testing.T) {
+	if engine == nil {
+		t.Skip("Skipping test because the engine is not initialized")
+	}
+
+	projectID, projectCleanup, err := createProject(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(projectCleanup)
+
+	ctx := t.Context()
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	t.Cleanup(cancel)
+
+	if _, err = projects.ProjectClone(ctx, engine, projects.NewProjectCloneRequest(projectID)); err != nil {
+		t.Errorf("unexpected error: %s", err)
+	}
+}
+
 func TestProjectGet(t *testing.T) {
 	if engine == nil {
 		t.Skip("Skipping test because the engine is not initialized")
