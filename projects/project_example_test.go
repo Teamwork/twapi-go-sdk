@@ -88,6 +88,29 @@ func ExampleProjectDelete() {
 	// Output: project deleted!
 }
 
+func ExampleProjectClone() {
+	address, stop, err := startProjectServer() // mock server for demonstration purposes
+	if err != nil {
+		fmt.Printf("failed to start server: %s", err)
+		return
+	}
+	defer stop()
+
+	ctx := context.Background()
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
+
+	cloneRequest := projects.NewProjectCloneRequest(12345)
+
+	_, err = projects.ProjectClone(ctx, engine, cloneRequest)
+	if err != nil {
+		fmt.Printf("failed to clone project: %s", err)
+	} else {
+		fmt.Println("project cloned!")
+	}
+
+	// Output: project cloned!
+}
+
 func ExampleProjectGet() {
 	address, stop, err := startProjectServer() // mock server for demonstration purposes
 	if err != nil {
@@ -173,6 +196,19 @@ func startProjectServer() (string, func(), error) {
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = fmt.Fprintln(w, `{"STATUS":"OK"}`)
+	})
+	mux.HandleFunc("POST /projects/{id}/clone", func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Content-Type") != "application/json" {
+			http.Error(w, "Unsupported Media Type", http.StatusUnsupportedMediaType)
+			return
+		}
+		if r.PathValue("id") != "12345" {
+			http.Error(w, "Not Found", http.StatusNotFound)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprintln(w, `{"projectId":12345}`)
 	})
 	mux.HandleFunc("GET /projects/api/v3/projects/{id}", func(w http.ResponseWriter, r *http.Request) {
 		if r.PathValue("id") != "12345" {

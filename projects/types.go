@@ -52,11 +52,11 @@ func (n LegacyNumber) MarshalJSON() ([]byte, error) {
 
 // UnmarshalJSON decodes a JSON string into a LegacyNumber type.
 func (n *LegacyNumber) UnmarshalJSON(data []byte) error {
-	var str string
-	if err := json.Unmarshal(data, &str); err != nil {
-		return err
+	v, err := strconv.Unquote(string(data))
+	if err != nil {
+		v = string(data)
 	}
-	parsedInt, err := strconv.ParseInt(str, 10, 64)
+	parsedInt, err := strconv.ParseInt(v, 10, 64)
 	if err != nil {
 		return err
 	}
