@@ -170,6 +170,25 @@ func createProject(t testEngine) (int64, func(), error) {
 	}, nil
 }
 
+func createProjectTemplate(t testEngine) (int64, func(), error) {
+	project, err := projects.ProjectTemplateCreate(t.Context(), engine, projects.ProjectTemplateCreateRequest{
+		ProjectCreateRequest: projects.ProjectCreateRequest{
+			Name: fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
+		},
+	})
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to create project template for test: %w", err)
+	}
+	id := int64(project.ID)
+	return id, func() {
+		ctx := context.Background() // t.Context is always canceled in cleanup
+		_, err := projects.ProjectDelete(ctx, engine, projects.NewProjectDeleteRequest(id))
+		if err != nil {
+			t.Errorf("failed to delete project template after test: %s", err)
+		}
+	}, nil
+}
+
 func createProjectCategory(t testEngine) (int64, func(), error) {
 	projectCategory, err := projects.ProjectCategoryCreate(t.Context(), engine, projects.ProjectCategoryCreateRequest{
 		Name:  fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),

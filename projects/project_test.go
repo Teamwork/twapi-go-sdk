@@ -136,12 +136,119 @@ func TestProjectClone(t *testing.T) {
 	}
 	t.Cleanup(projectCleanup)
 
-	ctx := t.Context()
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
-	t.Cleanup(cancel)
+	projectTemplateID, projectTemplateCleanup, err := createProjectTemplate(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(projectTemplateCleanup)
 
-	if _, err = projects.ProjectClone(ctx, engine, projects.NewProjectCloneRequest(projectID)); err != nil {
-		t.Errorf("unexpected error: %s", err)
+	movedProjectID, _, err := createProject(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name  string
+		input projects.ProjectCloneRequest
+	}{{
+		name: "clone regular project",
+		input: projects.ProjectCloneRequest{
+			Path: projects.ProjectCloneRequestPath{
+				ID: projectID,
+			},
+			Name:                   new(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100))),
+			Description:            new("This is a cloned test project"),
+			CompanyID:              &testResources.CompanyID,
+			CopyFiles:              new(true),
+			CopyMessages:           new(true),
+			CopyMilestones:         new(true),
+			CopyTasks:              new(true),
+			CopyTasklists:          new(true),
+			CopyNotebooks:          new(true),
+			CopyLinks:              new(true),
+			CopyComments:           new(true),
+			CopyFollowers:          new(true),
+			CopyInvoices:           new(true),
+			CopyTimelogs:           new(true),
+			CopyExpenses:           new(true),
+			CopyWebhooks:           new(true),
+			CopyProjectRoles:       new(true),
+			CopyCustomFields:       new(true),
+			CopyCustomItems:        new(true),
+			CopyProjectUpdates:     new(true),
+			CopyRisks:              new(true),
+			CopyForms:              new(true),
+			CopyAutomations:        new(true),
+			CopyPeople:             new(true),
+			CopyProjectPrivacy:     new(true),
+			CopyBudgets:            new(true),
+			CopyAllocations:        new(true),
+			CopyLogo:               new(true),
+			CopyProjectPreferences: new(true),
+		},
+	}, {
+		name: "clone template project",
+		input: projects.ProjectCloneRequest{
+			Path: projects.ProjectCloneRequestPath{
+				ID: projectTemplateID,
+			},
+			Name: new(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100))),
+		},
+	}, {
+		name: "clone regular project to template",
+		input: projects.ProjectCloneRequest{
+			Path: projects.ProjectCloneRequestPath{
+				ID: projectID,
+			},
+			Name:            new(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100))),
+			NewFromTemplate: new(false),
+			ToTemplate:      new(true),
+		},
+	}, {
+		name: "clone template project to regular",
+		input: projects.ProjectCloneRequest{
+			Path: projects.ProjectCloneRequestPath{
+				ID: projectTemplateID,
+			},
+			Name:               new(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100))),
+			NewFromTemplate:    new(true),
+			ToTemplate:         new(false),
+			TemplateDateTarget: new(projects.ProjectCloneTemplateDateTargetEnd),
+			TargetDate:         new(projects.NewLegacyDate(time.Now().Add(7 * 24 * time.Hour))),
+			DaysOffset:         new(int64(10)),
+		},
+	}, {
+		name: "move regular project",
+		input: projects.ProjectCloneRequest{
+			Path: projects.ProjectCloneRequestPath{
+				ID: movedProjectID,
+			},
+			Name:   new(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100))),
+			Action: new(projects.ProjectCloneActionMove),
+		},
+	}}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := t.Context()
+			ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+			t.Cleanup(cancel)
+
+			project, err := projects.ProjectClone(ctx, engine, tt.input)
+			t.Cleanup(func() {
+				if err != nil {
+					return
+				}
+				ctx = context.Background() // t.Context is always canceled in cleanup
+				_, err := projects.ProjectDelete(ctx, engine, projects.NewProjectDeleteRequest(int64(project.ID)))
+				if err != nil {
+					t.Errorf("failed to delete cloned project after test: %s", err)
+				}
+			})
+			if err != nil {
+				t.Errorf("unexpected error: %s", err)
+			}
+		})
 	}
 }
 

@@ -403,6 +403,23 @@ const (
 	ProjectCloneActionMove ProjectCloneAction = "MOVE"
 )
 
+// ProjectCloneTemplateDateTarget represents the target date type for cloning a
+// project from a template.
+type ProjectCloneTemplateDateTarget string
+
+const (
+	// ProjectCloneTemplateDateTargetStart indicates that the target date
+	// represents the start date of the new project. This is the default behavior
+	// when cloning from a template.
+	ProjectCloneTemplateDateTargetStart ProjectCloneTemplateDateTarget = "start"
+
+	// ProjectCloneTemplateDateTargetEnd indicates that the target date represents
+	// the end date of the new project. When this option is selected, the start
+	// date of the new project is calculated by subtracting the duration of the
+	// template project from the target end date.
+	ProjectCloneTemplateDateTargetEnd ProjectCloneTemplateDateTarget = "end"
+)
+
 // ProjectCloneRequest represents the request body for copying/moving a project.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v1/projects/post-projects-id-clone-json
@@ -531,6 +548,33 @@ type ProjectCloneRequest struct {
 	// from the original project to the new project. By default it is set to
 	// false.
 	CopyProjectPreferences *bool `json:"copyProjectPrefs,omitempty"`
+
+	// NewFromTemplate indicates whether the new project should be a regular one
+	// created from a template. By default it is set to false.
+	NewFromTemplate *bool `json:"newFromTemplate,omitempty"`
+
+	// ToTemplate indicates whether the new project should be set as a template.
+	// By default it is set to false.
+	ToTemplate *bool `json:"toTemplate,omitempty"`
+
+	// TemplateDateTarget specifies whether targetDate represents the project's
+	// start or end date. Accepted values: 'start' (default) or 'end'. When 'end',
+	// the start date is calculated by subtracting the template project's duration
+	// from targetDate. Only applicable when newFromTemplate=true.
+	TemplateDateTarget *ProjectCloneTemplateDateTarget `json:"templateDateTarget,omitempty"`
+
+	// TargetDate is the desired start or end date for the cloned project
+	// (determined by templateDateTarget). Used only when creating a project from
+	// a template (newFromTemplate=true). Accepted format: YYYYMMDD string.
+	// Defaults to the current user date if omitted.
+	TargetDate *LegacyDate `json:"targetDate,omitempty"`
+
+	// DaysOffset is the number of days to shift all scheduled dates in the cloned
+	// project relative to the base date. When cloning from a template, it defines
+	// the project duration span. When copying an existing project, it shifts the
+	// original start and end dates by this many days. If omitted, calculated
+	// automatically from the source project's date range.
+	DaysOffset *int64 `json:"daysOffset,omitempty"`
 }
 
 // NewProjectCloneRequest creates a new ProjectCloneRequest with the provided project
