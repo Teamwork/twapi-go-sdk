@@ -36,8 +36,10 @@ func TestCommentCreate(t *testing.T) {
 			Path: projects.CommentCreateRequestPath{
 				MilestoneID: testResources.MilestoneID,
 			},
-			Body:        "<h1>This is a test comment</h1>",
-			ContentType: new("HTML"),
+			Body:              "<h1>This is a test comment</h1>",
+			ContentType:       new("HTML"),
+			NotifyCurrentUser: new(true),
+			Notify:            projects.NewCommentNotifyAll(),
 		},
 	}, {
 		name: "all fields for task",
@@ -45,8 +47,10 @@ func TestCommentCreate(t *testing.T) {
 			Path: projects.CommentCreateRequestPath{
 				TaskID: testResources.TaskID,
 			},
-			Body:        "<h1>This is a test comment</h1>",
-			ContentType: new("HTML"),
+			Body:              "<h1>This is a test comment</h1>",
+			ContentType:       new("HTML"),
+			NotifyCurrentUser: new(true),
+			Notify:            projects.NewCommentNotifyFollowers(),
 		},
 	}}
 
@@ -96,8 +100,13 @@ func TestCommentUpdate(t *testing.T) {
 			Path: projects.CommentUpdateRequestPath{
 				ID: commentID,
 			},
-			Body:        "<h1>Updated comment</h1>",
-			ContentType: new("HTML"),
+			Body:              "<h1>Updated comment</h1>",
+			ContentType:       new("HTML"),
+			NotifyCurrentUser: new(true),
+			Notify: projects.NewCommentNotifyGroup(projects.LegacyUserGroups{
+				UserIDs:    []int64{testResources.UserID},
+				CompanyIDs: []int64{testResources.CompanyID},
+			}),
 		},
 	}}
 

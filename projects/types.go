@@ -97,7 +97,10 @@ type LegacyUserGroups struct {
 	TeamIDs    []int64
 }
 
-// MarshalJSON encodes the LegacyUserGroups as a JSON object.
+// MarshalJSON encodes the LegacyUserGroups as a comma-separated string, where
+// user IDs are represented as plain numbers, company IDs are prefixed with "c",
+// and team IDs are prefixed with "t". The output order is user IDs first,
+// followed by team IDs, and then company IDs.
 func (m LegacyUserGroups) MarshalJSON() ([]byte, error) {
 	var result string
 	for _, id := range m.UserIDs {
@@ -106,17 +109,17 @@ func (m LegacyUserGroups) MarshalJSON() ([]byte, error) {
 		}
 		result += strconv.FormatInt(id, 10)
 	}
-	for _, id := range m.CompanyIDs {
-		if result != "" {
-			result += ","
-		}
-		result += "c" + strconv.FormatInt(id, 10)
-	}
 	for _, id := range m.TeamIDs {
 		if result != "" {
 			result += ","
 		}
 		result += "t" + strconv.FormatInt(id, 10)
+	}
+	for _, id := range m.CompanyIDs {
+		if result != "" {
+			result += ","
+		}
+		result += "c" + strconv.FormatInt(id, 10)
 	}
 	return []byte(`"` + result + `"`), nil
 }

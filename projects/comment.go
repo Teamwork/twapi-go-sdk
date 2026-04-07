@@ -108,6 +108,72 @@ type CommentCreateRequestPath struct {
 	LinkID int64
 }
 
+// commentNotifier is an interface that represents the different options for
+// notifying users when a comment is created or updated. It is implemented by
+// CommentNotifyAll, CommentNotifyFollowers, and CommentNotifyGroup.
+type commentNotifier interface {
+	commentNotifier()
+}
+
+// CommentNotifyAll is a comment notifier that notifies all users from the
+// project.
+type CommentNotifyAll struct{}
+
+// NewCommentNotifyAll creates a new CommentNotifyAll notifier.
+func NewCommentNotifyAll() CommentNotifyAll {
+	return CommentNotifyAll{}
+}
+
+// commentNotifier is a marker method to indicate that CommentNotifyAll
+// implements the commentNotifier interface.
+func (CommentNotifyAll) commentNotifier() {}
+
+// MarshalJSON encodes the CommentNotifyAll as a string "ALL", which is the
+// value expected by the API to notify all users.
+func (CommentNotifyAll) MarshalJSON() ([]byte, error) {
+	return []byte(`"ALL"`), nil
+}
+
+// CommentNotifyFollowers is a comment notifier that notifies only the followers
+// of the comment's object (task, milestone, etc.).
+type CommentNotifyFollowers struct{}
+
+// NewCommentNotifyFollowers creates a new CommentNotifyFollowers notifier.
+func NewCommentNotifyFollowers() CommentNotifyFollowers {
+	return CommentNotifyFollowers{}
+}
+
+// commentNotifier is a marker method to indicate that CommentNotifyFollowers
+// implements the commentNotifier interface.
+func (CommentNotifyFollowers) commentNotifier() {}
+
+// MarshalJSON encodes the CommentNotifyFollowers as a boolean true, which is
+// the value expected by the API to notify only followers.
+func (CommentNotifyFollowers) MarshalJSON() ([]byte, error) {
+	return []byte(`true`), nil
+}
+
+// CommentNotifyGroup is a comment notifier that notifies a specific group of
+// users, teams and/or companies.
+type CommentNotifyGroup LegacyUserGroups
+
+// NewCommentNotifyGroup creates a new CommentNotifyGroup notifier with the
+// provided group of users, teams and/or companies.
+func NewCommentNotifyGroup(groups LegacyUserGroups) CommentNotifyGroup {
+	return CommentNotifyGroup(groups)
+}
+
+// commentNotifier is a marker method to indicate that CommentNotifyGroup
+// implements the commentNotifier interface.
+func (CommentNotifyGroup) commentNotifier() {}
+
+// MarshalJSON encodes the CommentNotifyGroup as a string containing the encoded
+// group of users, teams and/or companies, which is the value expected by the
+// API to notify a specific group.
+func (c CommentNotifyGroup) MarshalJSON() ([]byte, error) {
+	return LegacyUserGroups(c).MarshalJSON()
+}
+
 // CommentCreateRequest represents the request body for creating a new
 // comment.
 //
@@ -122,6 +188,15 @@ type CommentCreateRequest struct {
 	// ContentType is the content type of the comment body. It can be "TEXT" or
 	// "HTML". If not provided, it defaults to "TEXT".
 	ContentType *string `json:"contentType,omitempty"`
+
+	// NotifyCurrentUser indicates whether the user creating the comment should be
+	// notified about the new comment. If not provided, it defaults to false.
+	NotifyCurrentUser *bool `json:"notifyCurrentUser,omitempty"`
+
+	// Notify is the comment notifier that specifies who should be notified about
+	// the new comment. It can be a CommentNotifyAll, CommentNotifyFollowers, or
+	// CommentNotifyGroup. If not provided, no notifications will be sent.
+	Notify commentNotifier `json:"notify,omitempty"`
 }
 
 // NewCommentCreateRequestInFileVersion creates a new CommentCreateRequest with
@@ -271,6 +346,15 @@ type CommentUpdateRequest struct {
 	// ContentType is the content type of the comment body. It can be "TEXT" or
 	// "HTML". If not provided, it defaults to "TEXT".
 	ContentType *string `json:"contentType,omitempty"`
+
+	// NotifyCurrentUser indicates whether the user creating the comment should be
+	// notified about the new comment. If not provided, it defaults to false.
+	NotifyCurrentUser *bool `json:"notify-current-user,omitempty"`
+
+	// Notify is the comment notifier that specifies who should be notified about
+	// the new comment. It can be a CommentNotifyAll, CommentNotifyFollowers, or
+	// CommentNotifyGroup. If not provided, no notifications will be sent.
+	Notify commentNotifier `json:"notify,omitempty"`
 }
 
 // NewCommentUpdateRequest creates a new CommentUpdateRequest with the
