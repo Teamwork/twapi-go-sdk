@@ -201,6 +201,18 @@ type TaskCreateRequest struct {
 
 	// Predecessors is the list of task predecessors associated with this task.
 	Predecessors []TaskPredecessor `json:"-"`
+
+	// ChangeFollowers is the list of users, teams or clients/companies that will
+	// receive notifications when the task is updated.
+	ChangeFollowers UserGroups `json:"changeFollowers,omitzero"`
+
+	// CommentFollowers is the list of users, teams or clients/companies that will
+	// receive notifications when a comment is added to the task.
+	CommentFollowers UserGroups `json:"commentFollowers,omitzero"`
+
+	// CompleteFollowers is the list of users, teams or clients/companies that
+	// will receive notifications when the task is completed.
+	CompleteFollowers UserGroups `json:"completeFollowers,omitzero"`
 }
 
 // NewTaskCreateRequest creates a new TaskCreateRequest with the provided name
@@ -334,6 +346,18 @@ type TaskUpdateRequest struct {
 
 	// Predecessors is the list of task predecessors associated with this task.
 	Predecessors []TaskPredecessor `json:"-"`
+
+	// ChangeFollowers is the list of users, teams or clients/companies that will
+	// receive notifications when the task is updated.
+	ChangeFollowers *UserGroups `json:"changeFollowers,omitempty"`
+
+	// CommentFollowers is the list of users, teams or clients/companies that will
+	// receive notifications when a comment is added to the task.
+	CommentFollowers *UserGroups `json:"commentFollowers,omitempty"`
+
+	// CompleteFollowers is the list of users, teams or clients/companies that
+	// will receive notifications when the task is completed.
+	CompleteFollowers *UserGroups `json:"completeFollowers,omitempty"`
 }
 
 // NewTaskUpdateRequest creates a new TaskUpdateRequest with the

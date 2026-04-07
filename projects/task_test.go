@@ -55,6 +55,18 @@ func TestTaskCreate(t *testing.T) {
 			Predecessors: []projects.TaskPredecessor{
 				{ID: testResources.TaskID, Type: projects.TaskPredecessorTypeFinish},
 			},
+			ChangeFollowers: projects.UserGroups{
+				UserIDs:    []int64{testResources.UserID},
+				CompanyIDs: []int64{testResources.CompanyID},
+			},
+			CommentFollowers: projects.UserGroups{
+				UserIDs:    []int64{testResources.UserID},
+				CompanyIDs: []int64{testResources.CompanyID},
+			},
+			CompleteFollowers: projects.UserGroups{
+				UserIDs:    []int64{testResources.UserID},
+				CompanyIDs: []int64{testResources.CompanyID},
+			},
 		},
 	}}
 
@@ -128,6 +140,18 @@ func TestTaskUpdate(t *testing.T) {
 			TagIDs: []int64{testResources.TagID},
 			Predecessors: []projects.TaskPredecessor{
 				{ID: testResources.TaskID, Type: projects.TaskPredecessorTypeFinish},
+			},
+			ChangeFollowers: &projects.UserGroups{
+				UserIDs:    []int64{testResources.UserID},
+				CompanyIDs: []int64{testResources.CompanyID},
+			},
+			CommentFollowers: &projects.UserGroups{
+				UserIDs:    []int64{testResources.UserID},
+				CompanyIDs: []int64{testResources.CompanyID},
+			},
+			CompleteFollowers: &projects.UserGroups{
+				UserIDs:    []int64{testResources.UserID},
+				CompanyIDs: []int64{testResources.CompanyID},
 			},
 		},
 	}}
