@@ -26,6 +26,7 @@ var testResources struct {
 	UserID            int64
 	MilestoneID       int64
 	TagID             int64
+	MessageID         int64
 }
 
 func TestMain(m *testing.M) {
@@ -141,6 +142,17 @@ func TestMain(m *testing.M) {
 	}
 	defer tagCleanup()
 	testResources.TagID = tagID
+
+	messageID, messageCleanup, err := createMessage(testEngine, projectID)
+	if err != nil {
+		logger.Error("Failed to create message for tests",
+			slog.String("error", err.Error()),
+		)
+		exitCode = 1
+		return
+	}
+	defer messageCleanup()
+	testResources.MessageID = messageID
 
 	exitCode = m.Run()
 }
@@ -475,7 +487,7 @@ func createSkill(t testEngine) (int64, func(), error) {
 		fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
 	))
 	if err != nil {
-		return 0, nil, fmt.Errorf("failed to create notebook for test: %w", err)
+		return 0, nil, fmt.Errorf("failed to create skill for test: %w", err)
 	}
 	id := skillResponse.Skill.ID
 	return id, func() {
@@ -517,6 +529,43 @@ func createCalendar(t testEngine) (int64, func(), error) {
 		_, err := projects.CalendarDelete(ctx, engine, projects.NewCalendarDeleteRequest(id))
 		if err != nil {
 			t.Errorf("failed to delete calendar after test: %s", err)
+		}
+	}, nil
+}
+
+func createMessage(t testEngine, projectID int64) (int64, func(), error) {
+	message, err := projects.MessageCreate(t.Context(), engine, projects.NewMessageCreateRequest(
+		projectID,
+		fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
+		"This is a test message",
+	))
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to create message for test: %w", err)
+	}
+	id := int64(message.ID)
+	return id, func() {
+		ctx := context.Background() // t.Context is always canceled in cleanup
+		_, err := projects.MessageDelete(ctx, engine, projects.NewMessageDeleteRequest(id))
+		if err != nil {
+			t.Errorf("failed to delete message after test: %s", err)
+		}
+	}, nil
+}
+
+func createMessageReply(t testEngine, messageID int64) (int64, func(), error) {
+	messageReply, err := projects.MessageReplyCreate(t.Context(), engine, projects.NewMessageReplyCreateRequest(
+		messageID,
+		"This is a test reply",
+	))
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to create message reply for test: %w", err)
+	}
+	id := int64(messageReply.ID)
+	return id, func() {
+		ctx := context.Background() // t.Context is always canceled in cleanup
+		_, err := projects.MessageReplyDelete(ctx, engine, projects.NewMessageReplyDeleteRequest(id))
+		if err != nil {
+			t.Errorf("failed to delete message reply after test: %s", err)
 		}
 	}, nil
 }
