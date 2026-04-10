@@ -27,6 +27,8 @@ var testResources struct {
 	MilestoneID       int64
 	TagID             int64
 	MessageID         int64
+	WorkflowID        int64
+	WorkflowStageID   int64
 }
 
 func TestMain(m *testing.M) {
@@ -153,6 +155,41 @@ func TestMain(m *testing.M) {
 	}
 	defer messageCleanup()
 	testResources.MessageID = messageID
+
+	workflowID, workflowCleanup, err := createWorkflow(testEngine)
+	if err != nil {
+		logger.Error("Failed to create workflow for tests",
+			slog.String("error", err.Error()),
+		)
+		exitCode = 1
+		return
+	}
+	defer workflowCleanup()
+	testResources.WorkflowID = workflowID
+
+	_, err = projects.WorkflowProjectLink(
+		testEngine.Context(),
+		engine,
+		projects.NewWorkflowProjectLinkRequest(workflowID, projectID),
+	)
+	if err != nil {
+		logger.Error("Failed to link project to workflow for tests",
+			slog.String("error", err.Error()),
+		)
+		exitCode = 1
+		return
+	}
+
+	workflowStageID, workflowStageCleanup, err := createWorkflowStage(testEngine, workflowID)
+	if err != nil {
+		logger.Error("Failed to create workflow stage for tests",
+			slog.String("error", err.Error()),
+		)
+		exitCode = 1
+		return
+	}
+	defer workflowStageCleanup()
+	testResources.WorkflowStageID = workflowStageID
 
 	exitCode = m.Run()
 }
@@ -566,6 +603,41 @@ func createMessageReply(t testEngine, messageID int64) (int64, func(), error) {
 		_, err := projects.MessageReplyDelete(ctx, engine, projects.NewMessageReplyDeleteRequest(id))
 		if err != nil {
 			t.Errorf("failed to delete message reply after test: %s", err)
+		}
+	}, nil
+}
+
+func createWorkflow(t testEngine) (int64, func(), error) {
+	workflow, err := projects.WorkflowCreate(t.Context(), engine, projects.NewWorkflowCreateRequest(
+		fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
+	))
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to create workflow for test: %w", err)
+	}
+	id := workflow.Workflow.ID
+	return id, func() {
+		ctx := context.Background() // t.Context is always canceled in cleanup
+		_, err := projects.WorkflowDelete(ctx, engine, projects.NewWorkflowDeleteRequest(id))
+		if err != nil {
+			t.Errorf("failed to delete workflow after test: %s", err)
+		}
+	}, nil
+}
+
+func createWorkflowStage(t testEngine, workflowID int64) (int64, func(), error) {
+	stage, err := projects.WorkflowStageCreate(t.Context(), engine, projects.NewWorkflowStageCreateRequest(
+		workflowID,
+		fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
+	))
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to create workflow stage for test: %w", err)
+	}
+	id := stage.Stage.ID
+	return id, func() {
+		ctx := context.Background() // t.Context is always canceled in cleanup
+		_, err := projects.WorkflowStageDelete(ctx, engine, projects.NewWorkflowStageDeleteRequest(workflowID, id))
+		if err != nil {
+			t.Errorf("failed to delete workflow stage after test: %s", err)
 		}
 	}, nil
 }
