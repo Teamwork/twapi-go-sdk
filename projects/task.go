@@ -87,6 +87,9 @@ type Task struct {
 	// can be started or completed.
 	Predecessors []twapi.Relationship `json:"predecessors"`
 
+	// WorkflowStages is the list of workflow stages associated with this task.
+	WorkflowStages []TaskWorkflowStage `json:"workflowStages"`
+
 	// CreatedBy is the ID of the user who created the task.
 	CreatedBy *int64 `json:"createdBy"`
 
@@ -146,6 +149,19 @@ type TaskPredecessor struct {
 
 	// Type is the type of predecessor constraint.
 	Type TaskPredecessorType `json:"type"`
+}
+
+// TaskWorkflowStage represents the workflow stage associated with a task. This
+// is used when creating or updating a task to set the workflow stage of the
+// task.
+type TaskWorkflowStage struct {
+	// WorkflowID is the unique identifier of the workflow associated with the
+	// task.
+	WorkflowID *int64 `json:"workflowId"`
+
+	// StageID is the unique identifier of the workflow stage associated with the
+	// task.
+	StageID *int64 `json:"stageId"`
 }
 
 // TaskUpdateRequestPath contains the path parameters for creating a
