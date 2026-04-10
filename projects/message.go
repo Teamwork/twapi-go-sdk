@@ -472,7 +472,8 @@ func MessageGet(
 // MessageListRequestFilters contains the filters for loading multiple
 // messages.
 type MessageListRequestFilters struct {
-	// SearchTerm is an optional search term to filter messages by name.
+	// SearchTerm is an optional search term to filter messages by body content or
+	// title.
 	SearchTerm string
 
 	// ProjectIDs is an optional list of project IDs to filter messages by

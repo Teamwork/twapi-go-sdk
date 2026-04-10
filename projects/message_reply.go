@@ -376,7 +376,7 @@ type MessageReplyGetRequestPath struct {
 // MessageReplyGetRequest represents the request body for loading a single
 // message reply.
 //
-// https://apidocs.teamwork.com/docs/teamwork/v3/message-replies/get-projects-api-v3-message-replies-message-id-json
+// https://apidocs.teamwork.com/docs/teamwork/v3/message-replies/get-projects-api-v3-messagesreplies-id-json
 type MessageReplyGetRequest struct {
 	// Path contains the path parameters for the request.
 	Path MessageReplyGetRequestPath
@@ -407,7 +407,7 @@ func (m MessageReplyGetRequest) HTTPRequest(ctx context.Context, server string) 
 // MessageReplyGetResponse contains all the information related to a message
 // reply.
 //
-// https://apidocs.teamwork.com/docs/teamwork/v3/message-replies/get-projects-api-v3-message-replies-message-id-json
+// https://apidocs.teamwork.com/docs/teamwork/v3/message-replies/get-projects-api-v3-messagesreplies-id-json
 type MessageReplyGetResponse struct {
 	MessageReply MessageReply `json:"messageReply"`
 }
@@ -447,6 +447,10 @@ type MessageReplyListRequestPath struct {
 // MessageReplyListRequestFilters contains the filters for loading multiple
 // message replies.
 type MessageReplyListRequestFilters struct {
+	// SearchTerm is an optional search term to filter message replies by body
+	// content or message title.
+	SearchTerm string
+
 	// MessageIDs is an optional list of message IDs to filter message replies by
 	// their parent messages.
 	MessageIDs []int64
@@ -458,14 +462,15 @@ type MessageReplyListRequestFilters struct {
 	// Page is the page number to retrieve. Defaults to 1.
 	Page int64
 
-	// PageSize is the number of messages to retrieve per page. Defaults to 50.
+	// PageSize is the number of message replies to retrieve per page. Defaults to
+	// 50.
 	PageSize int64
 }
 
 // MessageReplyListRequest represents the request body for loading multiple
 // message replies.
 //
-// https://apidocs.teamwork.com/docs/teamwork/v3/message-replies/get-projects-api-v3-message-replies-json
+// https://apidocs.teamwork.com/docs/teamwork/v3/message-replies/get-projects-api-v3-messagesreplies-json
 // https://apidocs.teamwork.com/docs/teamwork/v3/message-replies/get-projects-api-v3-messages-message-id-replies-json
 type MessageReplyListRequest struct {
 	// Path contains the path parameters for the request.
@@ -500,6 +505,9 @@ func (m MessageReplyListRequest) HTTPRequest(ctx context.Context, server string)
 		return nil, err
 	}
 	query := req.URL.Query()
+	if m.Filters.SearchTerm != "" {
+		query.Set("searchTerm", m.Filters.SearchTerm)
+	}
 	if len(m.Filters.MessageIDs) > 0 {
 		messageIDs := make([]string, len(m.Filters.MessageIDs))
 		for i, id := range m.Filters.MessageIDs {
@@ -528,7 +536,8 @@ func (m MessageReplyListRequest) HTTPRequest(ctx context.Context, server string)
 // MessageReplyListResponse contains information by multiple message replies
 // matching the request filters.
 //
-// https://apidocs.teamwork.com/docs/teamwork/v3/message-replies/get-projects-api-v3-message-replies-json
+// https://apidocs.teamwork.com/docs/teamwork/v3/message-replies/get-projects-api-v3-messagesreplies-json
+// https://apidocs.teamwork.com/docs/teamwork/v3/message-replies/get-projects-api-v3-messages-message-id-replies-json
 type MessageReplyListResponse struct {
 	request MessageReplyListRequest
 
