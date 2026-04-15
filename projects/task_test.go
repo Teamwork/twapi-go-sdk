@@ -188,6 +188,26 @@ func TestTaskDelete(t *testing.T) {
 	}
 }
 
+func TestTaskComplete(t *testing.T) {
+	if engine == nil {
+		t.Skip("Skipping test because the engine is not initialized")
+	}
+
+	taskID, taskCleanup, err := createTask(t, testResources.TasklistID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(taskCleanup)
+
+	ctx := t.Context()
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	t.Cleanup(cancel)
+
+	if _, err = projects.TaskComplete(ctx, engine, projects.NewTaskCompleteRequest(taskID)); err != nil {
+		t.Errorf("unexpected error: %s", err)
+	}
+}
+
 func TestTaskGet(t *testing.T) {
 	if engine == nil {
 		t.Skip("Skipping test because the engine is not initialized")

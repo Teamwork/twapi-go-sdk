@@ -20,6 +20,8 @@ var (
 	_ twapi.HTTPResponser = (*TaskUpdateResponse)(nil)
 	_ twapi.HTTPRequester = (*TaskDeleteRequest)(nil)
 	_ twapi.HTTPResponser = (*TaskDeleteResponse)(nil)
+	_ twapi.HTTPRequester = (*TaskCompleteRequest)(nil)
+	_ twapi.HTTPResponser = (*TaskCompleteResponse)(nil)
 	_ twapi.HTTPRequester = (*TaskGetRequest)(nil)
 	_ twapi.HTTPResponser = (*TaskGetResponse)(nil)
 	_ twapi.HTTPRequester = (*TaskListRequest)(nil)
@@ -491,6 +493,67 @@ func TaskDelete(
 	req TaskDeleteRequest,
 ) (*TaskDeleteResponse, error) {
 	return twapi.Execute[TaskDeleteRequest, *TaskDeleteResponse](ctx, engine, req)
+}
+
+// TaskCompleteRequestPath contains the path parameters for completing a task.
+type TaskCompleteRequestPath struct {
+	// ID is the unique identifier of the task to be marked as complete.
+	ID int64
+}
+
+// TaskCompleteRequest represents the request body for completing a task.
+//
+// https://apidocs.teamwork.com/docs/teamwork/v1/tasks/put-tasks-id-complete-json
+type TaskCompleteRequest struct {
+	// Path contains the path parameters for the request.
+	Path TaskCompleteRequestPath `json:"-"`
+}
+
+// NewTaskCompleteRequest creates a new TaskCompleteRequest with the provided
+// task ID. The ID is required to complete a task.
+func NewTaskCompleteRequest(taskID int64) TaskCompleteRequest {
+	return TaskCompleteRequest{
+		Path: TaskCompleteRequestPath{
+			ID: taskID,
+		},
+	}
+}
+
+// HTTPRequest creates an HTTP request for the TaskCompleteRequest.
+func (t TaskCompleteRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
+	uri := server + "/tasks/" + strconv.FormatInt(t.Path.ID, 10) + "/complete.json"
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, uri, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// TaskCompleteResponse represents the response body for completing a task.
+//
+// https://apidocs.teamwork.com/docs/teamwork/v1/tasks/put-tasks-id-complete-json
+type TaskCompleteResponse struct{}
+
+// HandleHTTPResponse handles the HTTP response for the TaskCompleteResponse.
+// If some unexpected HTTP status code is returned by the API, a twapi.HTTPError
+// is returned.
+func (t *TaskCompleteResponse) HandleHTTPResponse(resp *http.Response) error {
+	if resp.StatusCode != http.StatusOK {
+		return twapi.NewHTTPError(resp, "failed to complete task")
+	}
+	return nil
+}
+
+// TaskComplete marks a task as complete using the provided request and returns
+// the response.
+func TaskComplete(
+	ctx context.Context,
+	engine *twapi.Engine,
+	req TaskCompleteRequest,
+) (*TaskCompleteResponse, error) {
+	return twapi.Execute[TaskCompleteRequest, *TaskCompleteResponse](ctx, engine, req)
 }
 
 // TaskGetRequestPath contains the path parameters for loading a single task.
