@@ -81,6 +81,27 @@ func ExampleTaskDelete() {
 	// Output: task deleted!
 }
 
+func ExampleTaskComplete() {
+	address, stop, err := startTaskServer() // mock server for demonstration purposes
+	if err != nil {
+		fmt.Printf("failed to start server: %s", err)
+		return
+	}
+	defer stop()
+
+	ctx := context.Background()
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
+
+	_, err = projects.TaskComplete(ctx, engine, projects.NewTaskCompleteRequest(12345))
+	if err != nil {
+		fmt.Printf("failed to complete task: %s", err)
+	} else {
+		fmt.Println("task completed!")
+	}
+
+	// Output: task completed!
+}
+
 func ExampleTaskGet() {
 	address, stop, err := startTaskServer() // mock server for demonstration purposes
 	if err != nil {
@@ -170,6 +191,15 @@ func startTaskServer() (string, func(), error) {
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = fmt.Fprintln(w, `{"affected":{"taskIds":[12345]}}`)
+	})
+	mux.HandleFunc("PUT /tasks/{id}/complete", func(w http.ResponseWriter, r *http.Request) {
+		if r.PathValue("id") != "12345" {
+			http.Error(w, "Not Found", http.StatusNotFound)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprintln(w, `{"STATUS":"OK"}`)
 	})
 	mux.HandleFunc("GET /projects/api/v3/tasks/{id}", func(w http.ResponseWriter, r *http.Request) {
 		if r.PathValue("id") != "12345" {
