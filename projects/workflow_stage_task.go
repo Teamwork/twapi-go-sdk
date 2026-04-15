@@ -38,6 +38,11 @@ type WorkflowStageTaskMoveRequest struct {
 
 	// StageID is the identifier of the stage to which the task will be moved to.
 	StageID int64 `json:"stageId"`
+
+	// PositionAfterTaskID is the identifier of the task after which the current
+	// task will be positioned within the stage. If not provided or set as '-1',
+	// the task will be moved to the end of the stage.
+	PositionAfterTaskID int64 `json:"positionAfterTask,omitempty"`
 }
 
 // NewWorkflowStageTaskMoveRequest creates a new WorkflowStageTaskMoveRequest
@@ -54,6 +59,11 @@ func NewWorkflowStageTaskMoveRequest(workflowID, stageID, taskID int64) Workflow
 
 // HTTPRequest creates an HTTP request for the WorkflowStageTaskMoveRequest.
 func (w WorkflowStageTaskMoveRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
+	if w.PositionAfterTaskID == 0 || w.PositionAfterTaskID < -1 {
+		// default is to move the task to the end of the stage
+		w.PositionAfterTaskID = -1
+	}
+
 	uri := fmt.Sprintf("%s/projects/api/v3/tasks/%d/workflows/%d.json", server, w.Path.TaskID, w.Path.WorkflowID)
 
 	var body bytes.Buffer

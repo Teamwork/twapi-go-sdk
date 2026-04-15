@@ -13,6 +13,12 @@ func TestWorkflowStageTaskMove(t *testing.T) {
 		t.Skip("Skipping test because the engine is not initialized")
 	}
 
+	taskID, taskCleanup, err := createTask(t, testResources.TasklistID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(taskCleanup)
+
 	tests := []struct {
 		name  string
 		input projects.WorkflowStageTaskMoveRequest
@@ -23,6 +29,16 @@ func TestWorkflowStageTaskMove(t *testing.T) {
 			testResources.WorkflowStageID,
 			testResources.TaskID,
 		),
+	}, {
+		name: "all fields",
+		input: projects.WorkflowStageTaskMoveRequest{
+			Path: projects.WorkflowStageTaskMoveRequestPath{
+				WorkflowID: testResources.WorkflowID,
+				TaskID:     taskID,
+			},
+			StageID:             testResources.WorkflowStageID,
+			PositionAfterTaskID: testResources.TaskID,
+		},
 	}}
 
 	for _, tt := range tests {
