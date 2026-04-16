@@ -127,6 +127,11 @@ type Task struct {
 type TaskOptions struct {
 	// Notify enables notifications for the task actions.
 	Notify bool `json:"notify"`
+	// CheckInvalidusers enables checking for invalid users when assigning the
+	// task. If set to true, the API will return an error if any of the provided
+	// assignees are invalid. If set to false, the API will ignore invalid
+	// assignees and assign the task to valid ones.
+	CheckInvalidUsers bool `json:"checkInvalidusers"`
 }
 
 // TaskPredecessorType defines the predecessor constraint type
