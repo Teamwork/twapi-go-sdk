@@ -660,11 +660,27 @@ type TaskListRequestFilters struct {
 	// or tasklist's name.
 	SearchTerm string
 
-	// TagIDs is an optional list of tag IDs to filter tasks by tags.
-	TagIDs []int64
-
 	// AssigneeUserIDs is an optional list of User IDs to filter tasks by assigned user.
 	AssigneeUserIDs []int64
+
+	// UpdatedAfter is an optional filter to retrieve tasks updated after a
+	// specific date and time.
+	UpdatedAfter *time.Time
+
+	// UpdatedBefore is an optional filter to retrieve tasks updated before a
+	// specific date and time.
+	UpdatedBefore *time.Time
+
+	// CreatedAfter is an optional filter to retrieve tasks created after a
+	// specific date and time.
+	CreatedAfter *time.Time
+
+	// CreatedBefore is an optional filter to retrieve tasks created before a
+	// specific date and time.
+	CreatedBefore *time.Time
+
+	// TagIDs is an optional list of tag IDs to filter tasks by tags.
+	TagIDs []int64
 
 	// MatchAllTags is an optional flag to indicate if all tags must match. If set
 	// to true, only tasks matching all specified tags will be returned.
@@ -727,6 +743,18 @@ func (t TaskListRequest) HTTPRequest(ctx context.Context, server string) (*http.
 			assigneeUserIDs[i] = strconv.FormatInt(id, 10)
 		}
 		query.Set("responsiblePartyIds", strings.Join(assigneeUserIDs, ","))
+	}
+	if t.Filters.UpdatedAfter != nil && !t.Filters.UpdatedAfter.IsZero() {
+		query.Set("updatedAfter", t.Filters.UpdatedAfter.Format(time.RFC3339))
+	}
+	if t.Filters.UpdatedBefore != nil && !t.Filters.UpdatedBefore.IsZero() {
+		query.Set("updatedBefore", t.Filters.UpdatedBefore.Format(time.RFC3339))
+	}
+	if t.Filters.CreatedAfter != nil && !t.Filters.CreatedAfter.IsZero() {
+		query.Set("createdAfter", t.Filters.CreatedAfter.Format(time.RFC3339))
+	}
+	if t.Filters.CreatedBefore != nil && !t.Filters.CreatedBefore.IsZero() {
+		query.Set("createdBefore", t.Filters.CreatedBefore.Format(time.RFC3339))
 	}
 	if len(t.Filters.TagIDs) > 0 {
 		tagIDs := make([]string, len(t.Filters.TagIDs))

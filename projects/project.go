@@ -90,6 +90,12 @@ type Project struct {
 	// Tags is a list of tags associated with the project.
 	Tags []twapi.Relationship `json:"tags"`
 
+	// LastWorkedAt is the date and time when the project was last worked on.
+	//
+	// Attention: This field isn't populated when the project is retrieved as a
+	// sideload.
+	LastWorkedAt *time.Time `json:"lastWorkedOn"`
+
 	// CreatedAt is the date and time when the project was created.
 	CreatedAt *time.Time `json:"createdAt"`
 
