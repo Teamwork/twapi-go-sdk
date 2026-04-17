@@ -663,6 +663,14 @@ type TaskListRequestFilters struct {
 	// AssigneeUserIDs is an optional list of User IDs to filter tasks by assigned user.
 	AssigneeUserIDs []int64
 
+	// CreatedAfter is an optional filter to retrieve tasks created after a
+	// specific date and time.
+	CreatedAfter *time.Time
+
+	// CreatedBefore is an optional filter to retrieve tasks created before a
+	// specific date and time.
+	CreatedBefore *time.Time
+
 	// UpdatedAfter is an optional filter to retrieve tasks updated after a
 	// specific date and time.
 	UpdatedAfter *time.Time
@@ -671,13 +679,13 @@ type TaskListRequestFilters struct {
 	// specific date and time.
 	UpdatedBefore *time.Time
 
-	// CreatedAfter is an optional filter to retrieve tasks created after a
+	// CompletedAfter is an optional filter to retrieve tasks completed after a
 	// specific date and time.
-	CreatedAfter *time.Time
+	CompletedAfter *time.Time
 
-	// CreatedBefore is an optional filter to retrieve tasks created before a
+	// CompletedBefore is an optional filter to retrieve tasks completed before a
 	// specific date and time.
-	CreatedBefore *time.Time
+	CompletedBefore *time.Time
 
 	// TagIDs is an optional list of tag IDs to filter tasks by tags.
 	TagIDs []int64
@@ -744,17 +752,23 @@ func (t TaskListRequest) HTTPRequest(ctx context.Context, server string) (*http.
 		}
 		query.Set("responsiblePartyIds", strings.Join(assigneeUserIDs, ","))
 	}
+	if t.Filters.CreatedAfter != nil && !t.Filters.CreatedAfter.IsZero() {
+		query.Set("createdAfter", t.Filters.CreatedAfter.Format(time.RFC3339))
+	}
+	if t.Filters.CreatedBefore != nil && !t.Filters.CreatedBefore.IsZero() {
+		query.Set("createdBefore", t.Filters.CreatedBefore.Format(time.RFC3339))
+	}
 	if t.Filters.UpdatedAfter != nil && !t.Filters.UpdatedAfter.IsZero() {
 		query.Set("updatedAfter", t.Filters.UpdatedAfter.Format(time.RFC3339))
 	}
 	if t.Filters.UpdatedBefore != nil && !t.Filters.UpdatedBefore.IsZero() {
 		query.Set("updatedBefore", t.Filters.UpdatedBefore.Format(time.RFC3339))
 	}
-	if t.Filters.CreatedAfter != nil && !t.Filters.CreatedAfter.IsZero() {
-		query.Set("createdAfter", t.Filters.CreatedAfter.Format(time.RFC3339))
+	if t.Filters.CompletedAfter != nil && !t.Filters.CompletedAfter.IsZero() {
+		query.Set("completedAfter", t.Filters.CompletedAfter.Format(time.RFC3339))
 	}
-	if t.Filters.CreatedBefore != nil && !t.Filters.CreatedBefore.IsZero() {
-		query.Set("createdBefore", t.Filters.CreatedBefore.Format(time.RFC3339))
+	if t.Filters.CompletedBefore != nil && !t.Filters.CompletedBefore.IsZero() {
+		query.Set("completedBefore", t.Filters.CompletedBefore.Format(time.RFC3339))
 	}
 	if len(t.Filters.TagIDs) > 0 {
 		tagIDs := make([]string, len(t.Filters.TagIDs))
