@@ -28,6 +28,17 @@ var (
 	_ twapi.HTTPResponser = (*TaskListResponse)(nil)
 )
 
+// TaskDescriptionContentType defines the content type of the task description.
+type TaskDescriptionContentType string
+
+const (
+	// TaskDescriptionContentTypeText indicates the description is in plain text
+	// format.
+	TaskDescriptionContentTypeText TaskDescriptionContentType = "TEXT"
+	// TaskDescriptionContentTypeHTML indicates the description is in HTML format.
+	TaskDescriptionContentTypeHTML TaskDescriptionContentType = "HTML"
+)
+
 // Task represents an individual unit of work assigned to one or more team
 // members within a project. Each task can include details such as a title,
 // description, priority, estimated time, assignees, and due date, along with
@@ -51,7 +62,7 @@ type Task struct {
 
 	// DescriptionContentType is the content type of the description. It can be
 	// "TEXT" or "HTML".
-	DescriptionContentType *string `json:"descriptionContentType"`
+	DescriptionContentType *TaskDescriptionContentType `json:"descriptionContentType"`
 
 	// Priority is the priority of the task. It can be "none", "low", "medium" or
 	// "high".
@@ -195,6 +206,10 @@ type TaskCreateRequest struct {
 	// Description is an optional description of the task.
 	Description *string `json:"description,omitempty"`
 
+	// DescriptionContentType is the content type of the description. It can be
+	// "TEXT" or "HTML". If not provided, it defaults to "TEXT".
+	DescriptionContentType *TaskDescriptionContentType `json:"descriptionContentType,omitempty"`
+
 	// Priority is the priority of the task. It can be "none", "low", "medium" or
 	// "high".
 	Priority *string `json:"priority,omitempty"`
@@ -335,6 +350,10 @@ type TaskUpdateRequest struct {
 
 	// Description is an optional description of the task.
 	Description *string `json:"description,omitempty"`
+
+	// DescriptionContentType is the content type of the description. It can be
+	// "TEXT" or "HTML". If not provided, it defaults to "TEXT".
+	DescriptionContentType *TaskDescriptionContentType `json:"descriptionContentType,omitempty"`
 
 	// Priority is the priority of the task. It can be "none", "low", "medium" or
 	// "high".
