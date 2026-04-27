@@ -182,7 +182,7 @@ func startLinkServer() (string, func(), error) {
 	mux.HandleFunc("GET /links", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = fmt.Fprintln(w, `{"links":[{"id":"12345"},{"id":"12346"}]}`)
+		_, _ = fmt.Fprintln(w, `{"project":{"links":[{"id":"12345"},{"id":"12346"}]}}`)
 	})
 
 	server := &http.Server{

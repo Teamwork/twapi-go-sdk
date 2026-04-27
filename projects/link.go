@@ -76,7 +76,7 @@ type Link struct {
 	CreatedAt time.Time `json:"created-date"`
 
 	// UpdatedByUserID is the user who last updated this link.
-	UpdatedByUserID *int64 `json:"updated-by-userId"`
+	UpdatedByUserID *LegacyNumber `json:"updated-by-userId"`
 
 	// UpdatedAt is the date and time when the link was last updated.
 	UpdatedAt *time.Time `json:"updated-date"`
@@ -559,7 +559,11 @@ type LinkListResponse struct {
 	request LinkListRequest
 	hasMore bool
 
-	Links []Link `json:"links"`
+	// Links is the list of links matching the request filters. This field is not
+	// directly decoded from the API response, but is populated in the
+	// HandleHTTPResponse method, which decodes the response and extracts the
+	// links from it.
+	Links []Link `json:"-"`
 }
 
 // HandleHTTPResponse handles the HTTP response for the LinkListResponse. If
@@ -574,8 +578,22 @@ func (l *LinkListResponse) HandleHTTPResponse(resp *http.Response) error {
 	pages, _ := strconv.ParseInt(resp.Header.Get("X-Pages"), 10, 64)
 	l.hasMore = pages > page
 
-	if err := json.NewDecoder(resp.Body).Decode(l); err != nil {
+	var links struct {
+		Project struct {
+			Links []Link `json:"links"`
+		} `json:"project"`
+		Projects []struct {
+			Links []Link `json:"links"`
+		} `json:"projects"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&links); err != nil {
 		return fmt.Errorf("failed to decode list links response: %w", err)
+	}
+
+	l.Links = links.Project.Links
+	for _, project := range links.Projects {
+		l.Links = append(l.Links, project.Links...)
 	}
 	return nil
 }
