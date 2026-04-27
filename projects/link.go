@@ -563,7 +563,7 @@ type LinkListResponse struct {
 	// directly decoded from the API response, but is populated in the
 	// HandleHTTPResponse method, which decodes the response and extracts the
 	// links from it.
-	Links []Link `json:"-"`
+	Links []Link `json:"links"`
 }
 
 // HandleHTTPResponse handles the HTTP response for the LinkListResponse. If
