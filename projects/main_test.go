@@ -642,6 +642,24 @@ func createWorkflowStage(t testEngine, workflowID int64) (int64, func(), error) 
 	}, nil
 }
 
+func createLink(t testEngine, projectID int64) (int64, func(), error) {
+	linkResponse, err := projects.LinkCreate(t.Context(), engine, projects.NewLinkCreateRequest(
+		projectID,
+		"https://teamwork.com",
+	))
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to create link for test: %w", err)
+	}
+	id := int64(linkResponse.ID)
+	return id, func() {
+		ctx := context.Background() // t.Context is always canceled in cleanup
+		_, err := projects.LinkDelete(ctx, engine, projects.NewLinkDeleteRequest(id))
+		if err != nil {
+			t.Errorf("failed to delete link after test: %s", err)
+		}
+	}, nil
+}
+
 type testEngine interface {
 	Context() context.Context
 	Errorf(string, ...any)
