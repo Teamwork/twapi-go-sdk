@@ -568,6 +568,10 @@ type CommentListRequestPath struct {
 	// TaskID is the unique identifier of the task whose comments are to be
 	// retrieved.
 	TaskID int64
+
+	// LinkID is the unique identifier of the link whose comments are to be
+	// retrieved.
+	LinkID int64
 }
 
 // CommentListRequestFilters contains the filters for loading multiple comments.
@@ -597,6 +601,7 @@ type CommentListRequestFilters struct {
 // https://apidocs.teamwork.com/docs/teamwork/v3/milestone-comments/get-projects-api-v3-milestones-milestone-id-comments-json
 // https://apidocs.teamwork.com/docs/teamwork/v3/notebook-comments/get-projects-api-v3-notebooks-notebook-id-comments-json
 // https://apidocs.teamwork.com/docs/teamwork/v3/task-comments/get-projects-api-v3-tasks-task-id-comments-json
+// https://apidocs.teamwork.com/docs/teamwork/v3/link-comments/get-projects-api-v3-links-link-id-comments-json
 //
 //nolint:lll
 type CommentListRequest struct {
@@ -629,6 +634,8 @@ func (t CommentListRequest) HTTPRequest(ctx context.Context, server string) (*ht
 		uri = fmt.Sprintf("%s/projects/api/v3/notebooks/%d/comments.json", server, t.Path.NotebookID)
 	case t.Path.TaskID > 0:
 		uri = fmt.Sprintf("%s/projects/api/v3/tasks/%d/comments.json", server, t.Path.TaskID)
+	case t.Path.LinkID > 0:
+		uri = fmt.Sprintf("%s/projects/api/v3/links/%d/comments.json", server, t.Path.LinkID)
 	default:
 		uri = server + "/projects/api/v3/comments.json"
 	}
@@ -670,6 +677,7 @@ func (t CommentListRequest) HTTPRequest(ctx context.Context, server string) (*ht
 // https://apidocs.teamwork.com/docs/teamwork/v3/milestone-comments/get-projects-api-v3-milestones-milestone-id-comments-json
 // https://apidocs.teamwork.com/docs/teamwork/v3/notebook-comments/get-projects-api-v3-notebooks-notebook-id-comments-json
 // https://apidocs.teamwork.com/docs/teamwork/v3/task-comments/get-projects-api-v3-tasks-task-id-comments-json
+// https://apidocs.teamwork.com/docs/teamwork/v3/link-comments/get-projects-api-v3-links-link-id-comments-json
 //
 //nolint:lll
 type CommentListResponse struct {
