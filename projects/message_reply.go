@@ -467,6 +467,34 @@ type MessageReplyListRequestFilters struct {
 	PageSize int64
 }
 
+func (m MessageReplyListRequestFilters) apply(req *http.Request) {
+	query := req.URL.Query()
+	if m.SearchTerm != "" {
+		query.Set("searchTerm", m.SearchTerm)
+	}
+	if len(m.MessageIDs) > 0 {
+		messageIDs := make([]string, len(m.MessageIDs))
+		for i, id := range m.MessageIDs {
+			messageIDs[i] = strconv.FormatInt(id, 10)
+		}
+		query.Set("messageIds", strings.Join(messageIDs, ","))
+	}
+	if len(m.ProjectIDs) > 0 {
+		projectIDs := make([]string, len(m.ProjectIDs))
+		for i, id := range m.ProjectIDs {
+			projectIDs[i] = strconv.FormatInt(id, 10)
+		}
+		query.Set("projectIds", strings.Join(projectIDs, ","))
+	}
+	if m.Page > 0 {
+		query.Set("page", strconv.FormatInt(m.Page, 10))
+	}
+	if m.PageSize > 0 {
+		query.Set("pageSize", strconv.FormatInt(m.PageSize, 10))
+	}
+	req.URL.RawQuery = query.Encode()
+}
+
 // MessageReplyListRequest represents the request body for loading multiple
 // message replies.
 //
@@ -504,31 +532,7 @@ func (m MessageReplyListRequest) HTTPRequest(ctx context.Context, server string)
 	if err != nil {
 		return nil, err
 	}
-	query := req.URL.Query()
-	if m.Filters.SearchTerm != "" {
-		query.Set("searchTerm", m.Filters.SearchTerm)
-	}
-	if len(m.Filters.MessageIDs) > 0 {
-		messageIDs := make([]string, len(m.Filters.MessageIDs))
-		for i, id := range m.Filters.MessageIDs {
-			messageIDs[i] = strconv.FormatInt(id, 10)
-		}
-		query.Set("messageIds", strings.Join(messageIDs, ","))
-	}
-	if len(m.Filters.ProjectIDs) > 0 {
-		projectIDs := make([]string, len(m.Filters.ProjectIDs))
-		for i, id := range m.Filters.ProjectIDs {
-			projectIDs[i] = strconv.FormatInt(id, 10)
-		}
-		query.Set("projectIds", strings.Join(projectIDs, ","))
-	}
-	if m.Filters.Page > 0 {
-		query.Set("page", strconv.FormatInt(m.Filters.Page, 10))
-	}
-	if m.Filters.PageSize > 0 {
-		query.Set("pageSize", strconv.FormatInt(m.Filters.PageSize, 10))
-	}
-	req.URL.RawQuery = query.Encode()
+	m.Filters.apply(req)
 
 	return req, nil
 }

@@ -594,6 +594,30 @@ type CommentListRequestFilters struct {
 	PageSize int64
 }
 
+func (t CommentListRequestFilters) apply(req *http.Request) {
+	query := req.URL.Query()
+	if t.SearchTerm != "" {
+		query.Set("searchTerm", t.SearchTerm)
+	}
+	if len(t.UserIDs) > 0 {
+		tagIDs := make([]string, len(t.UserIDs))
+		for i, id := range t.UserIDs {
+			tagIDs[i] = strconv.FormatInt(id, 10)
+		}
+		query.Set("userIds", strings.Join(tagIDs, ","))
+	}
+	if !t.UpdatedAfter.IsZero() {
+		query.Set("updatedAfter", t.UpdatedAfter.Format(time.RFC3339))
+	}
+	if t.Page > 0 {
+		query.Set("page", strconv.FormatInt(t.Page, 10))
+	}
+	if t.PageSize > 0 {
+		query.Set("pageSize", strconv.FormatInt(t.PageSize, 10))
+	}
+	req.URL.RawQuery = query.Encode()
+}
+
 // CommentListRequest represents the request body for loading multiple comments.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/comments/get-projects-api-v3-comments-json
@@ -644,28 +668,7 @@ func (t CommentListRequest) HTTPRequest(ctx context.Context, server string) (*ht
 	if err != nil {
 		return nil, err
 	}
-
-	query := req.URL.Query()
-	if t.Filters.SearchTerm != "" {
-		query.Set("searchTerm", t.Filters.SearchTerm)
-	}
-	if len(t.Filters.UserIDs) > 0 {
-		tagIDs := make([]string, len(t.Filters.UserIDs))
-		for i, id := range t.Filters.UserIDs {
-			tagIDs[i] = strconv.FormatInt(id, 10)
-		}
-		query.Set("userIds", strings.Join(tagIDs, ","))
-	}
-	if !t.Filters.UpdatedAfter.IsZero() {
-		query.Set("updatedAfter", t.Filters.UpdatedAfter.Format(time.RFC3339))
-	}
-	if t.Filters.Page > 0 {
-		query.Set("page", strconv.FormatInt(t.Filters.Page, 10))
-	}
-	if t.Filters.PageSize > 0 {
-		query.Set("pageSize", strconv.FormatInt(t.Filters.PageSize, 10))
-	}
-	req.URL.RawQuery = query.Encode()
+	t.Filters.apply(req)
 
 	return req, nil
 }

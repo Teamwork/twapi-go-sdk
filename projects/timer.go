@@ -649,6 +649,29 @@ type TimerListRequestFilters struct {
 	PageSize int64
 }
 
+func (t TimerListRequestFilters) apply(req *http.Request) {
+	query := req.URL.Query()
+	if t.UserID > 0 {
+		query.Set("userId", strconv.FormatInt(t.UserID, 10))
+	}
+	if t.ProjectID > 0 {
+		query.Set("projectId", strconv.FormatInt(t.ProjectID, 10))
+	}
+	if t.TaskID > 0 {
+		query.Set("taskId", strconv.FormatInt(t.TaskID, 10))
+	}
+	if t.RunningTimersOnly {
+		query.Set("runningTimersOnly", strconv.FormatBool(t.RunningTimersOnly))
+	}
+	if t.Page > 0 {
+		query.Set("page", strconv.FormatInt(t.Page, 10))
+	}
+	if t.PageSize > 0 {
+		query.Set("pageSize", strconv.FormatInt(t.PageSize, 10))
+	}
+	req.URL.RawQuery = query.Encode()
+}
+
 // TimerListRequest represents the request body for loading multiple timers.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/time-tracking/get-projects-api-v3-timers-json
@@ -675,27 +698,7 @@ func (t TimerListRequest) HTTPRequest(ctx context.Context, server string) (*http
 	if err != nil {
 		return nil, err
 	}
-
-	query := req.URL.Query()
-	if t.Filters.UserID > 0 {
-		query.Set("userId", strconv.FormatInt(t.Filters.UserID, 10))
-	}
-	if t.Filters.ProjectID > 0 {
-		query.Set("projectId", strconv.FormatInt(t.Filters.ProjectID, 10))
-	}
-	if t.Filters.TaskID > 0 {
-		query.Set("taskId", strconv.FormatInt(t.Filters.TaskID, 10))
-	}
-	if t.Filters.RunningTimersOnly {
-		query.Set("runningTimersOnly", strconv.FormatBool(t.Filters.RunningTimersOnly))
-	}
-	if t.Filters.Page > 0 {
-		query.Set("page", strconv.FormatInt(t.Filters.Page, 10))
-	}
-	if t.Filters.PageSize > 0 {
-		query.Set("pageSize", strconv.FormatInt(t.Filters.PageSize, 10))
-	}
-	req.URL.RawQuery = query.Encode()
+	t.Filters.apply(req)
 
 	return req, nil
 }

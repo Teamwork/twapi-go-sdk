@@ -205,6 +205,30 @@ type ProjectBudgetListRequestFilters struct {
 	Cursor string
 }
 
+func (p ProjectBudgetListRequestFilters) apply(req *http.Request) {
+	query := req.URL.Query()
+	if len(p.ProjectIDs) > 0 {
+		ids := make([]string, 0, len(p.ProjectIDs))
+		for _, id := range p.ProjectIDs {
+			ids = append(ids, strconv.FormatInt(id, 10))
+		}
+		query.Set("projectIds", strings.Join(ids, ","))
+	}
+	if p.Status != "" {
+		query.Set("status", string(p.Status))
+	}
+	if p.Limit > 0 {
+		query.Set("limit", strconv.FormatInt(p.Limit, 10))
+	}
+	if p.PageSize > 0 {
+		query.Set("pageSize", strconv.FormatInt(p.PageSize, 10))
+	}
+	if p.Cursor != "" {
+		query.Set("cursor", p.Cursor)
+	}
+	req.URL.RawQuery = query.Encode()
+}
+
 // ProjectBudgetListRequest represents the request for listing project budgets.
 //
 // projects/api/v3/projects/budgets.json
@@ -227,28 +251,7 @@ func (p ProjectBudgetListRequest) HTTPRequest(ctx context.Context, server string
 	if err != nil {
 		return nil, err
 	}
-
-	query := req.URL.Query()
-	if len(p.Filters.ProjectIDs) > 0 {
-		ids := make([]string, 0, len(p.Filters.ProjectIDs))
-		for _, id := range p.Filters.ProjectIDs {
-			ids = append(ids, strconv.FormatInt(id, 10))
-		}
-		query.Set("projectIds", strings.Join(ids, ","))
-	}
-	if p.Filters.Status != "" {
-		query.Set("status", string(p.Filters.Status))
-	}
-	if p.Filters.Limit > 0 {
-		query.Set("limit", strconv.FormatInt(p.Filters.Limit, 10))
-	}
-	if p.Filters.PageSize > 0 {
-		query.Set("pageSize", strconv.FormatInt(p.Filters.PageSize, 10))
-	}
-	if p.Filters.Cursor != "" {
-		query.Set("cursor", p.Filters.Cursor)
-	}
-	req.URL.RawQuery = query.Encode()
+	p.Filters.apply(req)
 
 	return req, nil
 }

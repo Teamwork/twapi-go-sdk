@@ -386,6 +386,27 @@ type SkillListRequestFilters struct {
 	Include []SkillListRequestSideload
 }
 
+func (s SkillListRequestFilters) apply(req *http.Request) {
+	query := req.URL.Query()
+	if s.SearchTerm != "" {
+		query.Set("searchTerm", s.SearchTerm)
+	}
+	if s.Page > 0 {
+		query.Set("page", strconv.FormatInt(s.Page, 10))
+	}
+	if s.PageSize > 0 {
+		query.Set("pageSize", strconv.FormatInt(s.PageSize, 10))
+	}
+	if len(s.Include) > 0 {
+		var include []string
+		for _, sideload := range s.Include {
+			include = append(include, string(sideload))
+		}
+		query.Set("include", strings.Join(include, ","))
+	}
+	req.URL.RawQuery = query.Encode()
+}
+
 // SkillListRequest represents the request body for loading multiple skills.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/skills/get-projects-api-v3-skills-json
@@ -415,25 +436,7 @@ func (s SkillListRequest) HTTPRequest(ctx context.Context, server string) (*http
 	if err != nil {
 		return nil, err
 	}
-
-	query := req.URL.Query()
-	if s.Filters.SearchTerm != "" {
-		query.Set("searchTerm", s.Filters.SearchTerm)
-	}
-	if s.Filters.Page > 0 {
-		query.Set("page", strconv.FormatInt(s.Filters.Page, 10))
-	}
-	if s.Filters.PageSize > 0 {
-		query.Set("pageSize", strconv.FormatInt(s.Filters.PageSize, 10))
-	}
-	if len(s.Filters.Include) > 0 {
-		var include []string
-		for _, sideload := range s.Filters.Include {
-			include = append(include, string(sideload))
-		}
-		query.Set("include", strings.Join(include, ","))
-	}
-	req.URL.RawQuery = query.Encode()
+	s.Filters.apply(req)
 
 	return req, nil
 }

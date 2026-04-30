@@ -197,6 +197,30 @@ type ActivityListRequestFilters struct {
 	PageSize int64
 }
 
+func (a ActivityListRequestFilters) apply(req *http.Request) {
+	query := req.URL.Query()
+	if !a.StartDate.IsZero() {
+		query.Set("startDate", a.StartDate.Format(time.RFC3339))
+	}
+	if !a.EndDate.IsZero() {
+		query.Set("endDate", a.EndDate.Format(time.RFC3339))
+	}
+	if len(a.LogItemTypes) > 0 {
+		logItemTypes := make([]string, len(a.LogItemTypes))
+		for i, logType := range a.LogItemTypes {
+			logItemTypes[i] = string(logType)
+		}
+		query.Set("activityTypes", strings.Join(logItemTypes, ","))
+	}
+	if a.Page > 0 {
+		query.Set("page", strconv.FormatInt(a.Page, 10))
+	}
+	if a.PageSize > 0 {
+		query.Set("pageSize", strconv.FormatInt(a.PageSize, 10))
+	}
+	req.URL.RawQuery = query.Encode()
+}
+
 // ActivityListRequest represents the request body for loading multiple activities.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/activity/get-projects-api-v3-latestactivity-json
@@ -233,28 +257,7 @@ func (a ActivityListRequest) HTTPRequest(ctx context.Context, server string) (*h
 	if err != nil {
 		return nil, err
 	}
-
-	query := req.URL.Query()
-	if !a.Filters.StartDate.IsZero() {
-		query.Set("startDate", a.Filters.StartDate.Format(time.RFC3339))
-	}
-	if !a.Filters.EndDate.IsZero() {
-		query.Set("endDate", a.Filters.EndDate.Format(time.RFC3339))
-	}
-	if len(a.Filters.LogItemTypes) > 0 {
-		logItemTypes := make([]string, len(a.Filters.LogItemTypes))
-		for i, logType := range a.Filters.LogItemTypes {
-			logItemTypes[i] = string(logType)
-		}
-		query.Set("activityTypes", strings.Join(logItemTypes, ","))
-	}
-	if a.Filters.Page > 0 {
-		query.Set("page", strconv.FormatInt(a.Filters.Page, 10))
-	}
-	if a.Filters.PageSize > 0 {
-		query.Set("pageSize", strconv.FormatInt(a.Filters.PageSize, 10))
-	}
-	req.URL.RawQuery = query.Encode()
+	a.Filters.apply(req)
 
 	return req, nil
 }
