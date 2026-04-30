@@ -122,6 +122,14 @@ type Project struct {
 	// "projects-template", "personal", "holder-project", "tentative" or
 	// "global-messages".
 	Type string `json:"type"`
+
+	// Included contains related objects included in the response.
+	Included struct {
+		// ProjectCategories contains the categories associated with the project.
+		//
+		// The key is the string representation of the project category ID.
+		ProjectCategories []ProjectCategory `json:"projectCategories"`
+	}
 }
 
 // ProjectCreateRequest represents the request body for creating a new project.
@@ -645,6 +653,31 @@ func ProjectClone(
 	return twapi.Execute[ProjectCloneRequest, *ProjectCloneResponse](ctx, engine, req)
 }
 
+// ProjectRequestSideload contains the possible sideload options when loading
+// projects.
+type ProjectRequestSideload string
+
+// List of possible sideload options for ProjectRequestSideload.
+const (
+	ProjectRequestSideloadProjectCategories ProjectRequestSideload = "projectCategories"
+)
+
+// ProjectRequestFilters contains the filters for loading projects.
+type ProjectRequestFilters struct {
+	// Include specifies related resources to include.
+	Include []ProjectRequestSideload
+}
+
+func (p ProjectRequestFilters) apply(req *http.Request) {
+	query := req.URL.Query()
+	if len(p.Include) > 0 {
+		for _, include := range p.Include {
+			query.Add("include", string(include))
+		}
+	}
+	req.URL.RawQuery = query.Encode()
+}
+
 // ProjectGetRequestPath contains the path parameters for loading a single
 // project.
 type ProjectGetRequestPath struct {
@@ -658,6 +691,9 @@ type ProjectGetRequestPath struct {
 type ProjectGetRequest struct {
 	// Path contains the path parameters for the request.
 	Path ProjectGetRequestPath
+
+	// Filters contains the filters for loading a single project.
+	Filters ProjectRequestFilters
 }
 
 // NewProjectGetRequest creates a new ProjectGetRequest with the provided
@@ -678,6 +714,7 @@ func (p ProjectGetRequest) HTTPRequest(ctx context.Context, server string) (*htt
 	if err != nil {
 		return nil, err
 	}
+	p.Filters.apply(req)
 
 	return req, nil
 }
@@ -715,6 +752,8 @@ func ProjectGet(
 
 // ProjectListRequestFilters contains the filters for loading multiple projects.
 type ProjectListRequestFilters struct {
+	ProjectRequestFilters
+
 	// ProjectCategoryIDs is an optional list of project category IDs to filter
 	// projects by categories.
 	ProjectCategoryIDs []int64
@@ -735,6 +774,39 @@ type ProjectListRequestFilters struct {
 
 	// PageSize is the number of projects to retrieve per page. Defaults to 50.
 	PageSize int64
+}
+
+func (p ProjectListRequestFilters) apply(req *http.Request) {
+	p.ProjectRequestFilters.apply(req)
+
+	query := req.URL.Query()
+	if len(p.ProjectCategoryIDs) > 0 {
+		categoryIDs := make([]string, len(p.ProjectCategoryIDs))
+		for i, id := range p.ProjectCategoryIDs {
+			categoryIDs[i] = strconv.FormatInt(id, 10)
+		}
+		query.Set("projectCategoryIds", strings.Join(categoryIDs, ","))
+	}
+	if p.SearchTerm != "" {
+		query.Set("searchTerm", p.SearchTerm)
+	}
+	if len(p.TagIDs) > 0 {
+		tagIDs := make([]string, len(p.TagIDs))
+		for i, id := range p.TagIDs {
+			tagIDs[i] = strconv.FormatInt(id, 10)
+		}
+		query.Set("projectTagIds", strings.Join(tagIDs, ","))
+	}
+	if p.MatchAllTags != nil {
+		query.Set("matchAllProjectTags", strconv.FormatBool(*p.MatchAllTags))
+	}
+	if p.Page > 0 {
+		query.Set("page", strconv.FormatInt(p.Page, 10))
+	}
+	if p.PageSize > 0 {
+		query.Set("pageSize", strconv.FormatInt(p.PageSize, 10))
+	}
+	req.URL.RawQuery = query.Encode()
 }
 
 // ProjectListRequest represents the request body for loading multiple projects.
@@ -763,35 +835,7 @@ func (p ProjectListRequest) HTTPRequest(ctx context.Context, server string) (*ht
 	if err != nil {
 		return nil, err
 	}
-
-	query := req.URL.Query()
-	if len(p.Filters.ProjectCategoryIDs) > 0 {
-		categoryIDs := make([]string, len(p.Filters.ProjectCategoryIDs))
-		for i, id := range p.Filters.ProjectCategoryIDs {
-			categoryIDs[i] = strconv.FormatInt(id, 10)
-		}
-		query.Set("projectCategoryIds", strings.Join(categoryIDs, ","))
-	}
-	if p.Filters.SearchTerm != "" {
-		query.Set("searchTerm", p.Filters.SearchTerm)
-	}
-	if len(p.Filters.TagIDs) > 0 {
-		tagIDs := make([]string, len(p.Filters.TagIDs))
-		for i, id := range p.Filters.TagIDs {
-			tagIDs[i] = strconv.FormatInt(id, 10)
-		}
-		query.Set("projectTagIds", strings.Join(tagIDs, ","))
-	}
-	if p.Filters.MatchAllTags != nil {
-		query.Set("matchAllProjectTags", strconv.FormatBool(*p.Filters.MatchAllTags))
-	}
-	if p.Filters.Page > 0 {
-		query.Set("page", strconv.FormatInt(p.Filters.Page, 10))
-	}
-	if p.Filters.PageSize > 0 {
-		query.Set("pageSize", strconv.FormatInt(p.Filters.PageSize, 10))
-	}
-	req.URL.RawQuery = query.Encode()
+	p.Filters.apply(req)
 
 	return req, nil
 }
