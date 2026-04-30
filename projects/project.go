@@ -122,14 +122,6 @@ type Project struct {
 	// "projects-template", "personal", "holder-project", "tentative" or
 	// "global-messages".
 	Type string `json:"type"`
-
-	// Included contains related objects included in the response.
-	Included struct {
-		// ProjectCategories contains the categories associated with the project.
-		//
-		// The key is the string representation of the project category ID.
-		ProjectCategories []ProjectCategory `json:"projectCategories"`
-	}
 }
 
 // ProjectCreateRequest represents the request body for creating a new project.
@@ -724,6 +716,14 @@ func (p ProjectGetRequest) HTTPRequest(ctx context.Context, server string) (*htt
 // https://apidocs.teamwork.com/docs/teamwork/v3/projects/get-projects-api-v3-projects-project-id-json
 type ProjectGetResponse struct {
 	Project Project `json:"project"`
+
+	// Included contains related objects included in the response.
+	Included struct {
+		// ProjectCategories contains the categories associated with the project.
+		//
+		// The key is the string representation of the project category ID.
+		ProjectCategories []ProjectCategory `json:"projectCategories"`
+	} `json:"included"`
 }
 
 // HandleHTTPResponse handles the HTTP response for the ProjectGetResponse. If
@@ -847,12 +847,23 @@ func (p ProjectListRequest) HTTPRequest(ctx context.Context, server string) (*ht
 type ProjectListResponse struct {
 	request ProjectListRequest
 
+	// Meta contains metadata about the response, including pagination details.
 	Meta struct {
 		Page struct {
 			HasMore bool `json:"hasMore"`
 		} `json:"page"`
 	} `json:"meta"`
+
+	// Projects is the list of projects matching the request filters.
 	Projects []Project `json:"projects"`
+
+	// Included contains related objects included in the response.
+	Included struct {
+		// ProjectCategories contains the categories associated with the project.
+		//
+		// The key is the string representation of the project category ID.
+		ProjectCategories []ProjectCategory `json:"projectCategories"`
+	} `json:"included"`
 }
 
 // HandleHTTPResponse handles the HTTP response for the ProjectListResponse. If
