@@ -453,6 +453,29 @@ type TeamListRequestFilters struct {
 	PageSize int64
 }
 
+func (u TeamListRequestFilters) apply(req *http.Request) {
+	query := req.URL.Query()
+	if u.SearchTerm != "" {
+		query.Set("searchTerm", u.SearchTerm)
+	}
+	if u.IncludeCompanyTeams {
+		query.Set("includeCompanyTeams", "true")
+	}
+	if u.IncludeProjectTeams {
+		query.Set("includeProjectTeams", "true")
+	}
+	if u.IncludeSubteams {
+		query.Set("includeSubteams", "true")
+	}
+	if u.Page > 0 {
+		query.Set("page", strconv.FormatInt(u.Page, 10))
+	}
+	if u.PageSize > 0 {
+		query.Set("pageSize", strconv.FormatInt(u.PageSize, 10))
+	}
+	req.URL.RawQuery = query.Encode()
+}
+
 // TeamListRequest represents the request body for loading multiple teams.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v1/teams/get-teams-json
@@ -492,27 +515,7 @@ func (u TeamListRequest) HTTPRequest(ctx context.Context, server string) (*http.
 	if err != nil {
 		return nil, err
 	}
-
-	query := req.URL.Query()
-	if u.Filters.SearchTerm != "" {
-		query.Set("searchTerm", u.Filters.SearchTerm)
-	}
-	if u.Filters.IncludeCompanyTeams {
-		query.Set("includeCompanyTeams", "true")
-	}
-	if u.Filters.IncludeProjectTeams {
-		query.Set("includeProjectTeams", "true")
-	}
-	if u.Filters.IncludeSubteams {
-		query.Set("includeSubteams", "true")
-	}
-	if u.Filters.Page > 0 {
-		query.Set("page", strconv.FormatInt(u.Filters.Page, 10))
-	}
-	if u.Filters.PageSize > 0 {
-		query.Set("pageSize", strconv.FormatInt(u.Filters.PageSize, 10))
-	}
-	req.URL.RawQuery = query.Encode()
+	u.Filters.apply(req)
 
 	return req, nil
 }

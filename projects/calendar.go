@@ -204,6 +204,17 @@ type CalendarListRequestFilters struct {
 	PageSize int64
 }
 
+func (c CalendarListRequestFilters) apply(req *http.Request) {
+	query := req.URL.Query()
+	if c.Page > 0 {
+		query.Set("page", strconv.FormatInt(c.Page, 10))
+	}
+	if c.PageSize > 0 {
+		query.Set("pageSize", strconv.FormatInt(c.PageSize, 10))
+	}
+	req.URL.RawQuery = query.Encode()
+}
+
 // CalendarListRequest represents the request for loading calendars.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/calendars/get-projects-api-v3-calendars-json
@@ -230,15 +241,7 @@ func (c CalendarListRequest) HTTPRequest(ctx context.Context, server string) (*h
 	if err != nil {
 		return nil, err
 	}
-
-	query := req.URL.Query()
-	if c.Filters.Page > 0 {
-		query.Set("page", strconv.FormatInt(c.Filters.Page, 10))
-	}
-	if c.Filters.PageSize > 0 {
-		query.Set("pageSize", strconv.FormatInt(c.Filters.PageSize, 10))
-	}
-	req.URL.RawQuery = query.Encode()
+	c.Filters.apply(req)
 
 	return req, nil
 }

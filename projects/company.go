@@ -513,6 +513,30 @@ type CompanyListRequestFilters struct {
 	PageSize int64
 }
 
+func (c CompanyListRequestFilters) apply(req *http.Request) {
+	query := req.URL.Query()
+	if c.SearchTerm != "" {
+		query.Set("searchTerm", c.SearchTerm)
+	}
+	if len(c.TagIDs) > 0 {
+		tagIDs := make([]string, len(c.TagIDs))
+		for i, id := range c.TagIDs {
+			tagIDs[i] = strconv.FormatInt(id, 10)
+		}
+		query.Set("projectTagIds", strings.Join(tagIDs, ","))
+	}
+	if c.MatchAllTags != nil {
+		query.Set("matchAllProjectTags", strconv.FormatBool(*c.MatchAllTags))
+	}
+	if c.Page > 0 {
+		query.Set("page", strconv.FormatInt(c.Page, 10))
+	}
+	if c.PageSize > 0 {
+		query.Set("pageSize", strconv.FormatInt(c.PageSize, 10))
+	}
+	req.URL.RawQuery = query.Encode()
+}
+
 // CompanyListRequest represents the request body for loading multiple
 // clients/companies.
 //
@@ -540,28 +564,7 @@ func (c CompanyListRequest) HTTPRequest(ctx context.Context, server string) (*ht
 	if err != nil {
 		return nil, err
 	}
-
-	query := req.URL.Query()
-	if c.Filters.SearchTerm != "" {
-		query.Set("searchTerm", c.Filters.SearchTerm)
-	}
-	if len(c.Filters.TagIDs) > 0 {
-		tagIDs := make([]string, len(c.Filters.TagIDs))
-		for i, id := range c.Filters.TagIDs {
-			tagIDs[i] = strconv.FormatInt(id, 10)
-		}
-		query.Set("projectTagIds", strings.Join(tagIDs, ","))
-	}
-	if c.Filters.MatchAllTags != nil {
-		query.Set("matchAllProjectTags", strconv.FormatBool(*c.Filters.MatchAllTags))
-	}
-	if c.Filters.Page > 0 {
-		query.Set("page", strconv.FormatInt(c.Filters.Page, 10))
-	}
-	if c.Filters.PageSize > 0 {
-		query.Set("pageSize", strconv.FormatInt(c.Filters.PageSize, 10))
-	}
-	req.URL.RawQuery = query.Encode()
+	c.Filters.apply(req)
 
 	return req, nil
 }

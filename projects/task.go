@@ -720,6 +720,55 @@ type TaskListRequestFilters struct {
 	PageSize int64
 }
 
+func (t TaskListRequestFilters) apply(req *http.Request) {
+	query := req.URL.Query()
+	if t.SearchTerm != "" {
+		query.Set("searchTerm", t.SearchTerm)
+	}
+	if len(t.AssigneeUserIDs) > 0 {
+		assigneeUserIDs := make([]string, len(t.AssigneeUserIDs))
+		for i, id := range t.AssigneeUserIDs {
+			assigneeUserIDs[i] = strconv.FormatInt(id, 10)
+		}
+		query.Set("responsiblePartyIds", strings.Join(assigneeUserIDs, ","))
+	}
+	if t.CreatedAfter != nil && !t.CreatedAfter.IsZero() {
+		query.Set("createdAfter", t.CreatedAfter.Format(time.RFC3339))
+	}
+	if t.CreatedBefore != nil && !t.CreatedBefore.IsZero() {
+		query.Set("createdBefore", t.CreatedBefore.Format(time.RFC3339))
+	}
+	if t.UpdatedAfter != nil && !t.UpdatedAfter.IsZero() {
+		query.Set("updatedAfter", t.UpdatedAfter.Format(time.RFC3339))
+	}
+	if t.UpdatedBefore != nil && !t.UpdatedBefore.IsZero() {
+		query.Set("updatedBefore", t.UpdatedBefore.Format(time.RFC3339))
+	}
+	if t.CompletedAfter != nil && !t.CompletedAfter.IsZero() {
+		query.Set("completedAfter", t.CompletedAfter.Format(time.RFC3339))
+	}
+	if t.CompletedBefore != nil && !t.CompletedBefore.IsZero() {
+		query.Set("completedBefore", t.CompletedBefore.Format(time.RFC3339))
+	}
+	if len(t.TagIDs) > 0 {
+		tagIDs := make([]string, len(t.TagIDs))
+		for i, id := range t.TagIDs {
+			tagIDs[i] = strconv.FormatInt(id, 10)
+		}
+		query.Set("tagIds", strings.Join(tagIDs, ","))
+	}
+	if t.MatchAllTags != nil {
+		query.Set("matchAllTags", strconv.FormatBool(*t.MatchAllTags))
+	}
+	if t.Page > 0 {
+		query.Set("page", strconv.FormatInt(t.Page, 10))
+	}
+	if t.PageSize > 0 {
+		query.Set("pageSize", strconv.FormatInt(t.PageSize, 10))
+	}
+	req.URL.RawQuery = query.Encode()
+}
+
 // TaskListRequest represents the request body for loading multiple tasks.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/tasks/get-projects-api-v3-tasks-json
@@ -759,53 +808,7 @@ func (t TaskListRequest) HTTPRequest(ctx context.Context, server string) (*http.
 	if err != nil {
 		return nil, err
 	}
-
-	query := req.URL.Query()
-	if t.Filters.SearchTerm != "" {
-		query.Set("searchTerm", t.Filters.SearchTerm)
-	}
-	if len(t.Filters.AssigneeUserIDs) > 0 {
-		assigneeUserIDs := make([]string, len(t.Filters.AssigneeUserIDs))
-		for i, id := range t.Filters.AssigneeUserIDs {
-			assigneeUserIDs[i] = strconv.FormatInt(id, 10)
-		}
-		query.Set("responsiblePartyIds", strings.Join(assigneeUserIDs, ","))
-	}
-	if t.Filters.CreatedAfter != nil && !t.Filters.CreatedAfter.IsZero() {
-		query.Set("createdAfter", t.Filters.CreatedAfter.Format(time.RFC3339))
-	}
-	if t.Filters.CreatedBefore != nil && !t.Filters.CreatedBefore.IsZero() {
-		query.Set("createdBefore", t.Filters.CreatedBefore.Format(time.RFC3339))
-	}
-	if t.Filters.UpdatedAfter != nil && !t.Filters.UpdatedAfter.IsZero() {
-		query.Set("updatedAfter", t.Filters.UpdatedAfter.Format(time.RFC3339))
-	}
-	if t.Filters.UpdatedBefore != nil && !t.Filters.UpdatedBefore.IsZero() {
-		query.Set("updatedBefore", t.Filters.UpdatedBefore.Format(time.RFC3339))
-	}
-	if t.Filters.CompletedAfter != nil && !t.Filters.CompletedAfter.IsZero() {
-		query.Set("completedAfter", t.Filters.CompletedAfter.Format(time.RFC3339))
-	}
-	if t.Filters.CompletedBefore != nil && !t.Filters.CompletedBefore.IsZero() {
-		query.Set("completedBefore", t.Filters.CompletedBefore.Format(time.RFC3339))
-	}
-	if len(t.Filters.TagIDs) > 0 {
-		tagIDs := make([]string, len(t.Filters.TagIDs))
-		for i, id := range t.Filters.TagIDs {
-			tagIDs[i] = strconv.FormatInt(id, 10)
-		}
-		query.Set("tagIds", strings.Join(tagIDs, ","))
-	}
-	if t.Filters.MatchAllTags != nil {
-		query.Set("matchAllTags", strconv.FormatBool(*t.Filters.MatchAllTags))
-	}
-	if t.Filters.Page > 0 {
-		query.Set("page", strconv.FormatInt(t.Filters.Page, 10))
-	}
-	if t.Filters.PageSize > 0 {
-		query.Set("pageSize", strconv.FormatInt(t.Filters.PageSize, 10))
-	}
-	req.URL.RawQuery = query.Encode()
+	t.Filters.apply(req)
 
 	return req, nil
 }

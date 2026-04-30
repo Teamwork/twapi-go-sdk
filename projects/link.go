@@ -498,6 +498,33 @@ type LinkListRequestFilters struct {
 	PageSize int64
 }
 
+func (l LinkListRequestFilters) apply(req *http.Request) {
+	query := req.URL.Query()
+	if l.SearchTerm != "" {
+		query.Set("filterText", l.SearchTerm)
+	}
+	if l.ProjectID > 0 {
+		query.Set("projectId", strconv.FormatInt(l.ProjectID, 10))
+	}
+	if len(l.TagIDs) > 0 {
+		tagIDs := make([]string, len(l.TagIDs))
+		for i, id := range l.TagIDs {
+			tagIDs[i] = strconv.FormatInt(id, 10)
+		}
+		query.Set("filterTagIds", strings.Join(tagIDs, ","))
+	}
+	if l.MatchAllTags != nil {
+		query.Set("matchAllTags", strconv.FormatBool(*l.MatchAllTags))
+	}
+	if l.Page > 0 {
+		query.Set("page", strconv.FormatInt(l.Page, 10))
+	}
+	if l.PageSize > 0 {
+		query.Set("pageSize", strconv.FormatInt(l.PageSize, 10))
+	}
+	req.URL.RawQuery = query.Encode()
+}
+
 // LinkListRequest represents the request body for loading multiple links.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v1/links/get-links-json
@@ -523,30 +550,7 @@ func (l LinkListRequest) HTTPRequest(ctx context.Context, server string) (*http.
 	if err != nil {
 		return nil, err
 	}
-	query := req.URL.Query()
-	if l.Filters.SearchTerm != "" {
-		query.Set("filterText", l.Filters.SearchTerm)
-	}
-	if l.Filters.ProjectID > 0 {
-		query.Set("projectId", strconv.FormatInt(l.Filters.ProjectID, 10))
-	}
-	if len(l.Filters.TagIDs) > 0 {
-		tagIDs := make([]string, len(l.Filters.TagIDs))
-		for i, id := range l.Filters.TagIDs {
-			tagIDs[i] = strconv.FormatInt(id, 10)
-		}
-		query.Set("filterTagIds", strings.Join(tagIDs, ","))
-	}
-	if l.Filters.MatchAllTags != nil {
-		query.Set("matchAllTags", strconv.FormatBool(*l.Filters.MatchAllTags))
-	}
-	if l.Filters.Page > 0 {
-		query.Set("page", strconv.FormatInt(l.Filters.Page, 10))
-	}
-	if l.Filters.PageSize > 0 {
-		query.Set("pageSize", strconv.FormatInt(l.Filters.PageSize, 10))
-	}
-	req.URL.RawQuery = query.Encode()
+	l.Filters.apply(req)
 
 	return req, nil
 }

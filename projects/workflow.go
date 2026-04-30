@@ -342,6 +342,20 @@ type WorkflowListRequestFilters struct {
 	PageSize int64
 }
 
+func (w WorkflowListRequestFilters) apply(req *http.Request) {
+	query := req.URL.Query()
+	if w.SearchTerm != "" {
+		query.Set("searchTerm", w.SearchTerm)
+	}
+	if w.Page > 0 {
+		query.Set("page", strconv.FormatInt(w.Page, 10))
+	}
+	if w.PageSize > 0 {
+		query.Set("pageSize", strconv.FormatInt(w.PageSize, 10))
+	}
+	req.URL.RawQuery = query.Encode()
+}
+
 // WorkflowListRequest represents the request for loading multiple workflows.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/workflows/get-projects-api-v3-workflows-json
@@ -368,18 +382,7 @@ func (w WorkflowListRequest) HTTPRequest(ctx context.Context, server string) (*h
 	if err != nil {
 		return nil, err
 	}
-
-	query := req.URL.Query()
-	if w.Filters.SearchTerm != "" {
-		query.Set("searchTerm", w.Filters.SearchTerm)
-	}
-	if w.Filters.Page > 0 {
-		query.Set("page", strconv.FormatInt(w.Filters.Page, 10))
-	}
-	if w.Filters.PageSize > 0 {
-		query.Set("pageSize", strconv.FormatInt(w.Filters.PageSize, 10))
-	}
-	req.URL.RawQuery = query.Encode()
+	w.Filters.apply(req)
 
 	return req, nil
 }

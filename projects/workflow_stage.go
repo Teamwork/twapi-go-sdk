@@ -397,6 +397,17 @@ type WorkflowStageListRequestFilters struct {
 	PageSize int64
 }
 
+func (w WorkflowStageListRequestFilters) apply(req *http.Request) {
+	query := req.URL.Query()
+	if w.Page > 0 {
+		query.Set("page", strconv.FormatInt(w.Page, 10))
+	}
+	if w.PageSize > 0 {
+		query.Set("pageSize", strconv.FormatInt(w.PageSize, 10))
+	}
+	req.URL.RawQuery = query.Encode()
+}
+
 // WorkflowStageListRequest represents the request for loading multiple
 // workflow stages belonging to a workflow.
 //
@@ -431,15 +442,7 @@ func (w WorkflowStageListRequest) HTTPRequest(ctx context.Context, server string
 	if err != nil {
 		return nil, err
 	}
-
-	query := req.URL.Query()
-	if w.Filters.Page > 0 {
-		query.Set("page", strconv.FormatInt(w.Filters.Page, 10))
-	}
-	if w.Filters.PageSize > 0 {
-		query.Set("pageSize", strconv.FormatInt(w.Filters.PageSize, 10))
-	}
-	req.URL.RawQuery = query.Encode()
+	w.Filters.apply(req)
 
 	return req, nil
 }

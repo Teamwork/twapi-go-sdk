@@ -459,6 +459,30 @@ type MilestoneListRequestFilters struct {
 	PageSize int64
 }
 
+func (m MilestoneListRequestFilters) apply(req *http.Request) {
+	query := req.URL.Query()
+	if m.SearchTerm != "" {
+		query.Set("searchTerm", m.SearchTerm)
+	}
+	if len(m.TagIDs) > 0 {
+		tagIDs := make([]string, len(m.TagIDs))
+		for i, id := range m.TagIDs {
+			tagIDs[i] = strconv.FormatInt(id, 10)
+		}
+		query.Set("tagIds", strings.Join(tagIDs, ","))
+	}
+	if m.MatchAllTags != nil {
+		query.Set("matchAllTags", strconv.FormatBool(*m.MatchAllTags))
+	}
+	if m.Page > 0 {
+		query.Set("page", strconv.FormatInt(m.Page, 10))
+	}
+	if m.PageSize > 0 {
+		query.Set("pageSize", strconv.FormatInt(m.PageSize, 10))
+	}
+	req.URL.RawQuery = query.Encode()
+}
+
 // MilestoneListRequest represents the request body for loading multiple milestones.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/milestones/get-projects-api-v3-milestones-json
@@ -495,27 +519,7 @@ func (m MilestoneListRequest) HTTPRequest(ctx context.Context, server string) (*
 	if err != nil {
 		return nil, err
 	}
-	query := req.URL.Query()
-	if m.Filters.SearchTerm != "" {
-		query.Set("searchTerm", m.Filters.SearchTerm)
-	}
-	if len(m.Filters.TagIDs) > 0 {
-		tagIDs := make([]string, len(m.Filters.TagIDs))
-		for i, id := range m.Filters.TagIDs {
-			tagIDs[i] = strconv.FormatInt(id, 10)
-		}
-		query.Set("tagIds", strings.Join(tagIDs, ","))
-	}
-	if m.Filters.MatchAllTags != nil {
-		query.Set("matchAllTags", strconv.FormatBool(*m.Filters.MatchAllTags))
-	}
-	if m.Filters.Page > 0 {
-		query.Set("page", strconv.FormatInt(m.Filters.Page, 10))
-	}
-	if m.Filters.PageSize > 0 {
-		query.Set("pageSize", strconv.FormatInt(m.Filters.PageSize, 10))
-	}
-	req.URL.RawQuery = query.Encode()
+	m.Filters.apply(req)
 
 	return req, nil
 }

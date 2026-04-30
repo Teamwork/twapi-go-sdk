@@ -368,6 +368,20 @@ type ProjectCategoryListRequestFilters struct {
 	PageSize int64
 }
 
+func (p ProjectCategoryListRequestFilters) apply(req *http.Request) {
+	query := req.URL.Query()
+	if p.SearchTerm != "" {
+		query.Set("searchTerm", p.SearchTerm)
+	}
+	if p.Page > 0 {
+		query.Set("page", strconv.FormatInt(p.Page, 10))
+	}
+	if p.PageSize > 0 {
+		query.Set("pageSize", strconv.FormatInt(p.PageSize, 10))
+	}
+	req.URL.RawQuery = query.Encode()
+}
+
 // ProjectCategoryListRequest represents the request body for loading multiple
 // project categories.
 //
@@ -396,18 +410,7 @@ func (p ProjectCategoryListRequest) HTTPRequest(ctx context.Context, server stri
 	if err != nil {
 		return nil, err
 	}
-
-	query := req.URL.Query()
-	if p.Filters.SearchTerm != "" {
-		query.Set("searchTerm", p.Filters.SearchTerm)
-	}
-	if p.Filters.Page > 0 {
-		query.Set("page", strconv.FormatInt(p.Filters.Page, 10))
-	}
-	if p.Filters.PageSize > 0 {
-		query.Set("pageSize", strconv.FormatInt(p.Filters.PageSize, 10))
-	}
-	req.URL.RawQuery = query.Encode()
+	p.Filters.apply(req)
 
 	return req, nil
 }

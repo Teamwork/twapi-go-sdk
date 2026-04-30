@@ -356,6 +356,30 @@ type TagListRequestFilters struct {
 	PageSize int64
 }
 
+func (t TagListRequestFilters) apply(req *http.Request) {
+	query := req.URL.Query()
+	if t.SearchTerm != "" {
+		query.Set("searchTerm", t.SearchTerm)
+	}
+	if t.ItemType != "" {
+		query.Set("itemType", t.ItemType)
+	}
+	if len(t.ProjectIDs) > 0 {
+		projectIDs := make([]string, len(t.ProjectIDs))
+		for i, id := range t.ProjectIDs {
+			projectIDs[i] = strconv.FormatInt(id, 10)
+		}
+		query.Set("projectIds", strings.Join(projectIDs, ","))
+	}
+	if t.Page > 0 {
+		query.Set("page", strconv.FormatInt(t.Page, 10))
+	}
+	if t.PageSize > 0 {
+		query.Set("pageSize", strconv.FormatInt(t.PageSize, 10))
+	}
+	req.URL.RawQuery = query.Encode()
+}
+
 // TagListRequest represents the request body for loading multiple tags.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/tags/get-projects-api-v3-tags-json
@@ -382,28 +406,7 @@ func (t TagListRequest) HTTPRequest(ctx context.Context, server string) (*http.R
 	if err != nil {
 		return nil, err
 	}
-
-	query := req.URL.Query()
-	if t.Filters.SearchTerm != "" {
-		query.Set("searchTerm", t.Filters.SearchTerm)
-	}
-	if t.Filters.ItemType != "" {
-		query.Set("itemType", t.Filters.ItemType)
-	}
-	if len(t.Filters.ProjectIDs) > 0 {
-		projectIDs := make([]string, len(t.Filters.ProjectIDs))
-		for i, id := range t.Filters.ProjectIDs {
-			projectIDs[i] = strconv.FormatInt(id, 10)
-		}
-		query.Set("projectIds", strings.Join(projectIDs, ","))
-	}
-	if t.Filters.Page > 0 {
-		query.Set("page", strconv.FormatInt(t.Filters.Page, 10))
-	}
-	if t.Filters.PageSize > 0 {
-		query.Set("pageSize", strconv.FormatInt(t.Filters.PageSize, 10))
-	}
-	req.URL.RawQuery = query.Encode()
+	t.Filters.apply(req)
 
 	return req, nil
 }

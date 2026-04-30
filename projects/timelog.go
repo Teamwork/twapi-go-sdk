@@ -552,6 +552,61 @@ type TimelogListRequestFilters struct {
 	PageSize int64
 }
 
+func (t TimelogListRequestFilters) apply(req *http.Request) {
+	query := req.URL.Query()
+	if len(t.TagIDs) > 0 {
+		tagIDs := make([]string, len(t.TagIDs))
+		for i, id := range t.TagIDs {
+			tagIDs[i] = strconv.FormatInt(id, 10)
+		}
+		query.Set("tagIds", strings.Join(tagIDs, ","))
+	}
+	if t.MatchAllTags != nil {
+		query.Set("matchAllTags", strconv.FormatBool(*t.MatchAllTags))
+	}
+	if t.StartDate != nil && !t.StartDate.IsZero() {
+		query.Set("startDate", t.StartDate.Format(time.RFC3339))
+	}
+	if t.EndDate != nil && !t.EndDate.IsZero() {
+		query.Set("endDate", t.EndDate.Format(time.RFC3339))
+	}
+	if len(t.AssignedToUserIDs) > 0 {
+		assignedToUserIDs := make([]string, len(t.AssignedToUserIDs))
+		for i, id := range t.AssignedToUserIDs {
+			assignedToUserIDs[i] = strconv.FormatInt(id, 10)
+		}
+		query.Set("assignedToUserIds", strings.Join(assignedToUserIDs, ","))
+	}
+	if len(t.AssignedToCompanyIDs) > 0 {
+		assignedToCompanyIDs := make([]string, len(t.AssignedToCompanyIDs))
+		for i, id := range t.AssignedToCompanyIDs {
+			assignedToCompanyIDs[i] = strconv.FormatInt(id, 10)
+		}
+		query.Set("assignedToCompanyIds", strings.Join(assignedToCompanyIDs, ","))
+	}
+	if len(t.AssignedToTeamIDs) > 0 {
+		assignedToTeamIDs := make([]string, len(t.AssignedToTeamIDs))
+		for i, id := range t.AssignedToTeamIDs {
+			assignedToTeamIDs[i] = strconv.FormatInt(id, 10)
+		}
+		query.Set("assignedToTeamIds", strings.Join(assignedToTeamIDs, ","))
+	}
+	if len(t.DeskTicketIDs) > 0 {
+		deskTicketIDs := make([]string, len(t.DeskTicketIDs))
+		for i, id := range t.DeskTicketIDs {
+			deskTicketIDs[i] = strconv.FormatInt(id, 10)
+		}
+		query.Set("deskTicketIds", strings.Join(deskTicketIDs, ","))
+	}
+	if t.Page > 0 {
+		query.Set("page", strconv.FormatInt(t.Page, 10))
+	}
+	if t.PageSize > 0 {
+		query.Set("pageSize", strconv.FormatInt(t.PageSize, 10))
+	}
+	req.URL.RawQuery = query.Encode()
+}
+
 // TimelogListRequest represents the request body for loading multiple timelogs.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/time-tracking/get-projects-api-v3-time-json
@@ -591,59 +646,7 @@ func (t TimelogListRequest) HTTPRequest(ctx context.Context, server string) (*ht
 	if err != nil {
 		return nil, err
 	}
-
-	query := req.URL.Query()
-	if len(t.Filters.TagIDs) > 0 {
-		tagIDs := make([]string, len(t.Filters.TagIDs))
-		for i, id := range t.Filters.TagIDs {
-			tagIDs[i] = strconv.FormatInt(id, 10)
-		}
-		query.Set("tagIds", strings.Join(tagIDs, ","))
-	}
-	if t.Filters.MatchAllTags != nil {
-		query.Set("matchAllTags", strconv.FormatBool(*t.Filters.MatchAllTags))
-	}
-	if t.Filters.StartDate != nil && !t.Filters.StartDate.IsZero() {
-		query.Set("startDate", t.Filters.StartDate.Format(time.RFC3339))
-	}
-	if t.Filters.EndDate != nil && !t.Filters.EndDate.IsZero() {
-		query.Set("endDate", t.Filters.EndDate.Format(time.RFC3339))
-	}
-	if len(t.Filters.AssignedToUserIDs) > 0 {
-		assignedToUserIDs := make([]string, len(t.Filters.AssignedToUserIDs))
-		for i, id := range t.Filters.AssignedToUserIDs {
-			assignedToUserIDs[i] = strconv.FormatInt(id, 10)
-		}
-		query.Set("assignedToUserIds", strings.Join(assignedToUserIDs, ","))
-	}
-	if len(t.Filters.AssignedToCompanyIDs) > 0 {
-		assignedToCompanyIDs := make([]string, len(t.Filters.AssignedToCompanyIDs))
-		for i, id := range t.Filters.AssignedToCompanyIDs {
-			assignedToCompanyIDs[i] = strconv.FormatInt(id, 10)
-		}
-		query.Set("assignedToCompanyIds", strings.Join(assignedToCompanyIDs, ","))
-	}
-	if len(t.Filters.AssignedToTeamIDs) > 0 {
-		assignedToTeamIDs := make([]string, len(t.Filters.AssignedToTeamIDs))
-		for i, id := range t.Filters.AssignedToTeamIDs {
-			assignedToTeamIDs[i] = strconv.FormatInt(id, 10)
-		}
-		query.Set("assignedToTeamIds", strings.Join(assignedToTeamIDs, ","))
-	}
-	if len(t.Filters.DeskTicketIDs) > 0 {
-		deskTicketIDs := make([]string, len(t.Filters.DeskTicketIDs))
-		for i, id := range t.Filters.DeskTicketIDs {
-			deskTicketIDs[i] = strconv.FormatInt(id, 10)
-		}
-		query.Set("deskTicketIds", strings.Join(deskTicketIDs, ","))
-	}
-	if t.Filters.Page > 0 {
-		query.Set("page", strconv.FormatInt(t.Filters.Page, 10))
-	}
-	if t.Filters.PageSize > 0 {
-		query.Set("pageSize", strconv.FormatInt(t.Filters.PageSize, 10))
-	}
-	req.URL.RawQuery = query.Encode()
+	t.Filters.apply(req)
 
 	return req, nil
 }

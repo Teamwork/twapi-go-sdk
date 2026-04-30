@@ -159,6 +159,42 @@ type TasklistBudgetListRequestFilters struct {
 	Fields TasklistBudgetListRequestFields
 }
 
+func (p TasklistBudgetListRequestFilters) apply(req *http.Request) {
+	query := req.URL.Query()
+	if p.OrderMode != "" {
+		query.Set("orderMode", string(p.OrderMode))
+	}
+	if p.OrderBy != "" {
+		query.Set("orderBy", string(p.OrderBy))
+	}
+	if p.ProjectBudgetID > 0 {
+		query.Set("projectBudgetId", strconv.FormatInt(p.ProjectBudgetID, 10))
+	}
+	if p.Page > 0 {
+		query.Set("page", strconv.FormatInt(p.Page, 10))
+	}
+	if p.PageSize > 0 {
+		query.Set("pageSize", strconv.FormatInt(p.PageSize, 10))
+	}
+	if len(p.Include) > 0 {
+		include := make([]string, 0, len(p.Include))
+		for _, sideload := range p.Include {
+			include = append(include, string(sideload))
+		}
+		query.Set("include", strings.Join(include, ","))
+	}
+	if len(p.Fields.Tasklists) > 0 {
+		query.Set("fields[tasklists]", strings.Join(p.Fields.Tasklists, ","))
+	}
+	if len(p.Fields.TasklistBudgetNotifications) > 0 {
+		query.Set("fields[tasklistBudgetNotifications]", strings.Join(p.Fields.TasklistBudgetNotifications, ","))
+	}
+	if len(p.Fields.ProjectBudgets) > 0 {
+		query.Set("fields[projectBudgets]", strings.Join(p.Fields.ProjectBudgets, ","))
+	}
+	req.URL.RawQuery = query.Encode()
+}
+
 // TasklistBudgetListRequest represents the request for listing tasklist budgets
 // under a project budget.
 //
@@ -193,40 +229,7 @@ func (p TasklistBudgetListRequest) HTTPRequest(ctx context.Context, server strin
 	if err != nil {
 		return nil, err
 	}
-
-	query := req.URL.Query()
-	if p.Filters.OrderMode != "" {
-		query.Set("orderMode", string(p.Filters.OrderMode))
-	}
-	if p.Filters.OrderBy != "" {
-		query.Set("orderBy", string(p.Filters.OrderBy))
-	}
-	if p.Filters.ProjectBudgetID > 0 {
-		query.Set("projectBudgetId", strconv.FormatInt(p.Filters.ProjectBudgetID, 10))
-	}
-	if p.Filters.Page > 0 {
-		query.Set("page", strconv.FormatInt(p.Filters.Page, 10))
-	}
-	if p.Filters.PageSize > 0 {
-		query.Set("pageSize", strconv.FormatInt(p.Filters.PageSize, 10))
-	}
-	if len(p.Filters.Include) > 0 {
-		include := make([]string, 0, len(p.Filters.Include))
-		for _, sideload := range p.Filters.Include {
-			include = append(include, string(sideload))
-		}
-		query.Set("include", strings.Join(include, ","))
-	}
-	if len(p.Filters.Fields.Tasklists) > 0 {
-		query.Set("fields[tasklists]", strings.Join(p.Filters.Fields.Tasklists, ","))
-	}
-	if len(p.Filters.Fields.TasklistBudgetNotifications) > 0 {
-		query.Set("fields[tasklistBudgetNotifications]", strings.Join(p.Filters.Fields.TasklistBudgetNotifications, ","))
-	}
-	if len(p.Filters.Fields.ProjectBudgets) > 0 {
-		query.Set("fields[projectBudgets]", strings.Join(p.Filters.Fields.ProjectBudgets, ","))
-	}
-	req.URL.RawQuery = query.Encode()
+	p.Filters.apply(req)
 
 	return req, nil
 }

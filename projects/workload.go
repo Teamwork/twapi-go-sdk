@@ -100,6 +100,61 @@ type WorkloadRequestFilters struct {
 	PageSize int64
 }
 
+func (w WorkloadRequestFilters) apply(req *http.Request) {
+	query := req.URL.Query()
+	if !time.Time(w.StartDate).IsZero() {
+		query.Set("startDate", w.StartDate.String())
+	}
+	if !time.Time(w.EndDate).IsZero() {
+		query.Set("endDate", w.EndDate.String())
+	}
+	if len(w.UserIDs) > 0 {
+		var ids []string
+		for _, id := range w.UserIDs {
+			ids = append(ids, strconv.FormatInt(id, 10))
+		}
+		query.Set("userIds", strings.Join(ids, ","))
+	}
+	if len(w.UserCompanyIDs) > 0 {
+		var ids []string
+		for _, id := range w.UserCompanyIDs {
+			ids = append(ids, strconv.FormatInt(id, 10))
+		}
+		query.Set("companyIds", strings.Join(ids, ","))
+	}
+	if len(w.UserTeamIDs) > 0 {
+		var ids []string
+		for _, id := range w.UserTeamIDs {
+			ids = append(ids, strconv.FormatInt(id, 10))
+		}
+		query.Set("teamIds", strings.Join(ids, ","))
+	}
+	if len(w.ProjectIDs) > 0 {
+		var ids []string
+		for _, id := range w.ProjectIDs {
+			ids = append(ids, strconv.FormatInt(id, 10))
+		}
+		query.Set("projectIds", strings.Join(ids, ","))
+	}
+	if w.Page > 0 {
+		query.Set("page", strconv.FormatInt(w.Page, 10))
+	}
+	if w.PageSize > 0 {
+		query.Set("pageSize", strconv.FormatInt(w.PageSize, 10))
+	}
+	if len(w.Include) > 0 {
+		for _, include := range w.Include {
+			query.Add("include", string(include))
+		}
+	}
+
+	// to reduce the size of the response, we omit empty date entries where the
+	// user has no capacity and is not unavailable.
+	query.Set("omitEmptyDateEntries", "true")
+
+	req.URL.RawQuery = query.Encode()
+}
+
 // WorkloadRequest represents the request body for loading workload data.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/workload/get-projects-api-v3-workload-json
@@ -127,59 +182,7 @@ func (w WorkloadRequest) HTTPRequest(ctx context.Context, server string) (*http.
 	if err != nil {
 		return nil, err
 	}
-
-	query := req.URL.Query()
-	if !time.Time(w.Filters.StartDate).IsZero() {
-		query.Set("startDate", w.Filters.StartDate.String())
-	}
-	if !time.Time(w.Filters.EndDate).IsZero() {
-		query.Set("endDate", w.Filters.EndDate.String())
-	}
-	if len(w.Filters.UserIDs) > 0 {
-		var ids []string
-		for _, id := range w.Filters.UserIDs {
-			ids = append(ids, strconv.FormatInt(id, 10))
-		}
-		query.Set("userIds", strings.Join(ids, ","))
-	}
-	if len(w.Filters.UserCompanyIDs) > 0 {
-		var ids []string
-		for _, id := range w.Filters.UserCompanyIDs {
-			ids = append(ids, strconv.FormatInt(id, 10))
-		}
-		query.Set("companyIds", strings.Join(ids, ","))
-	}
-	if len(w.Filters.UserTeamIDs) > 0 {
-		var ids []string
-		for _, id := range w.Filters.UserTeamIDs {
-			ids = append(ids, strconv.FormatInt(id, 10))
-		}
-		query.Set("teamIds", strings.Join(ids, ","))
-	}
-	if len(w.Filters.ProjectIDs) > 0 {
-		var ids []string
-		for _, id := range w.Filters.ProjectIDs {
-			ids = append(ids, strconv.FormatInt(id, 10))
-		}
-		query.Set("projectIds", strings.Join(ids, ","))
-	}
-	if w.Filters.Page > 0 {
-		query.Set("page", strconv.FormatInt(w.Filters.Page, 10))
-	}
-	if w.Filters.PageSize > 0 {
-		query.Set("pageSize", strconv.FormatInt(w.Filters.PageSize, 10))
-	}
-	if len(w.Filters.Include) > 0 {
-		for _, include := range w.Filters.Include {
-			query.Add("include", string(include))
-		}
-	}
-
-	// to reduce the size of the response, we omit empty date entries where the
-	// user has no capacity and is not unavailable.
-	query.Set("omitEmptyDateEntries", "true")
-
-	req.URL.RawQuery = query.Encode()
+	w.Filters.apply(req)
 	return req, nil
 }
 

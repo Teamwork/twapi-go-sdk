@@ -278,6 +278,37 @@ type CalendarEventListRequestFilters struct {
 	Limit int64
 }
 
+func (c CalendarEventListRequestFilters) apply(req *http.Request) {
+	query := req.URL.Query()
+	if !c.StartedAfterDate.IsZero() {
+		query.Set("startedAfterDate", c.StartedAfterDate.String())
+	}
+	if !c.EndedBeforeDate.IsZero() {
+		query.Set("endedBeforeDate", c.EndedBeforeDate.String())
+	}
+	if len(c.Include) > 0 {
+		for _, include := range c.Include {
+			query.Add("include", string(include))
+		}
+	}
+	if c.Cursor != "" {
+		query.Set("cursor", c.Cursor)
+	}
+	if c.Limit > 0 {
+		query.Set("limit", strconv.FormatInt(c.Limit, 10))
+	}
+	// hardcoded filters to simplify API usage
+	query.Set("includeMasterInstances", "false")
+	query.Set("showDeletedInstances", "false")
+	query.Set("includeInstances", "true")
+	query.Set("includeOngoingEvents", "true")
+	query.Set("includeDeletedInstances", "false")
+	query.Set("includeModifiedInstances", "true")
+	query.Set("includeTimelogs", "false")
+
+	req.URL.RawQuery = query.Encode()
+}
+
 // CalendarEventListRequest represents the request for loading calendar events.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/calendar-events/get-projects-api-v3-calendars-calendar-id-events-json
@@ -310,35 +341,8 @@ func (c CalendarEventListRequest) HTTPRequest(ctx context.Context, server string
 	if err != nil {
 		return nil, err
 	}
+	c.Filters.apply(req)
 
-	query := req.URL.Query()
-	if !c.Filters.StartedAfterDate.IsZero() {
-		query.Set("startedAfterDate", c.Filters.StartedAfterDate.String())
-	}
-	if !c.Filters.EndedBeforeDate.IsZero() {
-		query.Set("endedBeforeDate", c.Filters.EndedBeforeDate.String())
-	}
-	if len(c.Filters.Include) > 0 {
-		for _, include := range c.Filters.Include {
-			query.Add("include", string(include))
-		}
-	}
-	if c.Filters.Cursor != "" {
-		query.Set("cursor", c.Filters.Cursor)
-	}
-	if c.Filters.Limit > 0 {
-		query.Set("limit", strconv.FormatInt(c.Filters.Limit, 10))
-	}
-	// hardcoded filters to simplify API usage
-	query.Set("includeMasterInstances", "false")
-	query.Set("showDeletedInstances", "false")
-	query.Set("includeInstances", "true")
-	query.Set("includeOngoingEvents", "true")
-	query.Set("includeDeletedInstances", "false")
-	query.Set("includeModifiedInstances", "true")
-	query.Set("includeTimelogs", "false")
-
-	req.URL.RawQuery = query.Encode()
 	return req, nil
 }
 

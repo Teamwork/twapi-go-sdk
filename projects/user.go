@@ -521,6 +521,23 @@ type UserListRequestFilters struct {
 	PageSize int64
 }
 
+func (u UserListRequestFilters) apply(req *http.Request) {
+	query := req.URL.Query()
+	if u.SearchTerm != "" {
+		query.Set("searchTerm", u.SearchTerm)
+	}
+	if u.Type != "" {
+		query.Set("userType", u.Type)
+	}
+	if u.Page > 0 {
+		query.Set("page", strconv.FormatInt(u.Page, 10))
+	}
+	if u.PageSize > 0 {
+		query.Set("pageSize", strconv.FormatInt(u.PageSize, 10))
+	}
+	req.URL.RawQuery = query.Encode()
+}
+
 // UserListRequest represents the request body for loading multiple users.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/people/get-projects-api-v3-people-json
@@ -557,21 +574,7 @@ func (u UserListRequest) HTTPRequest(ctx context.Context, server string) (*http.
 	if err != nil {
 		return nil, err
 	}
-
-	query := req.URL.Query()
-	if u.Filters.SearchTerm != "" {
-		query.Set("searchTerm", u.Filters.SearchTerm)
-	}
-	if u.Filters.Type != "" {
-		query.Set("userType", u.Filters.Type)
-	}
-	if u.Filters.Page > 0 {
-		query.Set("page", strconv.FormatInt(u.Filters.Page, 10))
-	}
-	if u.Filters.PageSize > 0 {
-		query.Set("pageSize", strconv.FormatInt(u.Filters.PageSize, 10))
-	}
-	req.URL.RawQuery = query.Encode()
+	u.Filters.apply(req)
 
 	return req, nil
 }

@@ -151,6 +151,36 @@ type RateUserGetRequestFilters struct {
 	Include []RateUserGetRequestSideload
 }
 
+func (r RateUserGetRequestFilters) apply(req *http.Request) {
+	query := req.URL.Query()
+	if r.Page > 0 {
+		query.Set("page", strconv.FormatInt(r.Page, 10))
+	}
+	if r.PageSize > 0 {
+		query.Set("pageSize", strconv.FormatInt(r.PageSize, 10))
+	}
+	if r.IncludeInstallationRate {
+		query.Set("includeInstallationRate", "true")
+	}
+	if r.IncludeUserCost {
+		query.Set("includeUserCost", "true")
+	}
+	if r.IncludeArchivedProjects {
+		query.Set("includeArchivedProjects", "true")
+	}
+	if r.IncludeDeletedProjects {
+		query.Set("includeDeletedProjects", "true")
+	}
+	if len(r.Include) > 0 {
+		var include []string
+		for _, i := range r.Include {
+			include = append(include, string(i))
+		}
+		query.Set("include", strings.Join(include, ","))
+	}
+	req.URL.RawQuery = query.Encode()
+}
+
 // RateUserGetRequest represents the request for getting a user's rates.
 type RateUserGetRequest struct {
 	// Path contains the path parameters for the request.
@@ -182,34 +212,7 @@ func (r RateUserGetRequest) HTTPRequest(ctx context.Context, server string) (*ht
 	if err != nil {
 		return nil, err
 	}
-
-	query := req.URL.Query()
-	if r.Filters.Page > 0 {
-		query.Set("page", strconv.FormatInt(r.Filters.Page, 10))
-	}
-	if r.Filters.PageSize > 0 {
-		query.Set("pageSize", strconv.FormatInt(r.Filters.PageSize, 10))
-	}
-	if r.Filters.IncludeInstallationRate {
-		query.Set("includeInstallationRate", "true")
-	}
-	if r.Filters.IncludeUserCost {
-		query.Set("includeUserCost", "true")
-	}
-	if r.Filters.IncludeArchivedProjects {
-		query.Set("includeArchivedProjects", "true")
-	}
-	if r.Filters.IncludeDeletedProjects {
-		query.Set("includeDeletedProjects", "true")
-	}
-	if len(r.Filters.Include) > 0 {
-		var include []string
-		for _, i := range r.Filters.Include {
-			include = append(include, string(i))
-		}
-		query.Set("include", strings.Join(include, ","))
-	}
-	req.URL.RawQuery = query.Encode()
+	r.Filters.apply(req)
 
 	return req, nil
 }
@@ -280,6 +283,17 @@ type RateInstallationUserListRequestFilters struct {
 	PageSize int64
 }
 
+func (r RateInstallationUserListRequestFilters) apply(req *http.Request) {
+	query := req.URL.Query()
+	if r.Page > 0 {
+		query.Set("page", strconv.FormatInt(r.Page, 10))
+	}
+	if r.PageSize > 0 {
+		query.Set("pageSize", strconv.FormatInt(r.PageSize, 10))
+	}
+	req.URL.RawQuery = query.Encode()
+}
+
 // RateInstallationUserListRequest represents the request for listing
 // installation user rates.
 type RateInstallationUserListRequest struct {
@@ -306,15 +320,7 @@ func (r RateInstallationUserListRequest) HTTPRequest(ctx context.Context, server
 	if err != nil {
 		return nil, err
 	}
-
-	query := req.URL.Query()
-	if r.Filters.Page > 0 {
-		query.Set("page", strconv.FormatInt(r.Filters.Page, 10))
-	}
-	if r.Filters.PageSize > 0 {
-		query.Set("pageSize", strconv.FormatInt(r.Filters.PageSize, 10))
-	}
-	req.URL.RawQuery = query.Encode()
+	r.Filters.apply(req)
 
 	return req, nil
 }
@@ -414,6 +420,16 @@ type RateInstallationUserGetRequestFilters struct {
 	Include []RateInstallationUserGetRequestSideload
 }
 
+func (r RateInstallationUserGetRequestFilters) apply(req *http.Request) {
+	query := req.URL.Query()
+	if len(r.Include) > 0 {
+		for _, include := range r.Include {
+			query.Add("include", string(include))
+		}
+	}
+	req.URL.RawQuery = query.Encode()
+}
+
 // RateInstallationUserGetRequest represents the request for getting an
 // installation user rate.
 type RateInstallationUserGetRequest struct {
@@ -442,14 +458,7 @@ func (r RateInstallationUserGetRequest) HTTPRequest(ctx context.Context, server 
 	if err != nil {
 		return nil, err
 	}
-
-	query := req.URL.Query()
-	if len(r.Filters.Include) > 0 {
-		for _, include := range r.Filters.Include {
-			query.Add("include", string(include))
-		}
-	}
-	req.URL.RawQuery = query.Encode()
+	r.Filters.apply(req)
 
 	return req, nil
 }
@@ -679,6 +688,16 @@ type RateProjectGetRequestFilters struct {
 	Include []RateProjectGetRequestSideload
 }
 
+func (r RateProjectGetRequestFilters) apply(req *http.Request) {
+	query := req.URL.Query()
+	if len(r.Include) > 0 {
+		for _, include := range r.Include {
+			query.Add("include", string(include))
+		}
+	}
+	req.URL.RawQuery = query.Encode()
+}
+
 // RateProjectGetRequest represents the request for getting a project rate.
 type RateProjectGetRequest struct {
 	// Path contains the path parameters for the request.
@@ -706,14 +725,7 @@ func (r RateProjectGetRequest) HTTPRequest(ctx context.Context, server string) (
 	if err != nil {
 		return nil, err
 	}
-
-	query := req.URL.Query()
-	if len(r.Filters.Include) > 0 {
-		for _, include := range r.Filters.Include {
-			query.Add("include", string(include))
-		}
-	}
-	req.URL.RawQuery = query.Encode()
+	r.Filters.apply(req)
 
 	return req, nil
 }
@@ -943,6 +955,26 @@ type RateProjectUserListRequestFilters struct {
 	PageSize int64
 }
 
+func (r RateProjectUserListRequestFilters) apply(req *http.Request) {
+	query := req.URL.Query()
+	if r.SearchTerm != "" {
+		query.Set("searchTerm", r.SearchTerm)
+	}
+	if r.OrderBy != "" {
+		query.Set("orderBy", string(r.OrderBy))
+	}
+	if r.OrderMode != "" {
+		query.Set("orderMode", string(r.OrderMode))
+	}
+	if r.Page > 0 {
+		query.Set("page", strconv.FormatInt(r.Page, 10))
+	}
+	if r.PageSize > 0 {
+		query.Set("pageSize", strconv.FormatInt(r.PageSize, 10))
+	}
+	req.URL.RawQuery = query.Encode()
+}
+
 // RateProjectUserListRequest represents the request for listing project user rates.
 type RateProjectUserListRequest struct {
 	// Path contains the path parameters for the request.
@@ -974,24 +1006,7 @@ func (r RateProjectUserListRequest) HTTPRequest(ctx context.Context, server stri
 	if err != nil {
 		return nil, err
 	}
-
-	query := req.URL.Query()
-	if r.Filters.SearchTerm != "" {
-		query.Set("searchTerm", r.Filters.SearchTerm)
-	}
-	if r.Filters.OrderBy != "" {
-		query.Set("orderBy", string(r.Filters.OrderBy))
-	}
-	if r.Filters.OrderMode != "" {
-		query.Set("orderMode", string(r.Filters.OrderMode))
-	}
-	if r.Filters.Page > 0 {
-		query.Set("page", strconv.FormatInt(r.Filters.Page, 10))
-	}
-	if r.Filters.PageSize > 0 {
-		query.Set("pageSize", strconv.FormatInt(r.Filters.PageSize, 10))
-	}
-	req.URL.RawQuery = query.Encode()
+	r.Filters.apply(req)
 
 	return req, nil
 }
@@ -1122,6 +1137,16 @@ type RateProjectUserGetRequestFilters struct {
 	Include []RateProjectUserGetRequestSideload
 }
 
+func (r RateProjectUserGetRequestFilters) apply(req *http.Request) {
+	query := req.URL.Query()
+	if len(r.Include) > 0 {
+		for _, include := range r.Include {
+			query.Add("include", string(include))
+		}
+	}
+	req.URL.RawQuery = query.Encode()
+}
+
 // RateProjectUserGetRequest represents the request for getting a project user
 // rate.
 type RateProjectUserGetRequest struct {
@@ -1150,14 +1175,7 @@ func (r RateProjectUserGetRequest) HTTPRequest(ctx context.Context, server strin
 	if err != nil {
 		return nil, err
 	}
-
-	query := req.URL.Query()
-	if len(r.Filters.Include) > 0 {
-		for _, include := range r.Filters.Include {
-			query.Add("include", string(include))
-		}
-	}
-	req.URL.RawQuery = query.Encode()
+	r.Filters.apply(req)
 
 	return req, nil
 }
@@ -1330,6 +1348,31 @@ type RateProjectUserHistoryGetRequestFilters struct {
 	Include []RateProjectUserHistoryGetRequestSideload
 }
 
+func (r RateProjectUserHistoryGetRequestFilters) apply(req *http.Request) {
+	query := req.URL.Query()
+	if r.SearchTerm != "" {
+		query.Set("searchTerm", r.SearchTerm)
+	}
+	if r.OrderBy != "" {
+		query.Set("orderBy", string(r.OrderBy))
+	}
+	if r.OrderMode != "" {
+		query.Set("orderMode", string(r.OrderMode))
+	}
+	if r.Page > 0 {
+		query.Set("page", strconv.FormatInt(r.Page, 10))
+	}
+	if r.PageSize > 0 {
+		query.Set("pageSize", strconv.FormatInt(r.PageSize, 10))
+	}
+	if len(r.Include) > 0 {
+		for _, include := range r.Include {
+			query.Add("include", string(include))
+		}
+	}
+	req.URL.RawQuery = query.Encode()
+}
+
 // RateProjectUserHistoryGetRequest represents the request for getting project
 // user rate history.
 type RateProjectUserHistoryGetRequest struct {
@@ -1364,29 +1407,7 @@ func (r RateProjectUserHistoryGetRequest) HTTPRequest(ctx context.Context, serve
 	if err != nil {
 		return nil, err
 	}
-
-	query := req.URL.Query()
-	if r.Filters.SearchTerm != "" {
-		query.Set("searchTerm", r.Filters.SearchTerm)
-	}
-	if r.Filters.OrderBy != "" {
-		query.Set("orderBy", string(r.Filters.OrderBy))
-	}
-	if r.Filters.OrderMode != "" {
-		query.Set("orderMode", string(r.Filters.OrderMode))
-	}
-	if r.Filters.Page > 0 {
-		query.Set("page", strconv.FormatInt(r.Filters.Page, 10))
-	}
-	if r.Filters.PageSize > 0 {
-		query.Set("pageSize", strconv.FormatInt(r.Filters.PageSize, 10))
-	}
-	if len(r.Filters.Include) > 0 {
-		for _, include := range r.Filters.Include {
-			query.Add("include", string(include))
-		}
-	}
-	req.URL.RawQuery = query.Encode()
+	r.Filters.apply(req)
 
 	return req, nil
 }
