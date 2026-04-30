@@ -690,6 +690,10 @@ type TaskListRequestFilters struct {
 	// specific date and time.
 	CreatedBefore *time.Time
 
+	// CreatedByUserIDs is an optional list of User IDs to filter tasks by
+	// creator.
+	CreatedByUserIDs []int64
+
 	// UpdatedAfter is an optional filter to retrieve tasks updated after a
 	// specific date and time.
 	UpdatedAfter *time.Time
@@ -737,6 +741,13 @@ func (t TaskListRequestFilters) apply(req *http.Request) {
 	}
 	if t.CreatedBefore != nil && !t.CreatedBefore.IsZero() {
 		query.Set("createdBefore", t.CreatedBefore.Format(time.RFC3339))
+	}
+	if len(t.CreatedByUserIDs) > 0 {
+		createdByUserIDs := make([]string, len(t.CreatedByUserIDs))
+		for i, id := range t.CreatedByUserIDs {
+			createdByUserIDs[i] = strconv.FormatInt(id, 10)
+		}
+		query.Set("createdByUserIds", strings.Join(createdByUserIDs, ","))
 	}
 	if t.UpdatedAfter != nil && !t.UpdatedAfter.IsZero() {
 		query.Set("updatedAfter", t.UpdatedAfter.Format(time.RFC3339))
