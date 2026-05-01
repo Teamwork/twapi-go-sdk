@@ -288,6 +288,15 @@ func TestProjectList(t *testing.T) {
 		input projects.ProjectListRequest
 	}{{
 		name: "all projects",
+		input: projects.ProjectListRequest{
+			Filters: projects.ProjectListRequestFilters{
+				ProjectRequestFilters: projects.ProjectRequestFilters{
+					Include: []projects.ProjectRequestSideload{
+						projects.ProjectRequestSideloadProjectCategories,
+					},
+				},
+			},
+		},
 	}}
 
 	for _, tt := range tests {

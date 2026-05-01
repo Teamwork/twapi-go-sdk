@@ -722,7 +722,7 @@ type ProjectGetResponse struct {
 		// ProjectCategories contains the categories associated with the project.
 		//
 		// The key is the string representation of the project category ID.
-		ProjectCategories []ProjectCategory `json:"projectCategories"`
+		ProjectCategories map[string]ProjectCategory `json:"projectCategories"`
 	} `json:"included"`
 }
 
@@ -862,7 +862,7 @@ type ProjectListResponse struct {
 		// ProjectCategories contains the categories associated with the project.
 		//
 		// The key is the string representation of the project category ID.
-		ProjectCategories []ProjectCategory `json:"projectCategories"`
+		ProjectCategories map[string]ProjectCategory `json:"projectCategories"`
 	} `json:"included"`
 }
 
