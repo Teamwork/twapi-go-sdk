@@ -62,6 +62,9 @@ type Task struct {
 
 	// DescriptionContentType is the content type of the description. It can be
 	// "TEXT" or "HTML".
+	//
+	// Deprecated: This field will be removed in a future release. The task is
+	// always plain text or Markdown formatting.
 	DescriptionContentType *TaskDescriptionContentType `json:"descriptionContentType"`
 
 	// Priority is the priority of the task. It can be "none", "low", "medium" or
@@ -203,12 +206,9 @@ type TaskCreateRequest struct {
 	// Name is the name of the task
 	Name string `json:"name"`
 
-	// Description is an optional description of the task.
+	// Description is an optional description of the task. It supports plain text
+	// or Markdown formatting.
 	Description *string `json:"description,omitempty"`
-
-	// DescriptionContentType is the content type of the description. It can be
-	// "TEXT" or "HTML". If not provided, it defaults to "TEXT".
-	DescriptionContentType *TaskDescriptionContentType `json:"descriptionContentType,omitempty"`
 
 	// Priority is the priority of the task. It can be "none", "low", "medium" or
 	// "high".
@@ -348,12 +348,9 @@ type TaskUpdateRequest struct {
 	// Name is the name of the task
 	Name *string `json:"name,omitempty"`
 
-	// Description is an optional description of the task.
+	// Description is an optional description of the task. It supports plain text
+	// or Markdown formatting.
 	Description *string `json:"description,omitempty"`
-
-	// DescriptionContentType is the content type of the description. It can be
-	// "TEXT" or "HTML". If not provided, it defaults to "TEXT".
-	DescriptionContentType *TaskDescriptionContentType `json:"descriptionContentType,omitempty"`
 
 	// Priority is the priority of the task. It can be "none", "low", "medium" or
 	// "high".
