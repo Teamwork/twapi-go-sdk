@@ -642,6 +642,41 @@ func createWorkflowStage(t testEngine, workflowID int64) (int64, func(), error) 
 	}, nil
 }
 
+func createCustomField(t testEngine) (int64, func(), error) {
+	customFieldResponse, err := projects.CustomFieldCreate(t.Context(), engine, projects.NewCustomFieldCreateRequest(
+		fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
+		projects.CustomFieldTypeTextShort,
+		projects.CustomFieldEntityTask,
+	))
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to create custom field for test: %w", err)
+	}
+	id := customFieldResponse.CustomField.ID
+	return id, func() {
+		ctx := context.Background() // t.Context is always canceled in cleanup
+		_, err := projects.CustomFieldDelete(ctx, engine, projects.NewCustomFieldDeleteRequest(id))
+		if err != nil {
+			t.Errorf("failed to delete custom field after test: %s", err)
+		}
+	}, nil
+}
+
+func createTaskCustomFieldValue(t testEngine, taskID, customFieldID int64) (int64, func(), error) {
+	valueResponse, err := projects.CustomFieldValueCreate(t.Context(), engine,
+		projects.NewTaskCustomFieldValueCreateRequest(taskID, customFieldID, "test value"))
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to create custom field value for test: %w", err)
+	}
+	id := valueResponse.CustomFieldValue.ID
+	return id, func() {
+		ctx := context.Background() // t.Context is always canceled in cleanup
+		_, err := projects.CustomFieldValueDelete(ctx, engine, projects.NewTaskCustomFieldValueDeleteRequest(taskID, id))
+		if err != nil {
+			t.Errorf("failed to delete custom field value after test: %s", err)
+		}
+	}, nil
+}
+
 func createLink(t testEngine, projectID int64) (int64, func(), error) {
 	linkResponse, err := projects.LinkCreate(t.Context(), engine, projects.NewLinkCreateRequest(
 		projectID,

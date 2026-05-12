@@ -1,13 +1,17 @@
 package twapi
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
 	"strconv"
 	"time"
 )
+
+var reHexColor = regexp.MustCompile(`^#([0-9a-f]{6})$`)
 
 // HTTPError represents an error response from the API.
 type HTTPError struct {
@@ -189,3 +193,35 @@ const (
 	OrderModeAscending  OrderMode = "asc"
 	OrderModeDescending OrderMode = "desc"
 )
+
+// HexColor defines a hexadecimal color.
+type HexColor string
+
+// MarshalJSON encodes the type to JSON format.
+func (h HexColor) MarshalJSON() ([]byte, error) {
+	return fmt.Appendf(nil, `"%s"`, h), nil
+}
+
+// UnmarshalJSON validate and parse v into a hexadecimal type.
+func (h *HexColor) UnmarshalJSON(v []byte) error {
+	v = bytes.TrimSpace(v)
+	v = bytes.ToLower(v)
+	v = bytes.Trim(v, `"`)
+
+	if !reHexColor.Match(v) {
+		return fmt.Errorf("invalid hexadecimal color: %s", v)
+	}
+
+	*h = HexColor(v[1:])
+	return nil
+}
+
+// String returns the hexadecimal color as a string.
+func (h HexColor) String() string {
+	return "#" + string(h)
+}
+
+// NewHexColor creates a pointer to new hexadecimal color.
+func NewHexColor(color string) *HexColor {
+	return new(HexColor(color))
+}
