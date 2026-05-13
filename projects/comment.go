@@ -83,6 +83,29 @@ type Comment struct {
 	DeletedAt *time.Time `json:"dateDeleted"`
 }
 
+// CommentSideload contains minimal information about a comment, used for
+// sideloading in other API responses.
+type CommentSideload struct {
+	// ID is the unique identifier of the comment.
+	ID int64 `json:"id"`
+
+	// Body is the body of the comment.
+	Body string `json:"title"`
+
+	// Object is the relationship to the object (task, milestone, project) that
+	// this comment is associated with.
+	Object twapi.Relationship `json:"object"`
+
+	// Project is the relationship to the project that this comment belongs to.
+	Project twapi.Relationship `json:"project"`
+
+	// PostedBy is the ID of the user who posted the comment.
+	PostedBy *twapi.Relationship `json:"postedBy"`
+
+	// PostedAt is the date and time when the comment was posted.
+	PostedAt *time.Time `json:"postedDateTime"`
+}
+
 // CommentUpdateRequestPath contains the path parameters for creating a
 // comment.
 type CommentCreateRequestPath struct {
