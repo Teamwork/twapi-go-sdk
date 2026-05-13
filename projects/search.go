@@ -220,7 +220,7 @@ type SearchResponse struct {
 		// Comments contains the comments associated with the search results.
 		//
 		// The key is the string representation of the comment ID.
-		Comments map[string]Comment `json:"comments,omitempty"`
+		Comments map[string]CommentSideload `json:"comments,omitempty"`
 		// Companies contains the companies associated with the search results.
 		//
 		// The key is the string representation of the company ID.
