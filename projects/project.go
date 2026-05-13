@@ -665,9 +665,11 @@ type ProjectRequestFilters struct {
 func (p ProjectRequestFilters) apply(req *http.Request) {
 	query := req.URL.Query()
 	if len(p.Include) > 0 {
-		for _, include := range p.Include {
-			query.Add("include", string(include))
+		includes := make([]string, len(p.Include))
+		for i, include := range p.Include {
+			includes[i] = string(include)
 		}
+		query.Set("include", strings.Join(includes, ","))
 	}
 	req.URL.RawQuery = query.Encode()
 }
