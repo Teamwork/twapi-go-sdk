@@ -36,7 +36,6 @@ type SearchRequestType string
 
 // List of possible types for SearchRequestType.
 const (
-	SearchRequestTypeCalendarEvents    SearchRequestType = "calendarevents"
 	SearchRequestTypeComments          SearchRequestType = "comments"
 	SearchRequestTypeTaskComments      SearchRequestType = "taskcomments"
 	SearchRequestTypeMilestoneComments SearchRequestType = "milestonecomments"
@@ -61,19 +60,18 @@ type SearchRequestSideload string
 
 // List of possible sideload options for SearchRequestSideload.
 const (
-	SearchRequestSideloadCalendarEvents SearchRequestSideload = "calendarevents"
-	SearchRequestSideloadComments       SearchRequestSideload = "comments"
-	SearchRequestSideloadCompanies      SearchRequestSideload = "companies"
-	SearchRequestSideloadLinks          SearchRequestSideload = "links"
-	SearchRequestSideloadMessages       SearchRequestSideload = "messages"
-	SearchRequestSideloadMilestones     SearchRequestSideload = "milestones"
-	SearchRequestSideloadNotebooks      SearchRequestSideload = "notebooks"
-	SearchRequestSideloadProjects       SearchRequestSideload = "projects"
-	SearchRequestSideloadTasklists      SearchRequestSideload = "tasklists"
-	SearchRequestSideloadTasks          SearchRequestSideload = "tasks"
-	SearchRequestSideloadTeams          SearchRequestSideload = "teams"
-	SearchRequestSideloadTimelogs       SearchRequestSideload = "timelogs"
-	SearchRequestSideloadUsers          SearchRequestSideload = "users"
+	SearchRequestSideloadComments   SearchRequestSideload = "comments"
+	SearchRequestSideloadCompanies  SearchRequestSideload = "companies"
+	SearchRequestSideloadLinks      SearchRequestSideload = "links"
+	SearchRequestSideloadMessages   SearchRequestSideload = "messages"
+	SearchRequestSideloadMilestones SearchRequestSideload = "milestones"
+	SearchRequestSideloadNotebooks  SearchRequestSideload = "notebooks"
+	SearchRequestSideloadProjects   SearchRequestSideload = "projects"
+	SearchRequestSideloadTasklists  SearchRequestSideload = "tasklists"
+	SearchRequestSideloadTasks      SearchRequestSideload = "tasks"
+	SearchRequestSideloadTeams      SearchRequestSideload = "teams"
+	SearchRequestSideloadTimelogs   SearchRequestSideload = "timelogs"
+	SearchRequestSideloadUsers      SearchRequestSideload = "users"
 )
 
 // SearchRequestFilters contains the filters for searching.
@@ -219,11 +217,6 @@ type SearchResponse struct {
 
 	// Included contains related objects included in the response.
 	Included struct {
-		// CalendarEvents contains the calendar events associated with the search
-		// results.
-		//
-		// The key is the string representation of the calendar event ID.
-		CalendarEvents map[string]CalendarEvent `json:"calendarEvents,omitempty"`
 		// Comments contains the comments associated with the search results.
 		//
 		// The key is the string representation of the comment ID.
