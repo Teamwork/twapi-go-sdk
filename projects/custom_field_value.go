@@ -552,7 +552,7 @@ func (c CustomFieldValueGetRequest) HTTPRequest(ctx context.Context, server stri
 // custom field value.
 type CustomFieldValueGetResponse struct {
 	// CustomFieldValue is the retrieved custom field value.
-	CustomFieldValue CustomFieldValue
+	CustomFieldValue CustomFieldValue `json:"customfieldValue"`
 }
 
 // UnmarshalJSON decodes the response into the CustomFieldValue field regardless
@@ -700,15 +700,16 @@ func (c CustomFieldValueListRequest) HTTPRequest(ctx context.Context, server str
 type CustomFieldValueListResponse struct {
 	request CustomFieldValueListRequest
 
+	// Meta contains the pagination information for the response.
 	Meta struct {
 		Page struct {
 			HasMore bool `json:"hasMore"`
 		} `json:"page"`
-	}
+	} `json:"meta"`
 
 	// CustomFieldValues is the list of custom field values returned by the
 	// request, regardless of the underlying entity type.
-	CustomFieldValues []CustomFieldValue
+	CustomFieldValues []CustomFieldValue `json:"customfieldValues"`
 }
 
 // UnmarshalJSON decodes the response into the CustomFieldValues slice

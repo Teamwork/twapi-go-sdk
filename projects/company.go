@@ -431,8 +431,8 @@ type CompanyRequestSideload string
 
 // List of possible sideload options for CompanyRequestSideload.
 const (
-	CompanyRequestSideloadCompanyCustomFields      CompanyRequestSideload = "customfields"
-	CompanyRequestSideloadCompanyCustomFieldValues CompanyRequestSideload = "customfieldcompanies"
+	CompanyRequestSideloadCustomFields      CompanyRequestSideload = "customfields"
+	CompanyRequestSideloadCustomFieldValues CompanyRequestSideload = "customfieldcompanies"
 )
 
 // CompanyRequestFilters contains the filters for loading companies.
