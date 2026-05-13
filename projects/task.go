@@ -599,8 +599,8 @@ type TaskRequestSideload string
 
 // List of possible sideload options for TaskRequestSideload.
 const (
-	TaskRequestSideloadTaskCustomFields      TaskRequestSideload = "customfields"
-	TaskRequestSideloadTaskCustomFieldValues TaskRequestSideload = "customfieldtasks"
+	TaskRequestSideloadCustomFields      TaskRequestSideload = "customfields"
+	TaskRequestSideloadCustomFieldValues TaskRequestSideload = "customfieldtasks"
 )
 
 // TaskRequestFilters contains the filters for loading tasks.

@@ -651,9 +651,9 @@ type ProjectRequestSideload string
 
 // List of possible sideload options for ProjectRequestSideload.
 const (
-	ProjectRequestSideloadProjectCategories        ProjectRequestSideload = "projectCategories"
-	ProjectRequestSideloadProjectCustomFields      ProjectRequestSideload = "customfields"
-	ProjectRequestSideloadProjectCustomFieldValues ProjectRequestSideload = "customfieldprojects"
+	ProjectRequestSideloadProjectCategories ProjectRequestSideload = "projectCategories"
+	ProjectRequestSideloadCustomFields      ProjectRequestSideload = "customfields"
+	ProjectRequestSideloadCustomFieldValues ProjectRequestSideload = "customfieldprojects"
 )
 
 // ProjectRequestFilters contains the filters for loading projects.

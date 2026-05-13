@@ -773,11 +773,14 @@ func (c CustomFieldListRequest) HTTPRequest(ctx context.Context, server string) 
 type CustomFieldListResponse struct {
 	request CustomFieldListRequest
 
+	// Meta contains the pagination information for the response.
 	Meta struct {
 		Page struct {
 			HasMore bool `json:"hasMore"`
 		} `json:"page"`
 	} `json:"meta"`
+
+	// CustomFields is the list of custom fields matching the request filters.
 	CustomFields []CustomField `json:"customfields"`
 }
 
