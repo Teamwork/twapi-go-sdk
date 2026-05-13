@@ -425,6 +425,32 @@ func CompanyDelete(
 	return twapi.Execute[CompanyDeleteRequest, *CompanyDeleteResponse](ctx, engine, req)
 }
 
+// CompanyRequestSideload contains the possible sideload options when loading
+// companies.
+type CompanyRequestSideload string
+
+// List of possible sideload options for CompanyRequestSideload.
+const (
+	CompanyRequestSideloadCompanyCustomFields      CompanyRequestSideload = "customfields"
+	CompanyRequestSideloadCompanyCustomFieldValues CompanyRequestSideload = "customfieldcompanies"
+)
+
+// CompanyRequestFilters contains the filters for loading companies.
+type CompanyRequestFilters struct {
+	// Include specifies related resources to include.
+	Include []CompanyRequestSideload
+}
+
+func (p CompanyRequestFilters) apply(req *http.Request) {
+	query := req.URL.Query()
+	if len(p.Include) > 0 {
+		for _, include := range p.Include {
+			query.Add("include", string(include))
+		}
+	}
+	req.URL.RawQuery = query.Encode()
+}
+
 // CompanyGetRequestPath contains the path parameters for loading a single company.
 type CompanyGetRequestPath struct {
 	// ID is the unique identifier of the company to be retrieved.
@@ -438,6 +464,9 @@ type CompanyGetRequestPath struct {
 type CompanyGetRequest struct {
 	// Path contains the path parameters for the request.
 	Path CompanyGetRequestPath
+
+	// Filters contains the filters for loading a single company.
+	Filters CompanyRequestFilters
 }
 
 // NewCompanyGetRequest creates a new CompanyGetRequest with the provided
@@ -458,6 +487,7 @@ func (c CompanyGetRequest) HTTPRequest(ctx context.Context, server string) (*htt
 	if err != nil {
 		return nil, err
 	}
+	c.Filters.apply(req)
 
 	return req, nil
 }
@@ -467,6 +497,19 @@ func (c CompanyGetRequest) HTTPRequest(ctx context.Context, server string) (*htt
 // https://apidocs.teamwork.com/docs/teamwork/v3/companies/get-projects-api-v3-companies-company-id-json
 type CompanyGetResponse struct {
 	Company Company `json:"company"`
+
+	// Included contains related objects included in the response.
+	Included struct {
+		// CustomFields contains the custom fields associated with the company.
+		//
+		// The key is the string representation of the custom field ID.
+		CustomFields map[string]CustomField `json:"customfields,omitempty"`
+		// CustomFieldValues contains the values of the custom fields associated
+		// with the company.
+		//
+		// The key is the string representation of the custom field value ID.
+		CustomFieldValues map[string]CustomFieldValue `json:"customfieldCompanies,omitempty"`
+	} `json:"included"`
 }
 
 // HandleHTTPResponse handles the HTTP response for the CompanyGetResponse. If
@@ -496,6 +539,8 @@ func CompanyGet(
 // CompanyListRequestFilters contains the filters for loading multiple
 // clients/companies.
 type CompanyListRequestFilters struct {
+	CompanyRequestFilters
+
 	// SearchTerm is an optional search term to filter clients/companies by name.
 	SearchTerm string
 
@@ -514,6 +559,8 @@ type CompanyListRequestFilters struct {
 }
 
 func (c CompanyListRequestFilters) apply(req *http.Request) {
+	c.CompanyRequestFilters.apply(req)
+
 	query := req.URL.Query()
 	if c.SearchTerm != "" {
 		query.Set("searchTerm", c.SearchTerm)
@@ -576,12 +623,28 @@ func (c CompanyListRequest) HTTPRequest(ctx context.Context, server string) (*ht
 type CompanyListResponse struct {
 	request CompanyListRequest
 
+	// Meta contains metadata about the response, including pagination details.
 	Meta struct {
 		Page struct {
 			HasMore bool `json:"hasMore"`
 		} `json:"page"`
 	} `json:"meta"`
+
+	// Companies is the list of companies matching the request filters.
 	Companies []Company `json:"companies"`
+
+	// Included contains related objects included in the response.
+	Included struct {
+		// CustomFields contains the custom fields associated with the company.
+		//
+		// The key is the string representation of the custom field ID.
+		CustomFields map[string]CustomField `json:"customfields,omitempty"`
+		// CustomFieldValues contains the values of the custom fields associated
+		// with the company.
+		//
+		// The key is the string representation of the custom field value ID.
+		CustomFieldValues map[string]CustomFieldValue `json:"customfieldCompanies,omitempty"`
+	} `json:"included"`
 }
 
 // HandleHTTPResponse handles the HTTP response for the CompanyListResponse. If
