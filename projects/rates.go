@@ -355,8 +355,8 @@ type RateInstallationUserListResponse struct {
 
 	// Included contains related data.
 	Included struct {
-		Currencies map[string]Currency           `json:"currencies"`
-		Users      map[string]twapi.Relationship `json:"users"`
+		Currencies map[string]Currency           `json:"currencies,omitempty"`
+		Users      map[string]twapi.Relationship `json:"users,omitempty"`
 	} `json:"included"`
 }
 
@@ -475,7 +475,7 @@ type RateInstallationUserGetResponse struct {
 
 	// Included contains related data.
 	Included struct {
-		Currencies map[string]Currency `json:"currencies"`
+		Currencies map[string]Currency `json:"currencies,omitempty"`
 	} `json:"included"`
 }
 
@@ -741,7 +741,7 @@ type RateProjectGetResponse struct {
 
 	// Included contains related data.
 	Included struct {
-		Currencies map[string]Currency `json:"currencies"`
+		Currencies map[string]Currency `json:"currencies,omitempty"`
 	} `json:"included"`
 }
 
@@ -1068,9 +1068,9 @@ type RateProjectUserListResponse struct {
 
 	// Included contains related data.
 	Included struct {
-		CostRates  map[string]any                `json:"costRates"`
-		Currencies map[string]Currency           `json:"currencies"`
-		Users      map[string]twapi.Relationship `json:"users"`
+		CostRates  map[string]any                `json:"costRates,omitempty"`
+		Currencies map[string]Currency           `json:"currencies,omitempty"`
+		Users      map[string]twapi.Relationship `json:"users,omitempty"`
 	} `json:"included"`
 }
 
@@ -1192,7 +1192,7 @@ type RateProjectUserGetResponse struct {
 
 	// Included contains related data.
 	Included struct {
-		Currencies map[string]Currency `json:"currencies"`
+		Currencies map[string]Currency `json:"currencies,omitempty"`
 	} `json:"included"`
 }
 
@@ -1448,8 +1448,8 @@ type RateProjectUserHistoryGetResponse struct {
 
 	// Included contains related data.
 	Included struct {
-		Currencies map[string]Currency           `json:"currencies"`
-		Users      map[string]twapi.Relationship `json:"users"`
+		Currencies map[string]Currency           `json:"currencies,omitempty"`
+		Users      map[string]twapi.Relationship `json:"users,omitempty"`
 	} `json:"included"`
 }
 

@@ -223,55 +223,55 @@ type SearchResponse struct {
 		// results.
 		//
 		// The key is the string representation of the calendar event ID.
-		CalendarEvents map[string]CalendarEvent `json:"calendarEvents"`
+		CalendarEvents map[string]CalendarEvent `json:"calendarEvents,omitempty"`
 		// Comments contains the comments associated with the search results.
 		//
 		// The key is the string representation of the comment ID.
-		Comments map[string]Comment `json:"comments"`
+		Comments map[string]Comment `json:"comments,omitempty"`
 		// Companies contains the companies associated with the search results.
 		//
 		// The key is the string representation of the company ID.
-		Companies map[string]Company `json:"companies"`
+		Companies map[string]Company `json:"companies,omitempty"`
 		// Links contains the links associated with the search results.
 		//
 		// The key is the string representation of the link ID.
-		Links map[string]Link `json:"links"`
+		Links map[string]Link `json:"links,omitempty"`
 		// Messages contains the messages associated with the search results.
 		//
 		// The key is the string representation of the message ID.
-		Messages map[string]Message `json:"messages"`
+		Messages map[string]Message `json:"messages,omitempty"`
 		// Milestones contains the milestones associated with the search results.
 		//
 		// The key is the string representation of the milestone ID.
-		Milestones map[string]Milestone `json:"milestones"`
+		Milestones map[string]Milestone `json:"milestones,omitempty"`
 		// Notebooks contains the notebooks associated with the search results.
 		//
 		// The key is the string representation of the notebook ID.
-		Notebooks map[string]Notebook `json:"notebooks"`
+		Notebooks map[string]Notebook `json:"notebooks,omitempty"`
 		// Projects contains the projects associated with the search results.
 		//
 		// The key is the string representation of the project ID.
-		Projects map[string]Project `json:"projects"`
+		Projects map[string]Project `json:"projects,omitempty"`
 		// Tasklists contains the tasklists associated with the search results.
 		//
 		// The key is the string representation of the tasklist ID.
-		Tasklists map[string]Tasklist `json:"tasklists"`
+		Tasklists map[string]Tasklist `json:"tasklists,omitempty"`
 		// Tasks contains the tasks associated with the search results.
 		//
 		// The key is the string representation of the task ID.
-		Tasks map[string]Task `json:"tasks"`
+		Tasks map[string]Task `json:"tasks,omitempty"`
 		// Teams contains the teams associated with the search results.
 		//
 		// The key is the string representation of the team ID.
-		Teams map[string]Team `json:"teams"`
+		Teams map[string]Team `json:"teams,omitempty"`
 		// Timelogs contains the timelogs associated with the search results.
 		//
 		// The key is the string representation of the timelog ID.
-		Timelogs map[string]Timelog `json:"timelogs"`
+		Timelogs map[string]Timelog `json:"timelogs,omitempty"`
 		// Users contains the users associated with the search results.
 		//
 		// The key is the string representation of the user ID.
-		Users map[string]User `json:"users"`
+		Users map[string]User `json:"users,omitempty"`
 	} `json:"included"`
 }
 
