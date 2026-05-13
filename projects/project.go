@@ -651,7 +651,9 @@ type ProjectRequestSideload string
 
 // List of possible sideload options for ProjectRequestSideload.
 const (
-	ProjectRequestSideloadProjectCategories ProjectRequestSideload = "projectCategories"
+	ProjectRequestSideloadProjectCategories        ProjectRequestSideload = "projectCategories"
+	ProjectRequestSideloadProjectCustomFields      ProjectRequestSideload = "customfields"
+	ProjectRequestSideloadProjectCustomFieldValues ProjectRequestSideload = "customfieldprojects"
 )
 
 // ProjectRequestFilters contains the filters for loading projects.
@@ -723,6 +725,15 @@ type ProjectGetResponse struct {
 		//
 		// The key is the string representation of the project category ID.
 		ProjectCategories map[string]ProjectCategory `json:"projectCategories,omitempty"`
+		// CustomFields contains the custom fields associated with the project.
+		//
+		// The key is the string representation of the custom field ID.
+		CustomFields map[string]CustomField `json:"customfields,omitempty"`
+		// CustomFieldValues contains the values of the custom fields associated
+		// with the project.
+		//
+		// The key is the string representation of the custom field value ID.
+		CustomFieldValues map[string]CustomFieldValue `json:"customfieldProjects,omitempty"`
 	} `json:"included"`
 }
 
@@ -863,6 +874,15 @@ type ProjectListResponse struct {
 		//
 		// The key is the string representation of the project category ID.
 		ProjectCategories map[string]ProjectCategory `json:"projectCategories,omitempty"`
+		// CustomFields contains the custom fields associated with the project.
+		//
+		// The key is the string representation of the custom field ID.
+		CustomFields map[string]CustomField `json:"customfields,omitempty"`
+		// CustomFieldValues contains the values of the custom fields associated
+		// with the project.
+		//
+		// The key is the string representation of the custom field value ID.
+		CustomFieldValues map[string]CustomFieldValue `json:"customfieldProjects,omitempty"`
 	} `json:"included"`
 }
 

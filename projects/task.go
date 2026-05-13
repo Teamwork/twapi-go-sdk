@@ -593,6 +593,32 @@ func TaskComplete(
 	return twapi.Execute[TaskCompleteRequest, *TaskCompleteResponse](ctx, engine, req)
 }
 
+// TaskRequestSideload contains the possible sideload options when loading
+// tasks.
+type TaskRequestSideload string
+
+// List of possible sideload options for TaskRequestSideload.
+const (
+	TaskRequestSideloadTaskCustomFields      TaskRequestSideload = "customfields"
+	TaskRequestSideloadTaskCustomFieldValues TaskRequestSideload = "customfieldtasks"
+)
+
+// TaskRequestFilters contains the filters for loading tasks.
+type TaskRequestFilters struct {
+	// Include specifies related resources to include.
+	Include []TaskRequestSideload
+}
+
+func (p TaskRequestFilters) apply(req *http.Request) {
+	query := req.URL.Query()
+	if len(p.Include) > 0 {
+		for _, include := range p.Include {
+			query.Add("include", string(include))
+		}
+	}
+	req.URL.RawQuery = query.Encode()
+}
+
 // TaskGetRequestPath contains the path parameters for loading a single task.
 type TaskGetRequestPath struct {
 	// ID is the unique identifier of the task to be retrieved.
@@ -605,6 +631,9 @@ type TaskGetRequestPath struct {
 type TaskGetRequest struct {
 	// Path contains the path parameters for the request.
 	Path TaskGetRequestPath
+
+	// Filters contains the filters for loading a single task.
+	Filters TaskRequestFilters
 }
 
 // NewTaskGetRequest creates a new TaskGetRequest with the provided
@@ -625,6 +654,7 @@ func (t TaskGetRequest) HTTPRequest(ctx context.Context, server string) (*http.R
 	if err != nil {
 		return nil, err
 	}
+	t.Filters.apply(req)
 
 	return req, nil
 }
@@ -634,6 +664,19 @@ func (t TaskGetRequest) HTTPRequest(ctx context.Context, server string) (*http.R
 // https://apidocs.teamwork.com/docs/teamwork/v3/tasks/get-projects-api-v3-tasks-task-id-json
 type TaskGetResponse struct {
 	Task Task `json:"task"`
+
+	// Included contains related objects included in the response.
+	Included struct {
+		// CustomFields contains the custom fields associated with the task.
+		//
+		// The key is the string representation of the custom field ID.
+		CustomFields map[string]CustomField `json:"customfields,omitempty"`
+		// CustomFieldValues contains the values of the custom fields associated
+		// with the task.
+		//
+		// The key is the string representation of the custom field value ID.
+		CustomFieldValues map[string]CustomFieldValue `json:"customfieldTasks,omitempty"`
+	} `json:"included"`
 }
 
 // HandleHTTPResponse handles the HTTP response for the TaskGetResponse. If some
@@ -672,6 +715,8 @@ type TaskListRequestPath struct {
 
 // TaskListRequestFilters contains the filters for loading multiple tasks.
 type TaskListRequestFilters struct {
+	TaskRequestFilters
+
 	// SearchTerm is an optional search term to filter tasks by name, description
 	// or tasklist's name.
 	SearchTerm string
@@ -722,6 +767,8 @@ type TaskListRequestFilters struct {
 }
 
 func (t TaskListRequestFilters) apply(req *http.Request) {
+	t.TaskRequestFilters.apply(req)
+
 	query := req.URL.Query()
 	if t.SearchTerm != "" {
 		query.Set("searchTerm", t.SearchTerm)
@@ -830,12 +877,28 @@ func (t TaskListRequest) HTTPRequest(ctx context.Context, server string) (*http.
 type TaskListResponse struct {
 	request TaskListRequest
 
+	// Meta contains metadata about the response, including pagination details.
 	Meta struct {
 		Page struct {
 			HasMore bool `json:"hasMore"`
 		} `json:"page"`
 	} `json:"meta"`
+
+	// Tasks is the list of tasks matching the request filters.
 	Tasks []Task `json:"tasks"`
+
+	// Included contains related objects included in the response.
+	Included struct {
+		// CustomFields contains the custom fields associated with the task.
+		//
+		// The key is the string representation of the custom field ID.
+		CustomFields map[string]CustomField `json:"customfields,omitempty"`
+		// CustomFieldValues contains the values of the custom fields associated
+		// with the task.
+		//
+		// The key is the string representation of the custom field value ID.
+		CustomFieldValues map[string]CustomFieldValue `json:"customfieldTasks,omitempty"`
+	} `json:"included"`
 }
 
 // HandleHTTPResponse handles the HTTP response for the TaskListResponse. If
