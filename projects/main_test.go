@@ -40,7 +40,10 @@ func TestMain(m *testing.M) {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{}))
 
 	if engine = startEngine(); engine == nil {
-		logger.Info("Missing setup environment variables, skipping tests")
+		// Integration tests gate on `engine == nil` and skip themselves; run
+		// m.Run() so non-integration tests (which need no engine) still execute.
+		logger.Info("Missing setup environment variables, skipping integration tests")
+		exitCode = m.Run()
 		return
 	}
 

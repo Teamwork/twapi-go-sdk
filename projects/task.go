@@ -50,6 +50,8 @@ const (
 //
 // More information can be found at:
 // https://support.teamwork.com/projects/getting-started/tasks-overview
+//
+// sparsefields:gen
 type Task struct {
 	// ID is the unique identifier of the task.
 	ID int64 `json:"id"`
@@ -766,6 +768,13 @@ type TaskListRequestFilters struct {
 
 	// PageSize is the number of tasks to retrieve per page. Defaults to 50.
 	PageSize int64
+
+	// Fields restricts the attributes returned for the task and each of its
+	// sideloads. Each slot of TaskListFields is a separate `fields[entity]=…`
+	// selection; populated slots restrict the response, empty slots return the
+	// API default. Use the generated TaskField / CustomFieldField /
+	// CustomFieldValueField constants to ensure values match real attributes.
+	Fields TaskListFields
 }
 
 func (t TaskListRequestFilters) apply(req *http.Request) {
@@ -823,6 +832,7 @@ func (t TaskListRequestFilters) apply(req *http.Request) {
 	if t.PageSize > 0 {
 		query.Set("pageSize", strconv.FormatInt(t.PageSize, 10))
 	}
+	t.Fields.apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -876,6 +886,8 @@ func (t TaskListRequest) HTTPRequest(ctx context.Context, server string) (*http.
 // https://apidocs.teamwork.com/docs/teamwork/v3/tasks/get-projects-api-v3-tasks-json
 // https://apidocs.teamwork.com/docs/teamwork/v3/tasks/get-projects-api-v3-projects-project-id-tasks-json
 // https://apidocs.teamwork.com/docs/teamwork/v3/tasks/get-projects-api-v3-tasklists-tasklist-id-tasks-json
+//
+// sparsefields:list
 type TaskListResponse struct {
 	request TaskListRequest
 

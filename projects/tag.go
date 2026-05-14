@@ -35,6 +35,8 @@ var (
 //
 // More information can be found at:
 // https://support.teamwork.com/projects/glossary/tags-overview
+//
+// sparsefields:gen
 type Tag struct {
 	// ID is the unique identifier of the tag.
 	ID int64 `json:"id"`
@@ -354,6 +356,13 @@ type TagListRequestFilters struct {
 
 	// PageSize is the number of tags to retrieve per page. Defaults to 50.
 	PageSize int64
+
+	// Fields restricts the attributes returned for the tag and each of its
+	// sideloads. Each slot of TagListFields is a separate `fields[entity]=…`
+	// selection; populated slots restrict the response, empty slots return the
+	// API default. Use the generated TagField constants to ensure values match
+	// real attributes.
+	Fields TagListFields
 }
 
 func (t TagListRequestFilters) apply(req *http.Request) {
@@ -377,6 +386,7 @@ func (t TagListRequestFilters) apply(req *http.Request) {
 	if t.PageSize > 0 {
 		query.Set("pageSize", strconv.FormatInt(t.PageSize, 10))
 	}
+	t.Fields.apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -415,6 +425,8 @@ func (t TagListRequest) HTTPRequest(ctx context.Context, server string) (*http.R
 // filters.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/tags/get-projects-api-v3-tags-json
+//
+// sparsefields:list
 type TagListResponse struct {
 	request TagListRequest
 

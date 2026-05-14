@@ -49,3 +49,10 @@ Desktop.ini
 *.swo
 *~
 .#*
+
+# AI file
+.claude/settings.local.json
+
+# Go generate
+sparsefieldsgen
+!sparsefieldsgen/

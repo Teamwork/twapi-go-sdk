@@ -104,6 +104,8 @@ const (
 )
 
 // ProjectBudget contains project budget data exposed in included sideloads.
+//
+// sparsefields:gen
 type ProjectBudget struct {
 	// ID is the unique identifier of the project budget.
 	ID int64 `json:"id"`
@@ -203,6 +205,13 @@ type ProjectBudgetListRequestFilters struct {
 
 	// Cursor is the pagination cursor used by the endpoint.
 	Cursor string
+
+	// Fields restricts the attributes returned for the project budget and each
+	// of its sideloads. Each slot of ProjectBudgetListFields is a separate
+	// `fields[entity]=…` selection; populated slots restrict the response, empty
+	// slots return the API default. Use the generated ProjectBudgetField
+	// constants to ensure values match real attributes.
+	Fields ProjectBudgetListFields
 }
 
 func (p ProjectBudgetListRequestFilters) apply(req *http.Request) {
@@ -226,6 +235,7 @@ func (p ProjectBudgetListRequestFilters) apply(req *http.Request) {
 	if p.Cursor != "" {
 		query.Set("cursor", p.Cursor)
 	}
+	p.Fields.apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -258,6 +268,8 @@ func (p ProjectBudgetListRequest) HTTPRequest(ctx context.Context, server string
 
 // ProjectBudgetListResponse contains the list of project budgets matching the
 // request filters.
+//
+// sparsefields:list
 type ProjectBudgetListResponse struct {
 	Budgets []ProjectBudget `json:"budgets"`
 

@@ -100,6 +100,8 @@ const (
 )
 
 // CalendarEvent contains all the information returned from an event.
+//
+// sparsefields:gen
 type CalendarEvent struct {
 	// ID is the unique identifier for the event.
 	ID string `json:"id"`
@@ -276,6 +278,14 @@ type CalendarEventListRequestFilters struct {
 
 	// Limit is the maximum number of items to return.
 	Limit int64
+
+	// Fields restricts the attributes returned for the calendar event and each
+	// of its sideloads. Each slot of CalendarEventListFields is a separate
+	// `fields[entity]=…` selection; populated slots restrict the response, empty
+	// slots return the API default. Use the generated CalendarEventField / UserField
+	// / ProjectField / TaskField / TasklistField / CompanyField / TimelogField
+	// constants to ensure values match real attributes.
+	Fields CalendarEventListFields
 }
 
 func (c CalendarEventListRequestFilters) apply(req *http.Request) {
@@ -306,6 +316,7 @@ func (c CalendarEventListRequestFilters) apply(req *http.Request) {
 	query.Set("includeModifiedInstances", "true")
 	query.Set("includeTimelogs", "false")
 
+	c.Fields.apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -349,6 +360,8 @@ func (c CalendarEventListRequest) HTTPRequest(ctx context.Context, server string
 // CalendarEventListResponse contains the response for loading calendar events.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/calendar-events/get-projects-api-v3-calendars-calendar-id-events-json
+//
+// sparsefields:list
 type CalendarEventListResponse struct {
 	request CalendarEventListRequest
 

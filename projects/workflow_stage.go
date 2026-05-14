@@ -30,6 +30,8 @@ var (
 //
 // More information can be found at:
 // https://support.teamwork.com/projects/using-views/workflow-board
+//
+// sparsefields:gen
 type WorkflowStage struct {
 	// ID is the unique identifier of the workflow stage.
 	ID int64 `json:"id"`
@@ -395,6 +397,13 @@ type WorkflowStageListRequestFilters struct {
 
 	// PageSize is the number of stages to retrieve per page. Defaults to 50.
 	PageSize int64
+
+	// Fields restricts the attributes returned for the workflow stage and each
+	// of its sideloads. Each slot of WorkflowStageListFields is a separate
+	// `fields[entity]=…` selection; populated slots restrict the response, empty
+	// slots return the API default. Use the generated WorkflowStageField
+	// constants to ensure values match real attributes.
+	Fields WorkflowStageListFields
 }
 
 func (w WorkflowStageListRequestFilters) apply(req *http.Request) {
@@ -405,6 +414,7 @@ func (w WorkflowStageListRequestFilters) apply(req *http.Request) {
 	if w.PageSize > 0 {
 		query.Set("pageSize", strconv.FormatInt(w.PageSize, 10))
 	}
+	w.Fields.apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -451,6 +461,8 @@ func (w WorkflowStageListRequest) HTTPRequest(ctx context.Context, server string
 // matching the request filters.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/workflows/get-projects-api-v3-workflows-workflow-id-stages-json
+//
+// sparsefields:list
 type WorkflowStageListResponse struct {
 	request WorkflowStageListRequest
 

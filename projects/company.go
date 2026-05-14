@@ -38,6 +38,8 @@ var (
 //
 // More information can be found at:
 // https://support.teamwork.com/projects/getting-started/companies-owner-and-external
+//
+// sparsefields:gen
 type Company struct {
 	// ID is the unique identifier of the company.
 	ID int64 `json:"id"`
@@ -558,6 +560,13 @@ type CompanyListRequestFilters struct {
 
 	// PageSize is the number of companies to retrieve per page. Defaults to 50.
 	PageSize int64
+
+	// Fields restricts the attributes returned for the company and each of its
+	// sideloads. Each slot of CompanyListFields is a separate `fields[entity]=…`
+	// selection; populated slots restrict the response, empty slots return the
+	// API default. Use the generated CompanyField / CustomFieldField /
+	// CustomFieldValueField constants to ensure values match real attributes.
+	Fields CompanyListFields
 }
 
 func (c CompanyListRequestFilters) apply(req *http.Request) {
@@ -583,6 +592,7 @@ func (c CompanyListRequestFilters) apply(req *http.Request) {
 	if c.PageSize > 0 {
 		query.Set("pageSize", strconv.FormatInt(c.PageSize, 10))
 	}
+	c.Fields.apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -622,6 +632,8 @@ func (c CompanyListRequest) HTTPRequest(ctx context.Context, server string) (*ht
 // matching the request filters.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/companies/get-projects-api-v3-companies-json
+//
+// sparsefields:list
 type CompanyListResponse struct {
 	request CompanyListRequest
 

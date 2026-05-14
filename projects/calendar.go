@@ -44,6 +44,8 @@ const (
 // Calendar represents a calendar in Teamwork. Calendars can be of different
 // types such as Google calendars, blocked time calendars, or other integrated
 // calendar services.
+//
+// sparsefields:gen
 type Calendar struct {
 	// ID is the unique identifier of the calendar.
 	ID int64 `json:"id"`
@@ -202,6 +204,13 @@ type CalendarListRequestFilters struct {
 
 	// PageSize is the number of items per page.
 	PageSize int64
+
+	// Fields restricts the attributes returned for the calendar and each of its
+	// sideloads. Each slot of CalendarListFields is a separate `fields[entity]=…`
+	// selection; populated slots restrict the response, empty slots return the
+	// API default. Use the generated CalendarField constants to ensure values
+	// match real attributes.
+	Fields CalendarListFields
 }
 
 func (c CalendarListRequestFilters) apply(req *http.Request) {
@@ -212,6 +221,7 @@ func (c CalendarListRequestFilters) apply(req *http.Request) {
 	if c.PageSize > 0 {
 		query.Set("pageSize", strconv.FormatInt(c.PageSize, 10))
 	}
+	c.Fields.apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -249,6 +259,8 @@ func (c CalendarListRequest) HTTPRequest(ctx context.Context, server string) (*h
 // CalendarListResponse contains the response for loading calendars.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/calendars/get-projects-api-v3-calendars-json
+//
+// sparsefields:list
 type CalendarListResponse struct {
 	request CalendarListRequest
 

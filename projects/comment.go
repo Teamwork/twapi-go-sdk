@@ -37,6 +37,8 @@ var (
 //
 // More information can be found at:
 // https://support.teamwork.com/projects/getting-started/comments-overview
+//
+// sparsefields:gen
 type Comment struct {
 	// ID is the unique identifier of the comment.
 	ID int64 `json:"id"`
@@ -615,6 +617,13 @@ type CommentListRequestFilters struct {
 
 	// PageSize is the number of comments to retrieve per page. Defaults to 50.
 	PageSize int64
+
+	// Fields restricts the attributes returned for the comment and each of its
+	// sideloads. Each slot of CommentListFields is a separate `fields[entity]=…`
+	// selection; populated slots restrict the response, empty slots return the
+	// API default. Use the generated CommentField constants to ensure values
+	// match real attributes.
+	Fields CommentListFields
 }
 
 func (t CommentListRequestFilters) apply(req *http.Request) {
@@ -638,6 +647,7 @@ func (t CommentListRequestFilters) apply(req *http.Request) {
 	if t.PageSize > 0 {
 		query.Set("pageSize", strconv.FormatInt(t.PageSize, 10))
 	}
+	t.Fields.apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -704,6 +714,8 @@ func (t CommentListRequest) HTTPRequest(ctx context.Context, server string) (*ht
 // https://apidocs.teamwork.com/docs/teamwork/v3/notebook-comments/get-projects-api-v3-notebooks-notebook-id-comments-json
 // https://apidocs.teamwork.com/docs/teamwork/v3/task-comments/get-projects-api-v3-tasks-task-id-comments-json
 // https://apidocs.teamwork.com/docs/teamwork/v3/link-comments/get-projects-api-v3-links-link-id-comments-json
+//
+// sparsefields:list
 //
 //nolint:lll
 type CommentListResponse struct {

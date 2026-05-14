@@ -32,6 +32,8 @@ var (
 // using teams, organizations can streamline project planning and ensure the
 // right people are involved in the right parts of a project, enhancing clarity
 // and accountability across the platform.
+//
+// sparsefields:gen
 type Team struct {
 	// ID is the unique identifier of the team.
 	ID LegacyNumber `json:"id"`
@@ -451,6 +453,13 @@ type TeamListRequestFilters struct {
 
 	// PageSize is the number of teams to retrieve per page. Defaults to 50.
 	PageSize int64
+
+	// Fields restricts the attributes returned for the team and each of its
+	// sideloads. Each slot of TeamListFields is a separate `fields[entity]=…`
+	// selection; populated slots restrict the response, empty slots return the
+	// API default. Use the generated TeamField constants to ensure values match
+	// real attributes.
+	Fields TeamListFields
 }
 
 func (u TeamListRequestFilters) apply(req *http.Request) {
@@ -473,6 +482,7 @@ func (u TeamListRequestFilters) apply(req *http.Request) {
 	if u.PageSize > 0 {
 		query.Set("pageSize", strconv.FormatInt(u.PageSize, 10))
 	}
+	u.Fields.apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -526,6 +536,8 @@ func (u TeamListRequest) HTTPRequest(ctx context.Context, server string) (*http.
 // https://apidocs.teamwork.com/docs/teamwork/v1/teams/get-teams-json
 // https://apidocs.teamwork.com/docs/teamwork/v1/teams/get-projects-id-teams-json
 // https://apidocs.teamwork.com/docs/teamwork/v1/teams/get-companies-id-teams-json
+//
+// sparsefields:list
 type TeamListResponse struct {
 	request TeamListRequest
 	hasMore bool

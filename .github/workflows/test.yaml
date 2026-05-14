@@ -31,6 +31,32 @@ jobs:
         with:
           version: v2.10
 
+  generate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Verify generated code is up to date
+        run: |
+          go generate ./...
+          if [[ -n "$(git status --porcelain)" ]]; then
+            echo "::error::Generated code is out of date. Run 'go generate ./...' locally and commit the result."
+            echo "Files changed or created by 'go generate':"
+            git status --short
+            echo
+            echo "Diff:"
+            git --no-pager diff
+            exit 1
+          fi
+
   test:
     runs-on: ubuntu-latest
 
