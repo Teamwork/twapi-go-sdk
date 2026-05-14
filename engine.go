@@ -112,17 +112,9 @@ func Execute[R HTTPRequester, T HTTPResponser](ctx context.Context, engine *Engi
 		responser = reflect.New(rt.Elem()).Interface().(T)
 	}
 
-	req, err := requester.HTTPRequest(ctx, engine.session.Server())
+	resp, err := ExecuteRaw(ctx, engine, requester)
 	if err != nil {
-		return responser, fmt.Errorf("failed to create request: %w", err)
-	}
-	if err := engine.session.Authenticate(ctx, req); err != nil {
-		return responser, fmt.Errorf("failed to authenticate request: %w", err)
-	}
-
-	resp, err := engine.client.Do(req)
-	if err != nil {
-		return responser, fmt.Errorf("failed to execute request: %w", err)
+		return responser, err
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
@@ -141,4 +133,25 @@ func Execute[R HTTPRequester, T HTTPResponser](ctx context.Context, engine *Engi
 	}
 
 	return responser, nil
+}
+
+// ExecuteRaw sends an HTTP request using the provided requester and returns the
+// raw HTTP response. The caller will be responsible for closing the response
+// body. This is useful when using sparse fields, where only a subset of the
+// fields are returned in the response, and the caller needs to handle the
+// response manually.
+func ExecuteRaw[R HTTPRequester](ctx context.Context, engine *Engine, requester R) (*http.Response, error) {
+	req, err := requester.HTTPRequest(ctx, engine.session.Server())
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	if err := engine.session.Authenticate(ctx, req); err != nil {
+		return nil, fmt.Errorf("failed to authenticate request: %w", err)
+	}
+
+	resp, err := engine.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute request: %w", err)
+	}
+	return resp, nil
 }
