@@ -37,6 +37,8 @@ var (
 //
 // More information can be found at:
 // https://support.teamwork.com/projects/getting-started/milestones-overview
+//
+// sparsefields:gen
 type Milestone struct {
 	// ID is the unique identifier of the milestone.
 	ID int64 `json:"id"`
@@ -457,6 +459,13 @@ type MilestoneListRequestFilters struct {
 
 	// PageSize is the number of milestones to retrieve per page. Defaults to 50.
 	PageSize int64
+
+	// Fields restricts the attributes returned for the milestone and each of its
+	// sideloads. Each slot of MilestoneListFields is a separate
+	// `fields[entity]=…` selection; populated slots restrict the response, empty
+	// slots return the API default. Use the generated MilestoneField constants
+	// to ensure values match real attributes.
+	Fields MilestoneListFields
 }
 
 func (m MilestoneListRequestFilters) apply(req *http.Request) {
@@ -480,6 +489,7 @@ func (m MilestoneListRequestFilters) apply(req *http.Request) {
 	if m.PageSize > 0 {
 		query.Set("pageSize", strconv.FormatInt(m.PageSize, 10))
 	}
+	m.Fields.apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -529,6 +539,8 @@ func (m MilestoneListRequest) HTTPRequest(ctx context.Context, server string) (*
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/milestones/get-projects-api-v3-milestones-json
 // https://apidocs.teamwork.com/docs/teamwork/v3/milestones/get-projects-api-v3-projects-project-id-milestones-json
+//
+// sparsefields:list
 type MilestoneListResponse struct {
 	request MilestoneListRequest
 

@@ -35,6 +35,8 @@ var (
 // resources more effectively, invoice clients accurately, and assess
 // productivity. They can be created manually or with timers, and are often used
 // for reporting and billing purposes.
+//
+// sparsefields:gen
 type Timelog struct {
 	// ID is the unique identifier of the timelog.
 	ID int64 `json:"id"`
@@ -550,6 +552,13 @@ type TimelogListRequestFilters struct {
 
 	// PageSize is the number of timelogs to retrieve per page. Defaults to 50.
 	PageSize int64
+
+	// Fields restricts the attributes returned for the timelog and each of its
+	// sideloads. Each slot of TimelogListFields is a separate `fields[entity]=…`
+	// selection; populated slots restrict the response, empty slots return the
+	// API default. Use the generated TimelogField constants to ensure values
+	// match real attributes.
+	Fields TimelogListFields
 }
 
 func (t TimelogListRequestFilters) apply(req *http.Request) {
@@ -604,6 +613,7 @@ func (t TimelogListRequestFilters) apply(req *http.Request) {
 	if t.PageSize > 0 {
 		query.Set("pageSize", strconv.FormatInt(t.PageSize, 10))
 	}
+	t.Fields.apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -657,6 +667,8 @@ func (t TimelogListRequest) HTTPRequest(ctx context.Context, server string) (*ht
 // https://apidocs.teamwork.com/docs/teamwork/v3/time-tracking/get-projects-api-v3-time-json
 // https://apidocs.teamwork.com/docs/teamwork/v3/time-tracking/get-projects-api-v3-tasks-task-id-time-json
 // https://apidocs.teamwork.com/docs/teamwork/v3/time-tracking/get-projects-api-v3-projects-project-id-time-json
+//
+// sparsefields:list
 type TimelogListResponse struct {
 	request TimelogListRequest
 

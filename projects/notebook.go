@@ -49,6 +49,8 @@ const (
 //
 // More information can be found at:
 // https://support.teamwork.com/projects/notebooks
+//
+// sparsefields:gen
 type Notebook struct {
 	// ID is the unique identifier of the notebook.
 	ID int64 `json:"id"`
@@ -454,6 +456,13 @@ type NotebookListRequestFilters struct {
 
 	// PageSize is the number of notebooks to retrieve per page. Defaults to 50.
 	PageSize int64
+
+	// Fields restricts the attributes returned for the notebook and each of its
+	// sideloads. Each slot of NotebookListFields is a separate
+	// `fields[entity]=…` selection; populated slots restrict the response, empty
+	// slots return the API default. Use the generated NotebookField constants
+	// to ensure values match real attributes.
+	Fields NotebookListFields
 }
 
 func (m NotebookListRequestFilters) apply(req *http.Request) {
@@ -487,6 +496,7 @@ func (m NotebookListRequestFilters) apply(req *http.Request) {
 	if m.PageSize > 0 {
 		query.Set("pageSize", strconv.FormatInt(m.PageSize, 10))
 	}
+	m.Fields.apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -524,6 +534,8 @@ func (m NotebookListRequest) HTTPRequest(ctx context.Context, server string) (*h
 // request filters.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/notebooks/get-projects-api-v3-notebooks-json
+//
+// sparsefields:list
 type NotebookListResponse struct {
 	request NotebookListRequest
 

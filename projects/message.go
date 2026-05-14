@@ -46,6 +46,8 @@ const (
 //
 // More information can be found at:
 // https://support.teamwork.com/projects/getting-started/messages-overview
+//
+// sparsefields:gen
 type Message struct {
 	// ID is the unique identifier of the message.
 	ID int64 `json:"id"`
@@ -492,6 +494,13 @@ type MessageListRequestFilters struct {
 
 	// PageSize is the number of messages to retrieve per page. Defaults to 50.
 	PageSize int64
+
+	// Fields restricts the attributes returned for the message and each of its
+	// sideloads. Each slot of MessageListFields is a separate `fields[entity]=…`
+	// selection; populated slots restrict the response, empty slots return the
+	// API default. Use the generated MessageField constants to ensure values
+	// match real attributes.
+	Fields MessageListFields
 }
 
 func (m MessageListRequestFilters) apply(req *http.Request) {
@@ -522,6 +531,7 @@ func (m MessageListRequestFilters) apply(req *http.Request) {
 	if m.PageSize > 0 {
 		query.Set("pageSize", strconv.FormatInt(m.PageSize, 10))
 	}
+	m.Fields.apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -559,6 +569,8 @@ func (m MessageListRequest) HTTPRequest(ctx context.Context, server string) (*ht
 // request filters.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/messages/get-projects-api-v3-messages-json
+//
+// sparsefields:list
 type MessageListResponse struct {
 	request MessageListRequest
 

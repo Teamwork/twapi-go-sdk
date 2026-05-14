@@ -62,6 +62,8 @@ const (
 //
 // More information can be found at:
 // https://support.teamwork.com/projects/getting-started/projects-overview
+//
+// sparsefields:gen
 type Project struct {
 	// ID is the unique identifier of the project.
 	ID int64 `json:"id"`
@@ -787,6 +789,14 @@ type ProjectListRequestFilters struct {
 
 	// PageSize is the number of projects to retrieve per page. Defaults to 50.
 	PageSize int64
+
+	// Fields restricts the attributes returned for the project and each of its
+	// sideloads. Each slot of ProjectListFields is a separate `fields[entity]=…`
+	// selection; populated slots restrict the response, empty slots return the
+	// API default. Use the generated ProjectField / ProjectCategoryField /
+	// CustomFieldField / CustomFieldValueField constants to ensure values match
+	// real attributes.
+	Fields ProjectListFields
 }
 
 func (p ProjectListRequestFilters) apply(req *http.Request) {
@@ -819,6 +829,7 @@ func (p ProjectListRequestFilters) apply(req *http.Request) {
 	if p.PageSize > 0 {
 		query.Set("pageSize", strconv.FormatInt(p.PageSize, 10))
 	}
+	p.Fields.apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -857,6 +868,8 @@ func (p ProjectListRequest) HTTPRequest(ctx context.Context, server string) (*ht
 // request filters.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/projects/get-projects-api-v3-projects-json
+//
+// sparsefields:list
 type ProjectListResponse struct {
 	request ProjectListRequest
 

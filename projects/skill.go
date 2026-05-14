@@ -38,6 +38,8 @@ var (
 //
 // More information can be found at:
 // https://support.teamwork.com/projects/planning/skills
+//
+// sparsefields:gen
 type Skill struct {
 	// ID is the unique identifier of the skill.
 	ID int64 `json:"id"`
@@ -384,6 +386,13 @@ type SkillListRequestFilters struct {
 	// Include contains additional related information to include in the response
 	// as a sideload.
 	Include []SkillListRequestSideload
+
+	// Fields restricts the attributes returned for the skill and each of its
+	// sideloads. Each slot of SkillListFields is a separate `fields[entity]=…`
+	// selection; populated slots restrict the response, empty slots return the
+	// API default. Use the generated SkillField constants to ensure values match
+	// real attributes.
+	Fields SkillListFields
 }
 
 func (s SkillListRequestFilters) apply(req *http.Request) {
@@ -404,6 +413,7 @@ func (s SkillListRequestFilters) apply(req *http.Request) {
 		}
 		query.Set("include", strings.Join(include, ","))
 	}
+	s.Fields.apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -445,6 +455,8 @@ func (s SkillListRequest) HTTPRequest(ctx context.Context, server string) (*http
 // request filters.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/skills/get-projects-api-v3-skills-json
+//
+// sparsefields:list
 type SkillListResponse struct {
 	request SkillListRequest
 

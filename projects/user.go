@@ -38,6 +38,8 @@ var (
 //
 // More information can be found at:
 // https://support.teamwork.com/projects/getting-started/people-overview
+//
+// sparsefields:gen
 type User struct {
 	// ID is the unique identifier of the user.
 	ID int64 `json:"id"`
@@ -519,6 +521,13 @@ type UserListRequestFilters struct {
 
 	// PageSize is the number of users to retrieve per page. Defaults to 50.
 	PageSize int64
+
+	// Fields restricts the attributes returned for the user and each of its
+	// sideloads. Each slot of UserListFields is a separate `fields[entity]=…`
+	// selection; populated slots restrict the response, empty slots return the
+	// API default. Use the generated UserField constants to ensure values match
+	// real attributes.
+	Fields UserListFields
 }
 
 func (u UserListRequestFilters) apply(req *http.Request) {
@@ -535,6 +544,7 @@ func (u UserListRequestFilters) apply(req *http.Request) {
 	if u.PageSize > 0 {
 		query.Set("pageSize", strconv.FormatInt(u.PageSize, 10))
 	}
+	u.Fields.apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -584,6 +594,8 @@ func (u UserListRequest) HTTPRequest(ctx context.Context, server string) (*http.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/people/get-projects-api-v3-people-json
 // https://apidocs.teamwork.com/docs/teamwork/v3/people/get-projects-api-v3-projects-project-id-people-json
+//
+// sparsefields:list
 type UserListResponse struct {
 	request UserListRequest
 

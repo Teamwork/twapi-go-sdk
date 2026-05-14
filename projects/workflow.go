@@ -32,6 +32,8 @@ var (
 //
 // More information can be found at:
 // https://support.teamwork.com/projects/workflows/create-and-manage-workflows
+//
+// sparsefields:gen
 type Workflow struct {
 	// ID is the unique identifier of the workflow.
 	ID int64 `json:"id"`
@@ -340,6 +342,13 @@ type WorkflowListRequestFilters struct {
 
 	// PageSize is the number of workflows to retrieve per page. Defaults to 50.
 	PageSize int64
+
+	// Fields restricts the attributes returned for the workflow and each of its
+	// sideloads. Each slot of WorkflowListFields is a separate
+	// `fields[entity]=…` selection; populated slots restrict the response, empty
+	// slots return the API default. Use the generated WorkflowField constants
+	// to ensure values match real attributes.
+	Fields WorkflowListFields
 }
 
 func (w WorkflowListRequestFilters) apply(req *http.Request) {
@@ -353,6 +362,7 @@ func (w WorkflowListRequestFilters) apply(req *http.Request) {
 	if w.PageSize > 0 {
 		query.Set("pageSize", strconv.FormatInt(w.PageSize, 10))
 	}
+	w.Fields.apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -391,6 +401,8 @@ func (w WorkflowListRequest) HTTPRequest(ctx context.Context, server string) (*h
 // the request filters.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/workflows/get-projects-api-v3-workflows-json
+//
+// sparsefields:list
 type WorkflowListResponse struct {
 	request WorkflowListRequest
 

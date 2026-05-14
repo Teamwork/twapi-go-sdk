@@ -28,6 +28,8 @@ var (
 //
 // More information can be found at:
 // https://support.teamwork.com/projects/using-teamwork/activity
+//
+// sparsefields:gen
 type Activity struct {
 	// ID is the unique identifier of the activity.
 	ID int64 `json:"id"`
@@ -195,6 +197,13 @@ type ActivityListRequestFilters struct {
 
 	// PageSize is the number of activities to retrieve per page. Defaults to 50.
 	PageSize int64
+
+	// Fields restricts the attributes returned for the activity and each of its
+	// sideloads. Each slot of ActivityListFields is a separate `fields[entity]=…`
+	// selection; populated slots restrict the response, empty slots return the
+	// API default. Use the generated ActivityField constants to ensure values
+	// match real attributes.
+	Fields ActivityListFields
 }
 
 func (a ActivityListRequestFilters) apply(req *http.Request) {
@@ -218,6 +227,7 @@ func (a ActivityListRequestFilters) apply(req *http.Request) {
 	if a.PageSize > 0 {
 		query.Set("pageSize", strconv.FormatInt(a.PageSize, 10))
 	}
+	a.Fields.apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -267,6 +277,8 @@ func (a ActivityListRequest) HTTPRequest(ctx context.Context, server string) (*h
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/activity/get-projects-api-v3-latestactivity-json
 // https://apidocs.teamwork.com/docs/teamwork/v3/activity/get-projects-api-v3-projects-project-id-latestactivity
+//
+// sparsefields:list
 type ActivityListResponse struct {
 	request ActivityListRequest
 

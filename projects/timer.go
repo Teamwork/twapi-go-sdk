@@ -42,6 +42,8 @@ var (
 //
 // More information can be found at:
 // https://support.teamwork.com/projects/time-tracking/multiple-timers
+//
+// sparsefields:gen
 type Timer struct {
 	// ID is the unique identifier of the timer.
 	ID int64 `json:"id"`
@@ -647,6 +649,13 @@ type TimerListRequestFilters struct {
 
 	// PageSize is the number of timers to retrieve per page. Defaults to 50.
 	PageSize int64
+
+	// Fields restricts the attributes returned for the timer and each of its
+	// sideloads. Each slot of TimerListFields is a separate `fields[entity]=…`
+	// selection; populated slots restrict the response, empty slots return the
+	// API default. Use the generated TimerField constants to ensure values
+	// match real attributes.
+	Fields TimerListFields
 }
 
 func (t TimerListRequestFilters) apply(req *http.Request) {
@@ -669,6 +678,7 @@ func (t TimerListRequestFilters) apply(req *http.Request) {
 	if t.PageSize > 0 {
 		query.Set("pageSize", strconv.FormatInt(t.PageSize, 10))
 	}
+	t.Fields.apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -707,6 +717,8 @@ func (t TimerListRequest) HTTPRequest(ctx context.Context, server string) (*http
 // request filters.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/time-tracking/get-projects-api-v3-timers-json
+//
+// sparsefields:list
 type TimerListResponse struct {
 	request TimerListRequest
 

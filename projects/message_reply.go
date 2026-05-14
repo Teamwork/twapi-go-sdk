@@ -57,6 +57,8 @@ const (
 // maintain context by staying linked to the main topic, include the author and
 // timestamp, and help create a clear, ongoing conversation that is easy for
 // everyone involved to follow and reference.
+//
+// sparsefields:gen
 type MessageReply struct {
 	// ID is the unique identifier of the message reply.
 	ID int64 `json:"id"`
@@ -465,6 +467,13 @@ type MessageReplyListRequestFilters struct {
 	// PageSize is the number of message replies to retrieve per page. Defaults to
 	// 50.
 	PageSize int64
+
+	// Fields restricts the attributes returned for the message reply and each of
+	// its sideloads. Each slot of MessageReplyListFields is a separate
+	// `fields[entity]=…` selection; populated slots restrict the response, empty
+	// slots return the API default. Use the generated MessageReplyField constants
+	// to ensure values match real attributes.
+	Fields MessageReplyListFields
 }
 
 func (m MessageReplyListRequestFilters) apply(req *http.Request) {
@@ -492,6 +501,7 @@ func (m MessageReplyListRequestFilters) apply(req *http.Request) {
 	if m.PageSize > 0 {
 		query.Set("pageSize", strconv.FormatInt(m.PageSize, 10))
 	}
+	m.Fields.apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -542,6 +552,8 @@ func (m MessageReplyListRequest) HTTPRequest(ctx context.Context, server string)
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/message-replies/get-projects-api-v3-messagesreplies-json
 // https://apidocs.teamwork.com/docs/teamwork/v3/message-replies/get-projects-api-v3-messages-message-id-replies-json
+//
+// sparsefields:list
 type MessageReplyListResponse struct {
 	request MessageReplyListRequest
 

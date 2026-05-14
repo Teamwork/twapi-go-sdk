@@ -20,9 +20,9 @@ func TestTasklistBudgetListRequestGeneration(t *testing.T) {
 		projects.TasklistBudgetListRequestSideloadTasklists,
 		projects.TasklistBudgetListRequestSideloadProjectBudgets,
 	}
-	req.Filters.Fields.Tasklists = []string{"id", "name"}
-	req.Filters.Fields.TasklistBudgetNotifications = []string{"id", "projectId"}
-	req.Filters.Fields.ProjectBudgets = []string{"id", "status", "dateCreated"}
+	req.Filters.Fields.Tasklists = []projects.TasklistField{"id", "name"}
+	req.Filters.Fields.Notifications = []projects.TasklistBudgetNotificationField{"id", "projectId"}
+	req.Filters.Fields.ProjectBudgets = []projects.ProjectBudgetField{"id", "status", "dateCreated"}
 
 	httpReq, err := req.HTTPRequest(context.Background(), "https://test.com")
 	if err != nil {
@@ -59,10 +59,10 @@ func TestTasklistBudgetListRequestGeneration(t *testing.T) {
 	if query.Get("fields[tasklists]") != "id,name" {
 		t.Errorf("expected fields[tasklists]=id,name but got %q", query.Get("fields[tasklists]"))
 	}
-	if query.Get("fields[tasklistBudgetNotifications]") != "id,projectId" {
+	if query.Get("fields[notifications]") != "id,projectId" {
 		t.Errorf(
-			"expected fields[tasklistBudgetNotifications]=id,projectId but got %q",
-			query.Get("fields[tasklistBudgetNotifications]"),
+			"expected fields[notifications]=id,projectId but got %q",
+			query.Get("fields[notifications]"),
 		)
 	}
 	if query.Get("fields[projectBudgets]") != "id,status,dateCreated" {

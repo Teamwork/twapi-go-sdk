@@ -32,6 +32,8 @@ var (
 //
 // More information can be found at:
 // https://support.teamwork.com/projects/glossary/categories
+//
+// sparsefields:gen
 type ProjectCategory struct {
 	// ID is the unique identifier of the projectCategory.
 	ID int64 `json:"id"`
@@ -366,6 +368,13 @@ type ProjectCategoryListRequestFilters struct {
 	// PageSize is the number of project categories to retrieve per page. Defaults
 	// to 50.
 	PageSize int64
+
+	// Fields restricts the attributes returned for the project category and each
+	// of its sideloads. Each slot of ProjectCategoryListFields is a separate
+	// `fields[entity]=…` selection; populated slots restrict the response, empty
+	// slots return the API default. Use the generated ProjectCategoryField
+	// constants to ensure values match real attributes.
+	Fields ProjectCategoryListFields
 }
 
 func (p ProjectCategoryListRequestFilters) apply(req *http.Request) {
@@ -379,6 +388,7 @@ func (p ProjectCategoryListRequestFilters) apply(req *http.Request) {
 	if p.PageSize > 0 {
 		query.Set("pageSize", strconv.FormatInt(p.PageSize, 10))
 	}
+	p.Fields.apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -419,6 +429,8 @@ func (p ProjectCategoryListRequest) HTTPRequest(ctx context.Context, server stri
 // categories matching the request filters.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/categories/get-projects-api-v3-projectcategories-json
+//
+// sparsefields:list
 type ProjectCategoryListResponse struct {
 	request ProjectCategoryListRequest
 

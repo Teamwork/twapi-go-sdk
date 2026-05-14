@@ -19,6 +19,8 @@ var (
 )
 
 // TasklistBudget represents a budget item attached to a tasklist.
+//
+// sparsefields:gen
 type TasklistBudget struct {
 	// ID is the unique identifier of the tasklist budget.
 	ID int64 `json:"id"`
@@ -69,6 +71,8 @@ type TasklistBudget struct {
 
 // TasklistBudgetNotification contains notification details for a tasklist
 // budget.
+//
+// sparsefields:gen
 type TasklistBudgetNotification struct {
 	// ID is the unique identifier of the notification.
 	ID int64 `json:"id"`
@@ -119,20 +123,6 @@ const (
 	TasklistBudgetListRequestOrderByDateCreated TasklistBudgetListRequestOrderBy = "dateCreated"
 )
 
-// TasklistBudgetListRequestFields contains field selectors for sideloaded
-// entities.
-type TasklistBudgetListRequestFields struct {
-	// Tasklists limits fields returned for sideloaded tasklists.
-	Tasklists []string
-
-	// TasklistBudgetNotifications limits fields returned for sideloaded
-	// notifications.
-	TasklistBudgetNotifications []string
-
-	// ProjectBudgets limits fields returned for sideloaded project budgets.
-	ProjectBudgets []string
-}
-
 // TasklistBudgetListRequestFilters contains filters for listing tasklist
 // budgets in a project budget.
 type TasklistBudgetListRequestFilters struct {
@@ -155,8 +145,13 @@ type TasklistBudgetListRequestFilters struct {
 	// Include specifies sideloaded entities to include in the response.
 	Include []TasklistBudgetListRequestSideload
 
-	// Fields specifies field filtering for sideloaded entities.
-	Fields TasklistBudgetListRequestFields
+	// Fields restricts the attributes returned for the tasklist budget and each
+	// of its sideloads. Each slot of TasklistBudgetListFields is a separate
+	// `fields[entity]=…` selection; populated slots restrict the response, empty
+	// slots return the API default. Use the generated TasklistBudgetField /
+	// TasklistBudgetNotificationField / ProjectBudgetField / TasklistField
+	// constants to ensure values match real attributes.
+	Fields TasklistBudgetListFields
 }
 
 func (p TasklistBudgetListRequestFilters) apply(req *http.Request) {
@@ -183,15 +178,7 @@ func (p TasklistBudgetListRequestFilters) apply(req *http.Request) {
 		}
 		query.Set("include", strings.Join(include, ","))
 	}
-	if len(p.Fields.Tasklists) > 0 {
-		query.Set("fields[tasklists]", strings.Join(p.Fields.Tasklists, ","))
-	}
-	if len(p.Fields.TasklistBudgetNotifications) > 0 {
-		query.Set("fields[tasklistBudgetNotifications]", strings.Join(p.Fields.TasklistBudgetNotifications, ","))
-	}
-	if len(p.Fields.ProjectBudgets) > 0 {
-		query.Set("fields[projectBudgets]", strings.Join(p.Fields.ProjectBudgets, ","))
-	}
+	p.Fields.apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -238,6 +225,8 @@ func (p TasklistBudgetListRequest) HTTPRequest(ctx context.Context, server strin
 // project budget.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/budgets/get-projects-api-v3-projects-budgets-id-tasklists-budgets-json
+//
+// sparsefields:list
 type TasklistBudgetListResponse struct {
 	request TasklistBudgetListRequest
 

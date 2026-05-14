@@ -243,6 +243,8 @@ type customField struct {
 // More information can be found at:
 // https://support.teamwork.com/projects/custom-fields/create-and-manage-custom-fields
 // https://support.teamwork.com/projects/custom-fields/use-custom-fields
+//
+// sparsefields:gen
 type CustomField struct {
 	customField
 
@@ -678,6 +680,13 @@ type CustomFieldListRequestFilters struct {
 	// PageSize is the number of custom fields to retrieve per page. Defaults to
 	// 50.
 	PageSize int64
+
+	// Fields restricts the attributes returned for the custom field and each of
+	// its sideloads. Each slot of CustomFieldListFields is a separate
+	// `fields[entity]=…` selection; populated slots restrict the response, empty
+	// slots return the API default. Use the generated CustomFieldField
+	// constants to ensure values match real attributes.
+	Fields CustomFieldListFields
 }
 
 func (c CustomFieldListRequestFilters) apply(req *http.Request) {
@@ -730,6 +739,7 @@ func (c CustomFieldListRequestFilters) apply(req *http.Request) {
 	if c.PageSize > 0 {
 		query.Set("pageSize", strconv.FormatInt(c.PageSize, 10))
 	}
+	c.Fields.apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -770,6 +780,8 @@ func (c CustomFieldListRequest) HTTPRequest(ctx context.Context, server string) 
 // matching the request filters.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/custom-fields/get-projects-api-v3-customfields-json
+//
+// sparsefields:list
 type CustomFieldListResponse struct {
 	request CustomFieldListRequest
 
