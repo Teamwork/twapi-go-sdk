@@ -42,7 +42,7 @@ const (
 // records (see CustomItemRecord), and is scoped to one or more projects.
 //
 // More information can be found at:
-// https://support.teamwork.com/projects/custom-items
+// https://support.teamwork.com/projects/projects-area/custom-items
 type CustomItem struct {
 	// ID is the unique identifier of the custom item type.
 	ID int64 `json:"id"`
