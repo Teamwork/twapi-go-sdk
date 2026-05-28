@@ -27,6 +27,17 @@ var (
 	_ twapi.HTTPResponser = (*UserListResponse)(nil)
 )
 
+// UserType identifies the type of a user.
+type UserType string
+
+// Supported user types. Only types currently surfaced by the SDK are
+// exposed.
+const (
+	UserTypeAccount      UserType = "account"
+	UserTypeCollaborator UserType = "collaborator"
+	UserTypeContact      UserType = "contact"
+)
+
 // User is an individual who has access to one or more projects within a
 // Teamwork site, typically as a team member, collaborator, or administrator.
 // Users can be assigned tasks, participate in discussions, log time, share
@@ -512,9 +523,9 @@ type UserListRequestFilters struct {
 	// SearchTerm is an optional search term to filter users by name or e-mail.
 	SearchTerm string
 
-	// Type is an optional filter to load only users of a specific type. Possible
-	// values are "account", "collaborator" or "contact".
-	Type string
+	// Type is an optional filter to load only users of a specific type. Use
+	// the UserType constants.
+	Type UserType
 
 	// Page is the page number to retrieve. Defaults to 1.
 	Page int64
@@ -536,7 +547,7 @@ func (u UserListRequestFilters) apply(req *http.Request) {
 		query.Set("searchTerm", u.SearchTerm)
 	}
 	if u.Type != "" {
-		query.Set("userType", u.Type)
+		query.Set("userType", string(u.Type))
 	}
 	if u.Page > 0 {
 		query.Set("page", strconv.FormatInt(u.Page, 10))

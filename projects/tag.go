@@ -25,6 +25,25 @@ var (
 	_ twapi.HTTPResponser = (*TagListResponse)(nil)
 )
 
+// TagItemType identifies the type of item a tag can be associated with when
+// listing tags.
+type TagItemType string
+
+// Supported tag item types. Only types currently represented by an SDK
+// resource are exposed.
+const (
+	TagItemTypeProject   TagItemType = "PROJECT"
+	TagItemTypeTask      TagItemType = "TASK"
+	TagItemTypeTasklist  TagItemType = "TASKLIST"
+	TagItemTypeMilestone TagItemType = "MILESTONE"
+	TagItemTypeMessage   TagItemType = "MESSAGE"
+	TagItemTypeTimelog   TagItemType = "TIMELOG"
+	TagItemTypeNotebook  TagItemType = "NOTEBOOK"
+	TagItemTypeFile      TagItemType = "FILE"
+	TagItemTypeCompany   TagItemType = "COMPANY"
+	TagItemTypeLink      TagItemType = "LINK"
+)
+
 // Tag is a customizable label that can be applied to various items such as
 // tasks, projects, milestones, messages, and more, to help categorize and
 // organize work efficiently. Tags provide a flexible way to filter, search, and
@@ -342,10 +361,9 @@ type TagListRequestFilters struct {
 	// SearchTerm is an optional search term to filter tags by name.
 	SearchTerm string
 
-	// ItemType is the type of item the tag is associated with. Valid values are
-	// 'project', 'task', 'tasklist', 'milestone', 'message', 'timelog',
-	// 'notebook', 'file', 'company' and 'link'.
-	ItemType string
+	// ItemType is the type of item the tag is associated with. Use the
+	// TagItemType constants.
+	ItemType TagItemType
 
 	// ProjectIDs is an optional list of project IDs to filter tags by
 	// belonging to specific projects.
@@ -371,7 +389,7 @@ func (t TagListRequestFilters) apply(req *http.Request) {
 		query.Set("searchTerm", t.SearchTerm)
 	}
 	if t.ItemType != "" {
-		query.Set("itemType", t.ItemType)
+		query.Set("itemType", string(t.ItemType))
 	}
 	if len(t.ProjectIDs) > 0 {
 		projectIDs := make([]string, len(t.ProjectIDs))

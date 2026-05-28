@@ -125,6 +125,18 @@ func (c CustomFieldUnit) MarshalJSON() ([]byte, error) {
 	return json.Marshal(id)
 }
 
+// CustomFieldOrderBy identifies the attributes a custom field list can be
+// ordered by.
+type CustomFieldOrderBy string
+
+// Supported custom field order-by values.
+const (
+	CustomFieldOrderByName        CustomFieldOrderBy = "name"
+	CustomFieldOrderByProject     CustomFieldOrderBy = "project"
+	CustomFieldOrderByDateCreated CustomFieldOrderBy = "datecreated"
+	CustomFieldOrderByDateUpdated CustomFieldOrderBy = "dateupdated"
+)
+
 // CustomFieldOptions represents type-specific options for a custom field. The
 // structure of the options varies based on the custom field type.
 type CustomFieldOptions interface {
@@ -666,9 +678,9 @@ type CustomFieldListRequestFilters struct {
 	// results. Defaults to false.
 	ShowDeleted *bool
 
-	// OrderBy is the field to sort the results by. Valid values are "name",
-	// "project", "dateCreated" and "dateUpdated".
-	OrderBy string
+	// OrderBy is the field to sort the results by. Use the
+	// CustomFieldOrderBy constants.
+	OrderBy CustomFieldOrderBy
 
 	// OrderMode is the direction to sort the results in. See twapi.OrderMode for
 	// the supported values.
@@ -728,7 +740,7 @@ func (c CustomFieldListRequestFilters) apply(req *http.Request) {
 		query.Set("showDeleted", strconv.FormatBool(*c.ShowDeleted))
 	}
 	if c.OrderBy != "" {
-		query.Set("orderBy", c.OrderBy)
+		query.Set("orderBy", string(c.OrderBy))
 	}
 	if c.OrderMode != "" {
 		query.Set("orderMode", string(c.OrderMode))
