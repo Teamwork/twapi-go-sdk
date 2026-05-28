@@ -34,44 +34,36 @@ type CustomItemRecordState string
 
 // Supported custom item record states.
 const (
-	CustomItemRecordStateActive  CustomItemRecordState = "active"
-	CustomItemRecordStateDeleted CustomItemRecordState = "deleted"
+	CustomItemRecordStateActive   CustomItemRecordState = "active"
+	CustomItemRecordStateArchived CustomItemRecordState = "archived"
+	CustomItemRecordStateDeleted  CustomItemRecordState = "deleted"
 )
 
-// NullableInt64 is a tri-state integer used on writes where the API
-// distinguishes between an unset field, a field set to null, and a field set
-// to a concrete value. Use the helper constructors NewNullableInt64 and
-// NullInt64 instead of building it by hand.
-type NullableInt64 struct {
-	// Value is the integer value, ignored when Null is true.
-	Value int64
-	// Null indicates the field is explicitly set to null.
-	Null bool
-	// Set indicates the field is present in the payload. When false, the
-	// field is omitted entirely.
-	Set bool
-}
+// CustomItemRecordSideload identifies the related entities that can be
+// requested alongside a custom item record via the API's include mechanism.
+type CustomItemRecordSideload string
 
-// NewNullableInt64 returns a NullableInt64 set to the given value.
-func NewNullableInt64(value int64) NullableInt64 {
-	return NullableInt64{Value: value, Set: true}
-}
+// Supported custom item record sideloads.
+const (
+	CustomItemRecordSideloadCreatedBy          CustomItemRecordSideload = "createdBy"
+	CustomItemRecordSideloadUpdatedBy          CustomItemRecordSideload = "updatedBy"
+	CustomItemRecordSideloadDeletedBy          CustomItemRecordSideload = "deletedBy"
+	CustomItemRecordSideloadCustomItems        CustomItemRecordSideload = "customItems"
+	CustomItemRecordSideloadCustomItemFields   CustomItemRecordSideload = "customItemFields"
+	CustomItemRecordSideloadCustomItemSections CustomItemRecordSideload = "customItemSections"
+	CustomItemRecordSideloadUsers              CustomItemRecordSideload = "users"
+)
 
-// NullInt64 returns a NullableInt64 set to null.
-func NullInt64() NullableInt64 {
-	return NullableInt64{Null: true, Set: true}
-}
+// CustomItemRecordOrderBy identifies the attributes a custom item record
+// list can be ordered by.
+type CustomItemRecordOrderBy string
 
-// MarshalJSON implements json.Marshaler. Unset values are encoded as a JSON
-// null only when the surrounding tag does not include omitempty, so callers
-// embed NullableInt64 alongside the omitempty tag on the parent field for
-// "omit when not set" semantics.
-func (n NullableInt64) MarshalJSON() ([]byte, error) {
-	if !n.Set || n.Null {
-		return []byte("null"), nil
-	}
-	return json.Marshal(n.Value)
-}
+// Supported custom item record order-by values.
+const (
+	CustomItemRecordOrderByDisplayOrder    CustomItemRecordOrderBy = "displayorder"
+	CustomItemRecordOrderByName            CustomItemRecordOrderBy = "name"
+	CustomItemRecordOrderByCustomItemField CustomItemRecordOrderBy = "customitemfield"
+)
 
 // CustomItemRecordFieldValues is the field values payload of a record, keyed
 // by each field's TwID. The concrete type of the value depends on the
@@ -160,9 +152,9 @@ type CustomItemRecordCreateRequest struct {
 	// Name is the display name of the record. This field is required.
 	Name string `json:"name"`
 
-	// SectionID places the record in the given section. Use NullInt64() to
-	// place it outside any section.
-	SectionID NullableInt64 `json:"sectionId,omitzero"`
+	// SectionID places the record in the given section. Use twapi.NullInt64()
+	// to place it outside any section.
+	SectionID twapi.NullableInt64 `json:"sectionId,omitzero"`
 
 	// PositionAfterID places the new record after the record with the given
 	// ID. Nil appends to the end of the section.
@@ -264,9 +256,9 @@ type CustomItemRecordUpdateRequest struct {
 	// Name is the new display name of the record.
 	Name *string `json:"name,omitempty"`
 
-	// SectionID moves the record to the given section. Use NullInt64() to
-	// remove the record from any section.
-	SectionID NullableInt64 `json:"sectionId,omitzero"`
+	// SectionID moves the record to the given section. Use twapi.NullInt64()
+	// to remove the record from any section.
+	SectionID twapi.NullableInt64 `json:"sectionId,omitzero"`
 
 	// PositionAfterID moves the record after the record with the given ID.
 	PositionAfterID *int64 `json:"positionAfterId,omitempty"`
@@ -535,10 +527,9 @@ type CustomItemRecordGetRequest struct {
 	// Path contains the path parameters for the request.
 	Path CustomItemRecordGetRequestPath
 
-	// Include is an optional list of related entities to sideload. Common
-	// values include "createdBy", "updatedBy", "deletedBy", "customItems",
-	// "customItemFields" and "customItemSections".
-	Include []string
+	// Include is an optional list of related entities to sideload. Use the
+	// CustomItemRecordSideload constants.
+	Include []CustomItemRecordSideload
 }
 
 // NewCustomItemRecordGetRequest creates a new CustomItemRecordGetRequest
@@ -568,8 +559,12 @@ func (c CustomItemRecordGetRequest) HTTPRequest(ctx context.Context, server stri
 		return nil, err
 	}
 	if len(c.Include) > 0 {
+		includes := make([]string, len(c.Include))
+		for i, include := range c.Include {
+			includes[i] = string(include)
+		}
 		query := req.URL.Query()
-		query.Set("include", strings.Join(c.Include, ","))
+		query.Set("include", strings.Join(includes, ","))
 		req.URL.RawQuery = query.Encode()
 	}
 
@@ -628,9 +623,8 @@ type CustomItemRecordListRequestFilters struct {
 	// ShowDeleted includes deleted records in the result.
 	ShowDeleted *bool
 
-	// OrderBy sorts the result. Supported values include "name",
-	// "displayOrder", "dateCreated" and "dateUpdated".
-	OrderBy string
+	// OrderBy sorts the result. Use the CustomItemRecordOrderBy constants.
+	OrderBy CustomItemRecordOrderBy
 
 	// OrderMode is the sort direction.
 	OrderMode twapi.OrderMode
@@ -641,11 +635,6 @@ type CustomItemRecordListRequestFilters struct {
 	// PageSize is the number of records to retrieve per page. Defaults to
 	// 50.
 	PageSize int64
-
-	// SkipCounts asks the server to skip total-count queries for
-	// performance. When true, only HasMore in the response meta is
-	// reliable.
-	SkipCounts *bool
 }
 
 func (c CustomItemRecordListRequestFilters) apply(req *http.Request) {
@@ -671,7 +660,7 @@ func (c CustomItemRecordListRequestFilters) apply(req *http.Request) {
 		query.Set("showDeleted", strconv.FormatBool(*c.ShowDeleted))
 	}
 	if c.OrderBy != "" {
-		query.Set("orderBy", c.OrderBy)
+		query.Set("orderBy", string(c.OrderBy))
 	}
 	if c.OrderMode != "" {
 		query.Set("orderMode", string(c.OrderMode))
@@ -682,9 +671,7 @@ func (c CustomItemRecordListRequestFilters) apply(req *http.Request) {
 	if c.PageSize > 0 {
 		query.Set("pageSize", strconv.FormatInt(c.PageSize, 10))
 	}
-	if c.SkipCounts != nil {
-		query.Set("skipCounts", strconv.FormatBool(*c.SkipCounts))
-	}
+	query.Set("skipCounts", "true")
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -732,7 +719,11 @@ type CustomItemRecordListResponse struct {
 	request CustomItemRecordListRequest
 
 	// Meta contains pagination information for the response.
-	Meta CustomItemListMeta `json:"meta"`
+	Meta struct {
+		Page struct {
+			HasMore bool `json:"hasMore"`
+		} `json:"page"`
+	} `json:"meta"`
 
 	// CustomItemRecords is the list of records matching the request
 	// filters.

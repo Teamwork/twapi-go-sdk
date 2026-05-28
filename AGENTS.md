@@ -115,6 +115,58 @@ Color       *string `json:"color,omitempty"`
 Notify      *bool   `json:"notify-current-user,omitempty"`
 ```
 
+### Typed enums over raw strings
+
+Any field whose value is restricted to a fixed set the API accepts — sort keys (`OrderBy`), include/sideload lists, status values, type discriminators, etc. — **must** be exposed as a named `string` typedef with one exported constant per allowed value. Never expose those fields as `string` or `[]string`.
+
+```go
+// CustomItemSideload identifies the related entities that can be requested
+// alongside a custom item type via the API's include mechanism.
+type CustomItemSideload string
+
+// Supported custom item sideloads.
+const (
+    CustomItemSideloadCreatedBy        CustomItemSideload = "createdBy"
+    CustomItemSideloadCustomItemFields CustomItemSideload = "customItemFields"
+    // ...
+)
+
+// CustomItemOrderBy identifies the attributes a custom item list can be
+// ordered by.
+type CustomItemOrderBy string
+
+const (
+    CustomItemOrderByName CustomItemOrderBy = "name"
+)
+
+type CustomItemListRequestFilters struct {
+    OrderBy CustomItemOrderBy
+    Include []CustomItemSideload
+    // ...
+}
+```
+
+In the filter's `apply()`, cast back to `string` when writing to the query — and for slice enums, convert via a small loop before `strings.Join`:
+
+```go
+if c.OrderBy != "" {
+    query.Set("orderBy", string(c.OrderBy))
+}
+if len(c.Include) > 0 {
+    includes := make([]string, len(c.Include))
+    for i, include := range c.Include {
+        includes[i] = string(include)
+    }
+    query.Set("include", strings.Join(includes, ","))
+}
+```
+
+Why: surfaces typos at compile time, makes the legal value set self-documenting (and discoverable via `go doc`), and lets us evolve the API by adding constants without breaking callers. The naming convention is `{Resource}{Purpose}` for the type (e.g., `TaskRequestSideload`, `CustomItemRecordOrderBy`) and `{Type}{Value}` for each constant.
+
+### `skipCounts` on v3 list endpoints
+
+Always hard-code `skipCounts=true` in the filter's `apply()` rather than exposing it as an option. Total counts are derivable from `(page * pageSize) + 1` and `HasMore`, so leaving the option open just lets callers opt into a slower API call by mistake. The list response's `Meta` should mirror the pattern in [Pagination (list responses)](#pagination-list-responses) and expose only `HasMore` — never `Offset`, `Size`, or `Count`.
+
 ### HTTPRequest implementation (POST/PUT/PATCH)
 
 ```go
@@ -308,6 +360,7 @@ Defined in the root `twapi` package:
 | `Time`             | `time.Time` formatted as `"15:04:05"`                           |
 | `OptionalDateTime` | `time.Time` that accepts empty strings                          |
 | `Money`            | `int64` representing cents; use `NewMoney(float64)`             |
+| `NullableInt64`    | Tri-state int (unset / null / value); use `NewNullableInt64` / `NullInt64` |
 | `HTTPError`        | Structured API error; check with `errors.As(err, &httpErr)`     |
 
 ---

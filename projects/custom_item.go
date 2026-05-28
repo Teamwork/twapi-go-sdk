@@ -31,8 +31,32 @@ type CustomItemState string
 
 // Supported custom item states.
 const (
-	CustomItemStateActive  CustomItemState = "active"
-	CustomItemStateDeleted CustomItemState = "deleted"
+	CustomItemStateActive   CustomItemState = "active"
+	CustomItemStateArchived CustomItemState = "archived"
+	CustomItemStateDeleted  CustomItemState = "deleted"
+)
+
+// CustomItemSideload identifies the related entities that can be requested
+// alongside a custom item type via the API's include mechanism.
+type CustomItemSideload string
+
+// Supported custom item sideloads.
+const (
+	CustomItemSideloadCreatedBy          CustomItemSideload = "createdBy"
+	CustomItemSideloadUpdatedBy          CustomItemSideload = "updatedBy"
+	CustomItemSideloadDeletedBy          CustomItemSideload = "deletedBy"
+	CustomItemSideloadCustomItemViews    CustomItemSideload = "customItemViews"
+	CustomItemSideloadCustomItemFields   CustomItemSideload = "customItemFields"
+	CustomItemSideloadCustomItemSections CustomItemSideload = "customItemSections"
+)
+
+// CustomItemOrderBy identifies the attributes a custom item list can be
+// ordered by.
+type CustomItemOrderBy string
+
+// Supported custom item order-by values.
+const (
+	CustomItemOrderByName CustomItemOrderBy = "name"
 )
 
 // CustomItem is a user-defined entity type that can be added to a project to
@@ -400,10 +424,8 @@ type CustomItemGetRequest struct {
 	Path CustomItemGetRequestPath
 
 	// Include is an optional list of related entities to sideload alongside
-	// the custom item. Valid values include "createdBy", "updatedBy",
-	// "deletedBy", "customItemViews", "customItemFields" and
-	// "customItemSections".
-	Include []string
+	// the custom item. Use the CustomItemSideload constants.
+	Include []CustomItemSideload
 }
 
 // NewCustomItemGetRequest creates a new CustomItemGetRequest with the
@@ -426,8 +448,12 @@ func (c CustomItemGetRequest) HTTPRequest(ctx context.Context, server string) (*
 		return nil, err
 	}
 	if len(c.Include) > 0 {
+		includes := make([]string, len(c.Include))
+		for i, include := range c.Include {
+			includes[i] = string(include)
+		}
 		query := req.URL.Query()
-		query.Set("include", strings.Join(c.Include, ","))
+		query.Set("include", strings.Join(includes, ","))
 		req.URL.RawQuery = query.Encode()
 	}
 
@@ -482,9 +508,8 @@ type CustomItemListRequestFilters struct {
 	// IDs restricts the result to the given custom item IDs.
 	IDs []int64
 
-	// OrderBy sorts the results. The only supported value at the moment is
-	// "name".
-	OrderBy string
+	// OrderBy sorts the results. Use the CustomItemOrderBy constants.
+	OrderBy CustomItemOrderBy
 
 	// OrderMode is the sort direction.
 	OrderMode twapi.OrderMode
@@ -496,8 +521,9 @@ type CustomItemListRequestFilters struct {
 	// ShowDeleted includes deleted custom items in the result.
 	ShowDeleted *bool
 
-	// Include is an optional list of related entities to sideload.
-	Include []string
+	// Include is an optional list of related entities to sideload. Use the
+	// CustomItemSideload constants.
+	Include []CustomItemSideload
 
 	// Page is the page number to retrieve. Defaults to 1.
 	Page int64
@@ -505,10 +531,6 @@ type CustomItemListRequestFilters struct {
 	// PageSize is the number of custom items to retrieve per page. Defaults
 	// to 50.
 	PageSize int64
-
-	// SkipCounts asks the server to skip total-count queries for performance.
-	// When true, only HasMore in the response meta is reliable.
-	SkipCounts *bool
 }
 
 func (c CustomItemListRequestFilters) apply(req *http.Request) {
@@ -524,7 +546,7 @@ func (c CustomItemListRequestFilters) apply(req *http.Request) {
 		query.Set("ids", strings.Join(ids, ","))
 	}
 	if c.OrderBy != "" {
-		query.Set("orderBy", c.OrderBy)
+		query.Set("orderBy", string(c.OrderBy))
 	}
 	if c.OrderMode != "" {
 		query.Set("orderMode", string(c.OrderMode))
@@ -536,7 +558,11 @@ func (c CustomItemListRequestFilters) apply(req *http.Request) {
 		query.Set("showDeleted", strconv.FormatBool(*c.ShowDeleted))
 	}
 	if len(c.Include) > 0 {
-		query.Set("include", strings.Join(c.Include, ","))
+		includes := make([]string, len(c.Include))
+		for i, include := range c.Include {
+			includes[i] = string(include)
+		}
+		query.Set("include", strings.Join(includes, ","))
 	}
 	if c.Page > 0 {
 		query.Set("page", strconv.FormatInt(c.Page, 10))
@@ -544,9 +570,7 @@ func (c CustomItemListRequestFilters) apply(req *http.Request) {
 	if c.PageSize > 0 {
 		query.Set("pageSize", strconv.FormatInt(c.PageSize, 10))
 	}
-	if c.SkipCounts != nil {
-		query.Set("skipCounts", strconv.FormatBool(*c.SkipCounts))
-	}
+	query.Set("skipCounts", "true")
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -594,7 +618,11 @@ type CustomItemListResponse struct {
 	request CustomItemListRequest
 
 	// Meta contains pagination information for the response.
-	Meta CustomItemListMeta `json:"meta"`
+	Meta struct {
+		Page struct {
+			HasMore bool `json:"hasMore"`
+		} `json:"page"`
+	} `json:"meta"`
 
 	// CustomItems is the list of custom item types matching the request
 	// filters.
@@ -602,20 +630,6 @@ type CustomItemListResponse struct {
 
 	// Included carries any sideloaded entities requested via Filters.Include.
 	Included CustomItemIncluded `json:"included"`
-}
-
-// CustomItemListMeta carries pagination metadata for a custom item list
-// response.
-type CustomItemListMeta struct {
-	Page CustomItemListMetaPage `json:"page"`
-}
-
-// CustomItemListMetaPage describes the pagination state of the response.
-type CustomItemListMetaPage struct {
-	Offset  int64 `json:"offset"`
-	Size    int64 `json:"size"`
-	Count   int64 `json:"count"`
-	HasMore bool  `json:"hasMore"`
 }
 
 // CustomItemIncluded carries the sideloaded entities returned alongside a
