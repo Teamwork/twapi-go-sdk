@@ -135,49 +135,62 @@ func startCustomItemFieldServer() (string, func(), error) {
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("POST /projects/api/v3/customitems/{customItemId}/fields", func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Content-Type") != "application/json" {
-			http.Error(w, "Unsupported Media Type", http.StatusUnsupportedMediaType)
-			return
-		}
-		w.WriteHeader(http.StatusCreated)
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = fmt.Fprintln(w, `{"customItemField":{"id":67890,"displayName":"Customer","type":"text-short","twId":"f_67890","state":"active"}}`)
-	})
-	mux.HandleFunc("PATCH /projects/api/v3/customitems/{customItemId}/fields/{id}", func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Content-Type") != "application/json" {
-			http.Error(w, "Unsupported Media Type", http.StatusUnsupportedMediaType)
-			return
-		}
-		if r.PathValue("id") != "67890" {
-			http.Error(w, "Not Found", http.StatusNotFound)
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = fmt.Fprintln(w, `{"customItemField":{"id":67890,"displayName":"Primary Customer","type":"text-short","twId":"f_67890","state":"active"}}`)
-	})
-	mux.HandleFunc("DELETE /projects/api/v3/customitems/{customItemId}/fields/{id}", func(w http.ResponseWriter, r *http.Request) {
-		if r.PathValue("id") != "67890" {
-			http.Error(w, "Not Found", http.StatusNotFound)
-			return
-		}
-		w.WriteHeader(http.StatusNoContent)
-	})
-	mux.HandleFunc("GET /projects/api/v3/customitems/{customItemId}/fields/{id}", func(w http.ResponseWriter, r *http.Request) {
-		if r.PathValue("id") != "67890" {
-			http.Error(w, "Not Found", http.StatusNotFound)
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = fmt.Fprintln(w, `{"customItemField":{"id":67890,"displayName":"Customer","type":"text-short","twId":"f_67890","state":"active"}}`)
-	})
-	mux.HandleFunc("GET /projects/api/v3/customitems/{customItemId}/fields", func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = fmt.Fprintln(w, `{"customItemFields":[{"id":67890,"displayName":"Customer","type":"text-short","twId":"f_67890","state":"active"},{"id":67891,"displayName":"Value","type":"number-decimal","twId":"f_67891","state":"active"}],"meta":{"page":{"offset":0,"size":50,"count":2,"hasMore":false}}}`)
-	})
+	mux.HandleFunc("POST /projects/api/v3/customitems/{customItemId}/fields",
+		func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("Content-Type") != "application/json" {
+				http.Error(w, "Unsupported Media Type", http.StatusUnsupportedMediaType)
+				return
+			}
+			w.WriteHeader(http.StatusCreated)
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = fmt.Fprintln(w, `{"customItemField":{"id":67890,"displayName":"Customer",`+
+				`"type":"text-short","twId":"f_67890","state":"active"}}`)
+		})
+	mux.HandleFunc("PATCH /projects/api/v3/customitems/{customItemId}/fields/{id}",
+		func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("Content-Type") != "application/json" {
+				http.Error(w, "Unsupported Media Type", http.StatusUnsupportedMediaType)
+				return
+			}
+			if r.PathValue("id") != "67890" {
+				http.Error(w, "Not Found", http.StatusNotFound)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = fmt.Fprintln(w, `{"customItemField":{"id":67890,"displayName":"Primary Customer",`+
+				`"type":"text-short","twId":"f_67890","state":"active"}}`)
+		})
+	mux.HandleFunc("DELETE /projects/api/v3/customitems/{customItemId}/fields/{id}",
+		func(w http.ResponseWriter, r *http.Request) {
+			if r.PathValue("id") != "67890" {
+				http.Error(w, "Not Found", http.StatusNotFound)
+				return
+			}
+			w.WriteHeader(http.StatusNoContent)
+		})
+	mux.HandleFunc("GET /projects/api/v3/customitems/{customItemId}/fields/{id}",
+		func(w http.ResponseWriter, r *http.Request) {
+			if r.PathValue("id") != "67890" {
+				http.Error(w, "Not Found", http.StatusNotFound)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = fmt.Fprintln(w, `{"customItemField":{"id":67890,"displayName":"Customer",`+
+				`"type":"text-short","twId":"f_67890","state":"active"}}`)
+		})
+	mux.HandleFunc("GET /projects/api/v3/customitems/{customItemId}/fields",
+		func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = fmt.Fprintln(w, `{"customItemFields":[`+
+				`{"id":67890,"displayName":"Customer","type":"text-short",`+
+				`"twId":"f_67890","state":"active"},`+
+				`{"id":67891,"displayName":"Value","type":"number-decimal",`+
+				`"twId":"f_67891","state":"active"}`+
+				`],"meta":{"page":{"offset":0,"size":50,"count":2,"hasMore":false}}}`)
+		})
 
 	server := &http.Server{
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

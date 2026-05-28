@@ -135,15 +135,17 @@ func startCustomItemServer() (string, func(), error) {
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("POST /projects/api/v3/projects/{projectId}/customitems", func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Content-Type") != "application/json" {
-			http.Error(w, "Unsupported Media Type", http.StatusUnsupportedMediaType)
-			return
-		}
-		w.WriteHeader(http.StatusCreated)
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = fmt.Fprintln(w, `{"customItem":{"id":12345,"displayName":"Contracts","labelSingular":"Contract","labelPlural":"Contracts","state":"active"}}`)
-	})
+	mux.HandleFunc("POST /projects/api/v3/projects/{projectId}/customitems",
+		func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("Content-Type") != "application/json" {
+				http.Error(w, "Unsupported Media Type", http.StatusUnsupportedMediaType)
+				return
+			}
+			w.WriteHeader(http.StatusCreated)
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = fmt.Fprintln(w, `{"customItem":{"id":12345,"displayName":"Contracts",`+
+				`"labelSingular":"Contract","labelPlural":"Contracts","state":"active"}}`)
+		})
 	mux.HandleFunc("PATCH /projects/api/v3/customitems/{id}", func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Content-Type") != "application/json" {
 			http.Error(w, "Unsupported Media Type", http.StatusUnsupportedMediaType)
@@ -173,11 +175,15 @@ func startCustomItemServer() (string, func(), error) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = fmt.Fprintln(w, `{"customItem":{"id":12345,"displayName":"Contracts","state":"active"}}`)
 	})
-	mux.HandleFunc("GET /projects/api/v3/projects/{projectId}/customitems", func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = fmt.Fprintln(w, `{"customItems":[{"id":12345,"displayName":"Contracts","state":"active"},{"id":12346,"displayName":"Leads","state":"active"}],"meta":{"page":{"offset":0,"size":50,"count":2,"hasMore":false}}}`)
-	})
+	mux.HandleFunc("GET /projects/api/v3/projects/{projectId}/customitems",
+		func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = fmt.Fprintln(w, `{"customItems":[`+
+				`{"id":12345,"displayName":"Contracts","state":"active"},`+
+				`{"id":12346,"displayName":"Leads","state":"active"}`+
+				`],"meta":{"page":{"offset":0,"size":50,"count":2,"hasMore":false}}}`)
+		})
 
 	server := &http.Server{
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

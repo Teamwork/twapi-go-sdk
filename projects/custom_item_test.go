@@ -19,12 +19,16 @@ func TestCustomItemCreate(t *testing.T) {
 	labelSingular := "Test Item"
 	labelPlural := "Test Items"
 
+	minimal := projects.NewCustomItemCreateRequest(testResources.ProjectID, displayName)
+	minimal.LabelSingular = &labelSingular
+	minimal.LabelPlural = &labelPlural
+
 	tests := []struct {
 		name  string
 		input projects.CustomItemCreateRequest
 	}{{
-		name:  "only required fields",
-		input: projects.NewCustomItemCreateRequest(testResources.ProjectID, displayName),
+		name:  "minimal request",
+		input: minimal,
 	}, {
 		name: "all fields",
 		input: projects.CustomItemCreateRequest{
@@ -179,11 +183,15 @@ func TestCustomItemList(t *testing.T) {
 
 // createCustomItem is a test helper that creates a new custom item type on
 // the shared test project and returns its ID along with a cleanup func that
-// deletes it.
+// deletes it. LabelSingular and LabelPlural are required by the API.
 func createCustomItem(t testEngine) (int64, func(), error) {
 	displayName := fmt.Sprintf("test-ci-h-%d%d", time.Now().UnixNano(), rand.Intn(100))
-	customItemResponse, err := projects.CustomItemCreate(t.Context(), engine,
-		projects.NewCustomItemCreateRequest(testResources.ProjectID, displayName))
+	singular := "Test Record"
+	plural := "Test Records"
+	req := projects.NewCustomItemCreateRequest(testResources.ProjectID, displayName)
+	req.LabelSingular = &singular
+	req.LabelPlural = &plural
+	customItemResponse, err := projects.CustomItemCreate(t.Context(), engine, req)
 	if err != nil {
 		return 0, nil, fmt.Errorf("failed to create custom item for test: %w", err)
 	}
