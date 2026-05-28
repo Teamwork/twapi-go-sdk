@@ -568,9 +568,6 @@ type CustomItemFieldListRequestFilters struct {
 	// ShowDeleted includes deleted fields in the result.
 	ShowDeleted *bool
 
-	// OrderBy sorts the result. Supported value: "name".
-	OrderBy string
-
 	// OrderMode is the sort direction.
 	OrderMode twapi.OrderMode
 
@@ -579,9 +576,6 @@ type CustomItemFieldListRequestFilters struct {
 
 	// PageSize is the number of fields to retrieve per page. Defaults to 50.
 	PageSize int64
-
-	// SkipCounts asks the server to skip total-count queries for performance.
-	SkipCounts *bool
 }
 
 func (c CustomItemFieldListRequestFilters) apply(req *http.Request) {
@@ -599,9 +593,6 @@ func (c CustomItemFieldListRequestFilters) apply(req *http.Request) {
 	if c.ShowDeleted != nil {
 		query.Set("showDeleted", strconv.FormatBool(*c.ShowDeleted))
 	}
-	if c.OrderBy != "" {
-		query.Set("orderBy", c.OrderBy)
-	}
 	if c.OrderMode != "" {
 		query.Set("orderMode", string(c.OrderMode))
 	}
@@ -611,9 +602,7 @@ func (c CustomItemFieldListRequestFilters) apply(req *http.Request) {
 	if c.PageSize > 0 {
 		query.Set("pageSize", strconv.FormatInt(c.PageSize, 10))
 	}
-	if c.SkipCounts != nil {
-		query.Set("skipCounts", strconv.FormatBool(*c.SkipCounts))
-	}
+	query.Set("skipCounts", "true")
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -661,7 +650,11 @@ type CustomItemFieldListResponse struct {
 	request CustomItemFieldListRequest
 
 	// Meta contains pagination information for the response.
-	Meta CustomItemListMeta `json:"meta"`
+	Meta struct {
+		Page struct {
+			HasMore bool `json:"hasMore"`
+		} `json:"page"`
+	} `json:"meta"`
 
 	// CustomItemFields is the list of fields matching the request filters.
 	CustomItemFields []CustomItemField `json:"customItemFields"`

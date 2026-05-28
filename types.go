@@ -194,6 +194,41 @@ const (
 	OrderModeDescending OrderMode = "desc"
 )
 
+// NullableInt64 is a tri-state integer used on writes where the API
+// distinguishes between an unset field, a field set to null, and a field set
+// to a concrete value. Use the helper constructors NewNullableInt64 and
+// NullInt64 instead of building it by hand.
+type NullableInt64 struct {
+	// Value is the integer value, ignored when Null is true.
+	Value int64
+	// Null indicates the field is explicitly set to null.
+	Null bool
+	// Set indicates the field is present in the payload. When false, the
+	// field is omitted entirely.
+	Set bool
+}
+
+// NewNullableInt64 returns a NullableInt64 set to the given value.
+func NewNullableInt64(value int64) NullableInt64 {
+	return NullableInt64{Value: value, Set: true}
+}
+
+// NullInt64 returns a NullableInt64 set to null.
+func NullInt64() NullableInt64 {
+	return NullableInt64{Null: true, Set: true}
+}
+
+// MarshalJSON implements json.Marshaler. Unset values are encoded as a JSON
+// null only when the surrounding tag does not include omitempty, so callers
+// embed NullableInt64 alongside the omitempty tag on the parent field for
+// "omit when not set" semantics.
+func (n NullableInt64) MarshalJSON() ([]byte, error) {
+	if !n.Set || n.Null {
+		return []byte("null"), nil
+	}
+	return json.Marshal(n.Value)
+}
+
 // HexColor defines a hexadecimal color.
 type HexColor string
 
