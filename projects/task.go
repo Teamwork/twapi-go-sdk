@@ -100,7 +100,8 @@ type Task struct {
 	Tags []twapi.Relationship `json:"tags"`
 
 	// Predecessors is the list of tasks that must be completed before this task
-	// can be started or completed.
+	// can be started or completed. This is only populated when providing the
+	// IncludeRelatedTasks filter in the request.
 	Predecessors []twapi.Relationship `json:"predecessors"`
 
 	// WorkflowStages is the list of workflow stages associated with this task.
@@ -607,12 +608,33 @@ const (
 
 // TaskRequestFilters contains the filters for loading tasks.
 type TaskRequestFilters struct {
+	// IncludeRelatedTasks IDs of active subtasks, dependencies and predecessors.
+	// This will populate fields like Predecessors field in the response.
+	IncludeRelatedTasks bool
+
+	// IncludeCompletedPredecessors indicates whether to include completed
+	// predecessors.
+	IncludeCompletedPredecessors bool
+
+	// IncludeTasksWithoutDueDates indicates whether to include tasks without due
+	// dates. By default tasks without due dates are included.
+	IncludeTasksWithoutDueDates *bool
+
 	// Include specifies related resources to include.
 	Include []TaskRequestSideload
 }
 
 func (p TaskRequestFilters) apply(req *http.Request) {
 	query := req.URL.Query()
+	if p.IncludeRelatedTasks {
+		query.Set("includeRelatedTasks", "true")
+	}
+	if p.IncludeCompletedPredecessors {
+		query.Set("includeCompletedPredecessors", "true")
+	}
+	if p.IncludeTasksWithoutDueDates != nil {
+		query.Set("includeTasksWithoutDueDates", strconv.FormatBool(*p.IncludeTasksWithoutDueDates))
+	}
 	if len(p.Include) > 0 {
 		includes := make([]string, len(p.Include))
 		for i, include := range p.Include {
