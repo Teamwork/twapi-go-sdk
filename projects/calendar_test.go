@@ -15,6 +15,10 @@ func TestCalendarCreate(t *testing.T) {
 		t.Skip("Skipping test because the engine is not initialized")
 	}
 
+	// Only one blocked time calendar is allowed per user, so a leftover from an
+	// interrupted run makes the "all fields" case fail until it is removed.
+	deleteBlockedTimeCalendar(t)
+
 	tests := []struct {
 		name  string
 		input projects.CalendarCreateRequest
@@ -52,6 +56,35 @@ func TestCalendarCreate(t *testing.T) {
 				t.Error("expected a valid calendar ID but got 0")
 			}
 		})
+	}
+}
+
+// deleteBlockedTimeCalendar removes the user's blocked time calendar if one
+// exists, so tests that create one start from a clean slate.
+func deleteBlockedTimeCalendar(t *testing.T) {
+	t.Helper()
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	t.Cleanup(cancel)
+
+	for request := projects.NewCalendarListRequest(); ; {
+		response, err := projects.CalendarList(ctx, engine, request)
+		if err != nil {
+			t.Fatalf("failed to list calendars: %s", err)
+		}
+		for _, calendar := range response.Calendars {
+			if calendar.Type != projects.CalendarTypeBlockedTime {
+				continue
+			}
+			if _, err := projects.CalendarDelete(ctx, engine, projects.NewCalendarDeleteRequest(calendar.ID)); err != nil {
+				t.Fatalf("failed to delete leftover blocked time calendar: %s", err)
+			}
+		}
+		next := response.Iterate()
+		if next == nil {
+			return
+		}
+		request = *next
 	}
 }
 
