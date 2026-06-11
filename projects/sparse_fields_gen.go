@@ -349,6 +349,7 @@ const (
 	ProjectFieldCompletedAt  ProjectField = "completedAt"
 	ProjectFieldCompletedBy  ProjectField = "completedBy"
 	ProjectFieldStatus       ProjectField = "status"
+	ProjectFieldIsBillable   ProjectField = "isBillable"
 	ProjectFieldType         ProjectField = "type"
 )
 
