@@ -120,6 +120,10 @@ type Project struct {
 	// "deleted".
 	Status ProjectStatus `json:"status"`
 
+	// IsBillable indicates whether time logged to the project is billable by
+	// default.
+	IsBillable *bool `json:"isBillable"`
+
 	// Type is the type of the project. It can be "normal", "tasklists-template",
 	// "projects-template", "personal", "holder-project", "tentative" or
 	// "global-messages".
