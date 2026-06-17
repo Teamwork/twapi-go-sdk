@@ -81,8 +81,6 @@ func (d *Date) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &str); err != nil {
 		return err
 	}
-	// temporary workaround in case datetime date is received
-	// should be removed after date-only (projects-task-no-timezone) flag is fully enabled
 	if strings.Contains(str, "T") {
 		str, _, _ = strings.Cut(str, "T")
 	}
