@@ -77,10 +77,10 @@ type Task struct {
 	Progress int64 `json:"progress"`
 
 	// StartAt is the date and time when the task is scheduled to start.
-	StartAt *time.Time `json:"startDate"`
+	StartAt *twapi.Date `json:"startDate"`
 
 	// DueAt is the date and time when the task is scheduled to be completed.
-	DueAt *time.Time `json:"dueDate"`
+	DueAt *twapi.Date `json:"dueDate"`
 
 	// EstimatedMinutes is the estimated time to complete the task, in minutes.
 	EstimatedMinutes int64 `json:"estimateMinutes"`
