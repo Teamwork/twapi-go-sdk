@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -79,6 +80,9 @@ func (d *Date) UnmarshalJSON(data []byte) error {
 	var str string
 	if err := json.Unmarshal(data, &str); err != nil {
 		return err
+	}
+	if strings.Contains(str, "T") {
+		str, _, _ = strings.Cut(str, "T")
 	}
 	parsedTime, err := time.Parse("2006-01-02", str)
 	if err != nil {
