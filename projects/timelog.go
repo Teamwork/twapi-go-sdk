@@ -143,8 +143,9 @@ type TimelogCreateRequest struct {
 	// they will be summed up to calculate the total time logged.
 	Minutes int64 `json:"minutes"`
 
-	// Billable indicates whether the timelog is billable or not.
-	Billable bool `json:"isBillable"`
+	// Billable indicates whether the timelog is billable or not. When not
+	// provided, it will default to the tasklist or project settings.
+	Billable *bool `json:"isBillable"`
 
 	// UserID is an optional ID of the user who logged the timelog. If not
 	// provided, the timelog will be logged by the user making the request.
