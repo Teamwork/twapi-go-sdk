@@ -149,6 +149,9 @@ func ExecuteRaw[R HTTPRequester](ctx context.Context, engine *Engine, requester 
 		return nil, fmt.Errorf("failed to authenticate request: %w", err)
 	}
 
+	// Make the API aware that the SDK can handle job roles
+	req.Header.Set("Jobroles-Enabled", "true")
+
 	resp, err := engine.client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute request: %w", err)

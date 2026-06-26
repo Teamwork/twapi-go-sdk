@@ -87,6 +87,9 @@ type WorkloadRequestFilters struct {
 	// UserTeamIDs is a list of users' team IDs to filter the workload by.
 	UserTeamIDs []int64
 
+	// UserJobRoleIDs is a list of users' job role IDs to filter the workload by.
+	UserJobRoleIDs []int64
+
 	// ProjectIDs is a list of project IDs to filter the workload by.
 	ProjectIDs []int64
 
@@ -128,6 +131,13 @@ func (w WorkloadRequestFilters) apply(req *http.Request) {
 			ids = append(ids, strconv.FormatInt(id, 10))
 		}
 		query.Set("teamIds", strings.Join(ids, ","))
+	}
+	if len(w.UserJobRoleIDs) > 0 {
+		var ids []string
+		for _, id := range w.UserJobRoleIDs {
+			ids = append(ids, strconv.FormatInt(id, 10))
+		}
+		query.Set("jobRoleIds", strings.Join(ids, ","))
 	}
 	if len(w.ProjectIDs) > 0 {
 		var ids []string
