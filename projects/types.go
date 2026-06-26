@@ -82,25 +82,28 @@ func (l *LegacyNumericList) Add(n float64) {
 	*l = append(*l, int64(n))
 }
 
-// UserGroups represents a collection of users, companies, and teams.
+// UserGroups represents a collection of users, companies, teams, and job roles.
 type UserGroups struct {
 	UserIDs    []int64 `json:"userIds"`
 	CompanyIDs []int64 `json:"companyIds"`
 	TeamIDs    []int64 `json:"teamIds"`
+	JobRoleIDs []int64 `json:"jobRoleIds"`
 }
 
-// LegacyUserGroups represents a collection of users, companies, and teams
-// in a legacy format, where IDs are represented as strings.
+// LegacyUserGroups represents a collection of users, companies, teams, and job
+// roles in a legacy format, where IDs are represented as strings.
 type LegacyUserGroups struct {
 	UserIDs    []int64
 	CompanyIDs []int64
 	TeamIDs    []int64
+	JobRoleIDs []int64
 }
 
 // MarshalJSON encodes the LegacyUserGroups as a comma-separated string, where
 // user IDs are represented as plain numbers, company IDs are prefixed with "c",
-// and team IDs are prefixed with "t". The output order is user IDs first,
-// followed by team IDs, and then company IDs.
+// team IDs are prefixed with "t", and job role IDs are prefixed with "r". The
+// output order is user IDs first, followed by team IDs, then company IDs, and
+// finally job role IDs.
 func (m LegacyUserGroups) MarshalJSON() ([]byte, error) {
 	var result string
 	for _, id := range m.UserIDs {
@@ -120,6 +123,12 @@ func (m LegacyUserGroups) MarshalJSON() ([]byte, error) {
 			result += ","
 		}
 		result += "c" + strconv.FormatInt(id, 10)
+	}
+	for _, id := range m.JobRoleIDs {
+		if result != "" {
+			result += ","
+		}
+		result += "r" + strconv.FormatInt(id, 10)
 	}
 	return []byte(`"` + result + `"`), nil
 }
@@ -156,6 +165,15 @@ func (m *LegacyUserGroups) UnmarshalJSON(data []byte) error {
 				return err
 			}
 			m.TeamIDs = append(m.TeamIDs, id)
+		case 'r':
+			if len(part) < 2 {
+				return fmt.Errorf("invalid job role ID format: %s", part)
+			}
+			id, err := strconv.ParseInt(part[1:], 10, 64)
+			if err != nil {
+				return err
+			}
+			m.JobRoleIDs = append(m.JobRoleIDs, id)
 		default:
 			id, err := strconv.ParseInt(part, 10, 64)
 			if err != nil {
@@ -169,7 +187,8 @@ func (m *LegacyUserGroups) UnmarshalJSON(data []byte) error {
 
 // IsEmpty checks if the LegacyUserGroups contains no IDs.
 func (m LegacyUserGroups) IsEmpty() bool {
-	return len(m.UserIDs) == 0 && len(m.CompanyIDs) == 0 && len(m.TeamIDs) == 0
+	return len(m.UserIDs) == 0 && len(m.CompanyIDs) == 0 &&
+		len(m.TeamIDs) == 0 && len(m.JobRoleIDs) == 0
 }
 
 // LegacyRelationship describes the relation between the main entity and a
