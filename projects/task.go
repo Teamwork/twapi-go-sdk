@@ -778,6 +778,13 @@ type TaskListRequestFilters struct {
 	// specific date and time.
 	CompletedBefore *time.Time
 
+	// DueAfter is an optional filter to retrieve tasks due after a specific date.
+	DueAfter *twapi.Date
+
+	// DueBefore is an optional filter to retrieve tasks due before a specific
+	// date.
+	DueBefore *twapi.Date
+
 	// TagIDs is an optional list of tag IDs to filter tasks by tags.
 	TagIDs []int64
 
@@ -837,6 +844,12 @@ func (t TaskListRequestFilters) apply(req *http.Request) {
 	}
 	if t.CompletedBefore != nil && !t.CompletedBefore.IsZero() {
 		query.Set("completedBefore", t.CompletedBefore.Format(time.RFC3339))
+	}
+	if t.DueAfter != nil && !t.DueAfter.IsZero() {
+		query.Set("dueAfter", t.DueAfter.String())
+	}
+	if t.DueBefore != nil && !t.DueBefore.IsZero() {
+		query.Set("dueBefore", t.DueBefore.String())
 	}
 	if len(t.TagIDs) > 0 {
 		tagIDs := make([]string, len(t.TagIDs))
