@@ -891,6 +891,21 @@ func (f TeamListFields) apply(query url.Values) {
 	twapi.ApplySparseFields(query, "teams", f.Teams)
 }
 
+// TimeReportListFields selects sparse-fields slots for TimeReportListResponse. Leave a slot empty to receive the
+// API default for that entity; populate it to restrict the attributes returned.
+type TimeReportListFields struct {
+	// Users controls fields[users]=… on the response.
+	Users []UserField
+	// Projects controls fields[projects]=… on the response.
+	Projects []ProjectField
+}
+
+// apply writes every populated slot to query as a fields[entity]=… parameter.
+func (f TimeReportListFields) apply(query url.Values) {
+	twapi.ApplySparseFields(query, "users", f.Users)
+	twapi.ApplySparseFields(query, "projects", f.Projects)
+}
+
 // TimelogListFields selects sparse-fields slots for TimelogListResponse. Leave a slot empty to receive the
 // API default for that entity; populate it to restrict the attributes returned.
 type TimelogListFields struct {

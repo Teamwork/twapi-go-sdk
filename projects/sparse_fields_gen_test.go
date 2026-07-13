@@ -722,6 +722,39 @@ func TestTeamListFieldsZeroValue(t *testing.T) {
 	}
 }
 
+// TestTimeReportListFieldsApply verifies that populated TimeReportListFields slots emit the
+// expected fields[entity]=… query parameters.
+func TestTimeReportListFieldsApply(t *testing.T) {
+	fields := TimeReportListFields{
+		Users:    []UserField{UserFieldID},
+		Projects: []ProjectField{ProjectFieldID},
+	}
+	query := url.Values{}
+	fields.apply(query)
+	checks := map[string]string{
+		"fields[users]":    "id",
+		"fields[projects]": "id",
+	}
+	for key, want := range checks {
+		if got := query.Get(key); got != want {
+			t.Errorf("%s = %q, want %q", key, got, want)
+		}
+	}
+}
+
+// TestTimeReportListFieldsZeroValue verifies that an unset TimeReportListFields emits no
+// fields[*]=… query parameters.
+func TestTimeReportListFieldsZeroValue(t *testing.T) {
+	var fields TimeReportListFields
+	query := url.Values{}
+	fields.apply(query)
+	for key := range query {
+		if strings.HasPrefix(key, "fields[") {
+			t.Errorf("unexpected sparse-fields parameter %q on zero-value container", key)
+		}
+	}
+}
+
 // TestTimelogListFieldsApply verifies that populated TimelogListFields slots emit the
 // expected fields[entity]=… query parameters.
 func TestTimelogListFieldsApply(t *testing.T) {
