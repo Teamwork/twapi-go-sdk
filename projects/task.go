@@ -792,6 +792,13 @@ type TaskListRequestFilters struct {
 	// to true, only tasks matching all specified tags will be returned.
 	MatchAllTags *bool
 
+	// OnlyUnassigned is an optional flag to only return tasks with no assignee.
+	OnlyUnassigned *bool
+
+	// OnlyUnplanned is an optional flag to only return tasks that are
+	// unassigned, have no due date, or are missing estimated time.
+	OnlyUnplanned *bool
+
 	// Page is the page number to retrieve. Defaults to 1.
 	Page int64
 
@@ -860,6 +867,12 @@ func (t TaskListRequestFilters) apply(req *http.Request) {
 	}
 	if t.MatchAllTags != nil {
 		query.Set("matchAllTags", strconv.FormatBool(*t.MatchAllTags))
+	}
+	if t.OnlyUnassigned != nil {
+		query.Set("onlyUnassignedTasks", strconv.FormatBool(*t.OnlyUnassigned))
+	}
+	if t.OnlyUnplanned != nil {
+		query.Set("onlyUnplanned", strconv.FormatBool(*t.OnlyUnplanned))
 	}
 	if t.Page > 0 {
 		query.Set("page", strconv.FormatInt(t.Page, 10))
