@@ -399,6 +399,11 @@ type TasklistListRequestFilters struct {
 	// PageSize is the number of tasklists to retrieve per page. Defaults to 50.
 	PageSize int64
 
+	// ShowCompleted indicates whether to include completed tasklists in the
+	// results. When nil or false, completed tasklists are excluded (the API
+	// default). Set to true to include them.
+	ShowCompleted *bool
+
 	// Fields restricts the attributes returned for the tasklist and each of its
 	// sideloads. Each slot of TasklistListFields is a separate
 	// `fields[entity]=…` selection; populated slots restrict the response, empty
@@ -417,6 +422,9 @@ func (t TasklistListRequestFilters) apply(req *http.Request) {
 	}
 	if t.PageSize > 0 {
 		query.Set("pageSize", strconv.FormatInt(t.PageSize, 10))
+	}
+	if t.ShowCompleted != nil {
+		query.Set("showCompleted", strconv.FormatBool(*t.ShowCompleted))
 	}
 	t.Fields.apply(query)
 	req.URL.RawQuery = query.Encode()
