@@ -143,9 +143,11 @@ type CustomFieldOptions interface {
 	options()
 }
 
-// CustomFieldOptionsDropdown store the options for a dropdown type.
+// CustomFieldOptionsDropdown store the options for the choice-based custom
+// field types. The API uses this same "choices" shape for dropdown,
+// multiselect and status fields.
 type CustomFieldOptionsDropdown struct {
-	// Choices is the list of choices available for the dropdown.
+	// Choices is the list of choices available for the field.
 	Choices []CustomFieldOptionsDropdownChoice `json:"choices"`
 }
 
@@ -273,22 +275,36 @@ func (c *CustomField) UnmarshalJSON(data []byte) error {
 	}
 	*c = CustomField{customField: customField}
 
+	// The API nests the type-specific options under an "options" object, so
+	// decode that sub-object rather than the whole custom field payload.
+	var wrapper struct {
+		Options json.RawMessage `json:"options"`
+	}
+	if err := json.Unmarshal(data, &wrapper); err != nil {
+		return err
+	}
+	if len(wrapper.Options) == 0 || string(wrapper.Options) == "null" {
+		return nil
+	}
+
+	// The API serializes the same "choices" shape for dropdown, multiselect
+	// and status fields, so all three decode into the dropdown options type.
 	switch c.Type {
-	case CustomFieldTypeDropdown:
+	case CustomFieldTypeDropdown, CustomFieldTypeMultiselect, CustomFieldTypeStatus:
 		var options CustomFieldOptionsDropdown
-		if err := json.Unmarshal(data, &options); err != nil {
+		if err := json.Unmarshal(wrapper.Options, &options); err != nil {
 			return fmt.Errorf("failed to decode dropdown options: %w", err)
 		}
 		c.Options = options
 	case CustomFieldTypeRating:
 		var options CustomFieldOptionsRating
-		if err := json.Unmarshal(data, &options); err != nil {
+		if err := json.Unmarshal(wrapper.Options, &options); err != nil {
 			return fmt.Errorf("failed to decode rating options: %w", err)
 		}
 		c.Options = options
 	case CustomFieldTypeNumberDecimal:
 		var options CustomFieldOptionsNumberDecimal
-		if err := json.Unmarshal(data, &options); err != nil {
+		if err := json.Unmarshal(wrapper.Options, &options); err != nil {
 			return fmt.Errorf("failed to decode number decimal options: %w", err)
 		}
 		c.Options = options
