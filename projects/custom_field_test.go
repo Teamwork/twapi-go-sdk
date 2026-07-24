@@ -2,6 +2,7 @@ package projects_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"testing"
@@ -177,6 +178,141 @@ func TestCustomFieldList(t *testing.T) {
 			if err != nil {
 				t.Errorf("unexpected error: %s", err)
 			}
+		})
+	}
+}
+
+func TestCustomFieldUnmarshalJSONOptions(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  string
+		verify func(t *testing.T, cf projects.CustomField)
+	}{{
+		name: "dropdown choices nested under options",
+		input: `{
+			"id": 70375,
+			"name": "TestNumbers",
+			"type": "dropdown",
+			"entity": "task",
+			"options": {"choices": [
+				{"value": "1", "color": "#4cd5e3"},
+				{"value": "2", "color": "#e12d42"}
+			]}
+		}`,
+		verify: func(t *testing.T, cf projects.CustomField) {
+			options, ok := cf.Options.(projects.CustomFieldOptionsDropdown)
+			if !ok {
+				t.Fatalf("expected dropdown options, got %T", cf.Options)
+			}
+			if len(options.Choices) != 2 {
+				t.Fatalf("expected 2 choices, got %d", len(options.Choices))
+			}
+			if options.Choices[0].Value != "1" || options.Choices[1].Value != "2" {
+				t.Errorf("unexpected choice values: %+v", options.Choices)
+			}
+		},
+	}, {
+		name: "multiselect choices nested under options",
+		input: `{
+			"id": 71000,
+			"name": "Tags",
+			"type": "multiselect",
+			"entity": "task",
+			"options": {"choices": [
+				{"value": "red", "color": "#4cd5e3"},
+				{"value": "green", "color": "#e12d42"}
+			]}
+		}`,
+		verify: func(t *testing.T, cf projects.CustomField) {
+			options, ok := cf.Options.(projects.CustomFieldOptionsDropdown)
+			if !ok {
+				t.Fatalf("expected dropdown options for multiselect, got %T", cf.Options)
+			}
+			if len(options.Choices) != 2 {
+				t.Fatalf("expected 2 choices, got %d", len(options.Choices))
+			}
+			if options.Choices[0].Value != "red" || options.Choices[1].Value != "green" {
+				t.Errorf("unexpected choice values: %+v", options.Choices)
+			}
+		},
+	}, {
+		name: "status choices nested under options",
+		input: `{
+			"id": 71001,
+			"name": "Stage",
+			"type": "status",
+			"entity": "task",
+			"options": {"choices": [
+				{"value": "open", "color": "#4cd5e3"}
+			]}
+		}`,
+		verify: func(t *testing.T, cf projects.CustomField) {
+			options, ok := cf.Options.(projects.CustomFieldOptionsDropdown)
+			if !ok {
+				t.Fatalf("expected dropdown options for status, got %T", cf.Options)
+			}
+			if len(options.Choices) != 1 || options.Choices[0].Value != "open" {
+				t.Errorf("unexpected choices: %+v", options.Choices)
+			}
+		},
+	}, {
+		name: "rating options nested under options",
+		input: `{
+			"id": 1,
+			"name": "Rating",
+			"type": "rating",
+			"entity": "task",
+			"options": {"icon": "star", "color": "#ff0000"}
+		}`,
+		verify: func(t *testing.T, cf projects.CustomField) {
+			options, ok := cf.Options.(projects.CustomFieldOptionsRating)
+			if !ok {
+				t.Fatalf("expected rating options, got %T", cf.Options)
+			}
+			if options.Icon != "star" {
+				t.Errorf("expected icon 'star', got %q", options.Icon)
+			}
+		},
+	}, {
+		name: "number decimal options nested under options",
+		input: `{
+			"id": 2,
+			"name": "Decimal",
+			"type": "number-decimal",
+			"entity": "task",
+			"options": {"decimals": 3}
+		}`,
+		verify: func(t *testing.T, cf projects.CustomField) {
+			options, ok := cf.Options.(projects.CustomFieldOptionsNumberDecimal)
+			if !ok {
+				t.Fatalf("expected number decimal options, got %T", cf.Options)
+			}
+			if options.DecimalPoints == nil || *options.DecimalPoints != 3 {
+				t.Errorf("expected 3 decimal points, got %v", options.DecimalPoints)
+			}
+		},
+	}, {
+		name: "missing options is not an error",
+		input: `{
+			"id": 3,
+			"name": "Text",
+			"type": "text-short",
+			"entity": "task"
+		}`,
+		verify: func(t *testing.T, cf projects.CustomField) {
+			if cf.Options != nil {
+				t.Errorf("expected nil options, got %+v", cf.Options)
+			}
+		},
+	}}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var cf projects.CustomField
+			if err := json.Unmarshal([]byte(tt.input), &cf); err != nil {
+				t.Fatalf("failed to unmarshal custom field: %s", err)
+			}
+			tt.verify(t, cf)
 		})
 	}
 }
