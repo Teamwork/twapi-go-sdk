@@ -778,6 +778,16 @@ type TaskListRequestFilters struct {
 	// specific date and time.
 	CompletedBefore *time.Time
 
+	// IncludeCompletedTasks indicates whether to include completed tasks in the
+	// results. When nil or false, completed tasks are excluded (the API default).
+	// Set to true to include them.
+	IncludeCompletedTasks *bool
+
+	// IncludeTasksFromCompletedTasklists indicates whether to include tasks that
+	// belong to completed tasklists. When nil or false, those tasks are excluded
+	// (the API default). Set to true to include them.
+	IncludeTasksFromCompletedTasklists *bool
+
 	// DueAfter is an optional filter to retrieve tasks due after a specific date.
 	DueAfter *twapi.Date
 
@@ -851,6 +861,12 @@ func (t TaskListRequestFilters) apply(req *http.Request) {
 	}
 	if t.CompletedBefore != nil && !t.CompletedBefore.IsZero() {
 		query.Set("completedBefore", t.CompletedBefore.Format(time.RFC3339))
+	}
+	if t.IncludeCompletedTasks != nil {
+		query.Set("includeCompletedTasks", strconv.FormatBool(*t.IncludeCompletedTasks))
+	}
+	if t.IncludeTasksFromCompletedTasklists != nil {
+		query.Set("showCompletedLists", strconv.FormatBool(*t.IncludeTasksFromCompletedTasklists))
 	}
 	if t.DueAfter != nil && !t.DueAfter.IsZero() {
 		query.Set("dueAfter", t.DueAfter.String())
