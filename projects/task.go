@@ -827,75 +827,25 @@ func (t TaskListRequestFilters) apply(req *http.Request) {
 	t.TaskRequestFilters.apply(req)
 
 	query := req.URL.Query()
-	if t.SearchTerm != "" {
-		query.Set("searchTerm", t.SearchTerm)
-	}
-	if len(t.AssigneeUserIDs) > 0 {
-		assigneeUserIDs := make([]string, len(t.AssigneeUserIDs))
-		for i, id := range t.AssigneeUserIDs {
-			assigneeUserIDs[i] = strconv.FormatInt(id, 10)
-		}
-		query.Set("responsiblePartyIds", strings.Join(assigneeUserIDs, ","))
-	}
-	if t.CreatedAfter != nil && !t.CreatedAfter.IsZero() {
-		query.Set("createdAfter", t.CreatedAfter.Format(time.RFC3339))
-	}
-	if t.CreatedBefore != nil && !t.CreatedBefore.IsZero() {
-		query.Set("createdBefore", t.CreatedBefore.Format(time.RFC3339))
-	}
-	if len(t.CreatedByUserIDs) > 0 {
-		createdByUserIDs := make([]string, len(t.CreatedByUserIDs))
-		for i, id := range t.CreatedByUserIDs {
-			createdByUserIDs[i] = strconv.FormatInt(id, 10)
-		}
-		query.Set("createdByUserIds", strings.Join(createdByUserIDs, ","))
-	}
-	if t.UpdatedAfter != nil && !t.UpdatedAfter.IsZero() {
-		query.Set("updatedAfter", t.UpdatedAfter.Format(time.RFC3339))
-	}
-	if t.UpdatedBefore != nil && !t.UpdatedBefore.IsZero() {
-		query.Set("updatedBefore", t.UpdatedBefore.Format(time.RFC3339))
-	}
-	if t.CompletedAfter != nil && !t.CompletedAfter.IsZero() {
-		query.Set("completedAfter", t.CompletedAfter.Format(time.RFC3339))
-	}
-	if t.CompletedBefore != nil && !t.CompletedBefore.IsZero() {
-		query.Set("completedBefore", t.CompletedBefore.Format(time.RFC3339))
-	}
-	if t.IncludeCompletedTasks != nil {
-		query.Set("includeCompletedTasks", strconv.FormatBool(*t.IncludeCompletedTasks))
-	}
-	if t.IncludeTasksFromCompletedTasklists != nil {
-		query.Set("showCompletedLists", strconv.FormatBool(*t.IncludeTasksFromCompletedTasklists))
-	}
-	if t.DueAfter != nil && !t.DueAfter.IsZero() {
-		query.Set("dueAfter", t.DueAfter.String())
-	}
-	if t.DueBefore != nil && !t.DueBefore.IsZero() {
-		query.Set("dueBefore", t.DueBefore.String())
-	}
-	if len(t.TagIDs) > 0 {
-		tagIDs := make([]string, len(t.TagIDs))
-		for i, id := range t.TagIDs {
-			tagIDs[i] = strconv.FormatInt(id, 10)
-		}
-		query.Set("tagIds", strings.Join(tagIDs, ","))
-	}
-	if t.MatchAllTags != nil {
-		query.Set("matchAllTags", strconv.FormatBool(*t.MatchAllTags))
-	}
-	if t.OnlyUnassigned != nil {
-		query.Set("onlyUnassignedTasks", strconv.FormatBool(*t.OnlyUnassigned))
-	}
-	if t.OnlyUnplanned != nil {
-		query.Set("onlyUnplanned", strconv.FormatBool(*t.OnlyUnplanned))
-	}
-	if t.Page > 0 {
-		query.Set("page", strconv.FormatInt(t.Page, 10))
-	}
-	if t.PageSize > 0 {
-		query.Set("pageSize", strconv.FormatInt(t.PageSize, 10))
-	}
+	querySetString(query, "searchTerm", t.SearchTerm)
+	querySetInt64s(query, "responsiblePartyIds", t.AssigneeUserIDs)
+	querySetTimestamp(query, "createdAfter", t.CreatedAfter)
+	querySetTimestamp(query, "createdBefore", t.CreatedBefore)
+	querySetInt64s(query, "createdByUserIds", t.CreatedByUserIDs)
+	querySetTimestamp(query, "updatedAfter", t.UpdatedAfter)
+	querySetTimestamp(query, "updatedBefore", t.UpdatedBefore)
+	querySetTimestamp(query, "completedAfter", t.CompletedAfter)
+	querySetTimestamp(query, "completedBefore", t.CompletedBefore)
+	querySetBool(query, "includeCompletedTasks", t.IncludeCompletedTasks)
+	querySetBool(query, "showCompletedLists", t.IncludeTasksFromCompletedTasklists)
+	querySetDate(query, "dueAfter", t.DueAfter)
+	querySetDate(query, "dueBefore", t.DueBefore)
+	querySetInt64s(query, "tagIds", t.TagIDs)
+	querySetBool(query, "matchAllTags", t.MatchAllTags)
+	querySetBool(query, "onlyUnassignedTasks", t.OnlyUnassigned)
+	querySetBool(query, "onlyUnplanned", t.OnlyUnplanned)
+	querySetInt64(query, "page", t.Page)
+	querySetInt64(query, "pageSize", t.PageSize)
 	t.Fields.apply(query)
 	req.URL.RawQuery = query.Encode()
 }
