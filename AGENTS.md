@@ -327,9 +327,25 @@ Then run `go generate ./...` from the package directory (or the repo root). The 
 #### What the generator emits
 
 - `type <Entity>Field string` plus one constant per JSON-tagged attribute of the entity (same-package embedded structs are flattened; an outer struct's tag shadows the embed's).
-- `type <Resource>ListFields struct { ... }` with one typed slice per slot — the main list slice **and** each map field inside the response's `Included` struct. Slot names mirror the response's Go field names; entity keys come from the response's JSON tags.
+- `type <Resource>ListFields struct { ... }` with one typed slice per slot — the main list slice **and** each map field inside the response's `Included` struct. Slot names mirror the response's Go field names; entity keys come from the response's JSON tags unless overridden with `sparsefields:key` (see below).
 - `func (f <Resource>ListFields) apply(query url.Values)` writing every populated slot via `twapi.ApplySparseFields`.
 - A pair of generated tests per wired list: `Test<Resource>ListFieldsApply` and `Test<Resource>ListFieldsZeroValue`.
+
+#### When the envelope key isn't the entity name
+
+Entity keys default to the JSON tag of the response field, which is correct whenever the response envelope key matches the entity name the API recognises — the usual case (`{"tasks":[…]}` ↔ `fields[tasks]`). A few endpoints diverge: `/projects/api/v3/projects/budgets.json` wraps its payload in `budgets` while the entity is `projectBudgets`. Declare the divergence with a `sparsefields:key=<entityName>` marker on the response field — as a doc comment or a trailing line comment:
+
+```go
+type ProjectBudgetListResponse struct {
+    // The endpoint wraps its payload in "budgets", but the entity name the API
+    // recognises for sparse fieldsets and sideloads is "projectBudgets", so the
+    // fields[...] key can't be derived from the json tag here.
+    //
+    // sparsefields:key=projectBudgets
+    Budgets []ProjectBudget `json:"budgets"`
+```
+
+The marker only changes the emitted `fields[...]` key; the JSON tag still drives decoding. It works on `Included` sideload fields too. When in doubt, check the endpoint's apidocs page for the `fields[…]` parameter name rather than assuming it matches the envelope — an unrecognised key is silently ignored by the API, so the whole selection degrades to "return everything" with no error.
 
 #### When *not* to mark a response
 
@@ -342,6 +358,8 @@ In both cases the SDK still works — the endpoint simply can't expose typed spa
 
 - The generator fails fast if a marked response references an entity type that *isn't* marked with `sparsefields:gen` — every slot must resolve to a `<Entity>Field` enum.
 - The generator also fails if a filter declares `Fields <Container>` but no method on that filter type ever calls `<receiver>.Fields.apply(...)` — that catches the easy mistake of adding the slot but forgetting to wire it into the request.
+- A `sparsefields:key` marker with no value, or one containing characters that can't appear in an entity name (` `, `,`, `[`, `]`, `=`), is a generate-time error rather than a bad query parameter.
+- Two slots of the same list resolving to the same `fields[...]` key is a generate-time error — otherwise one would silently overwrite the other in `apply`.
 - CI runs `go generate ./...` on a clean checkout and fails if anything changes, so stale generated code can't merge.
 
 ---
