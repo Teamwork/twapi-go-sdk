@@ -171,7 +171,7 @@ type ProjectBudget struct {
 	CreatedAt *time.Time `json:"dateCreated"`
 
 	// UpdatedBy is the identifier of the user who last updated this budget.
-	UpdatedBy *int64 `json:"updatedByUserId"`
+	UpdatedBy *int64 `json:"updatedBy"`
 
 	// UpdatedAt is the date and time when this budget was last updated.
 	UpdatedAt *time.Time `json:"dateUpdated"`
