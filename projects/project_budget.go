@@ -171,7 +171,7 @@ type ProjectBudget struct {
 	CreatedAt *time.Time `json:"dateCreated"`
 
 	// UpdatedBy is the identifier of the user who last updated this budget.
-	UpdatedBy *int64 `json:"updatedUserId"`
+	UpdatedBy *int64 `json:"updatedBy"`
 
 	// UpdatedAt is the date and time when this budget was last updated.
 	UpdatedAt *time.Time `json:"dateUpdated"`
@@ -198,12 +198,27 @@ type ProjectBudgetListRequestFilters struct {
 	Status ProjectBudgetStatus
 
 	// Limit limits the number of items returned by the endpoint.
+	//
+	// Limit only applies to cursor pagination. When Cursor is empty the
+	// endpoint pages with Page/PageSize and Limit is ignored.
 	Limit int64
 
-	// PageSize sets the number of items per page.
+	// Page selects the 1-based page of results. The response reports the
+	// resulting offset as Meta.Page.PageOffset, which is Page-1.
+	//
+	// Page is ignored when Cursor is set.
+	Page int64
+
+	// PageSize sets the number of items per page. The endpoint caps this at
+	// 500.
+	//
+	// PageSize is ignored when Cursor is set.
 	PageSize int64
 
-	// Cursor is the pagination cursor used by the endpoint.
+	// Cursor is the pagination cursor used by the endpoint. It must be an
+	// opaque cursor returned by a previous response; it is not an offset or a
+	// page number. Setting it switches the endpoint into cursor pagination,
+	// where Page and PageSize are ignored and Limit bounds the page.
 	Cursor string
 
 	// Fields restricts the attributes returned for the project budget and each
@@ -228,6 +243,9 @@ func (p ProjectBudgetListRequestFilters) apply(req *http.Request) {
 	}
 	if p.Limit > 0 {
 		query.Set("limit", strconv.FormatInt(p.Limit, 10))
+	}
+	if p.Page > 0 {
+		query.Set("page", strconv.FormatInt(p.Page, 10))
 	}
 	if p.PageSize > 0 {
 		query.Set("pageSize", strconv.FormatInt(p.PageSize, 10))
