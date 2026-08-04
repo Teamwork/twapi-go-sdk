@@ -289,6 +289,11 @@ func (p ProjectBudgetListRequest) HTTPRequest(ctx context.Context, server string
 //
 // sparsefields:list
 type ProjectBudgetListResponse struct {
+	// The endpoint wraps its payload in "budgets", but the entity name the API
+	// recognises for sparse fieldsets and sideloads is "projectBudgets", so the
+	// fields[...] key can't be derived from the json tag here.
+	//
+	// sparsefields:key=projectBudgets
 	Budgets []ProjectBudget `json:"budgets"`
 
 	Meta struct {

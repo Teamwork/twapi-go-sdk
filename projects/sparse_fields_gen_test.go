@@ -436,7 +436,7 @@ func TestProjectBudgetListFieldsApply(t *testing.T) {
 	query := url.Values{}
 	fields.apply(query)
 	checks := map[string]string{
-		"fields[budgets]": "id",
+		"fields[projectBudgets]": "id",
 	}
 	for key, want := range checks {
 		if got := query.Get(key); got != want {

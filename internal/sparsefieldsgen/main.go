@@ -16,6 +16,16 @@
 //     that writes the appropriate fields[entityKey]=… query parameters via
 //     twapi.ApplySparseFields.
 //
+// A third marker applies to individual fields of a marked *ListResponse:
+//
+//   - sparsefields:key=entityName
+//     Overrides the fields[...] entity key for that slot. The key otherwise
+//     defaults to the field's json tag, which is right whenever the response
+//     envelope key matches the entity name the API recognises. A handful of
+//     endpoints break that assumption — /projects/api/v3/projects/budgets.json
+//     wraps its payload in "budgets" while the entity is "projectBudgets" — and
+//     this marker is how they declare the divergence.
+//
 // Usage (typically invoked via //go:generate from the target package):
 //
 //	//go:generate go run github.com/teamwork/twapi-go-sdk/internal/sparsefieldsgen
@@ -46,6 +56,7 @@ import (
 const (
 	markerEntity = "sparsefields:gen"
 	markerList   = "sparsefields:list"
+	markerKey    = "sparsefields:key"
 
 	rootImportPath = "github.com/teamwork/twapi-go-sdk"
 	rootImportName = "twapi"
@@ -433,6 +444,9 @@ func collectLists(file *ast.File, fieldTypeOf map[string]string, dst *[]listResp
 			if len(slots) == 0 {
 				log.Fatalf("sparsefieldsgen: %s has no sparse-fields slots (no slice field nor Included struct)", ts.Name.Name)
 			}
+			if err := assertUniqueEntityKeys(slots, ts.Name.Name); err != nil {
+				log.Fatalf("sparsefieldsgen: %v", err)
+			}
 			*dst = append(*dst, listResponse{
 				StructName:    ts.Name.Name,
 				ContainerName: container,
@@ -476,6 +490,47 @@ func markerOverride(doc *ast.CommentGroup, marker, defaultName string) (string, 
 		}
 	}
 	return "", false
+}
+
+// slotEntityKey resolves the fields[...] entity key for one slot of a marked
+// *ListResponse. It defaults to jsonTag — the response envelope key and the
+// entity name coincide for nearly every v3 list — and honours a
+// `sparsefields:key=<name>` marker on the field's doc comment or trailing
+// comment for the endpoints where the two diverge.
+//
+// The override is rejected when empty or when it contains characters that can't
+// appear in a query-parameter entity name, so a typo fails at generate time
+// rather than producing a fields[...] key the API silently ignores.
+func slotEntityKey(field *ast.Field, jsonTag, what string) (string, error) {
+	for _, doc := range []*ast.CommentGroup{field.Doc, field.Comment} {
+		key, ok := markerOverride(doc, markerKey, "")
+		if !ok {
+			continue
+		}
+		switch {
+		case key == "":
+			return "", fmt.Errorf("%s carries `%s` without a value; use `%s=entityName`", what, markerKey, markerKey)
+		case strings.ContainsAny(key, " \t,[]="):
+			return "", fmt.Errorf("%s declares an invalid `%s` value %q", what, markerKey, key)
+		}
+		return key, nil
+	}
+	return jsonTag, nil
+}
+
+// assertUniqueEntityKeys fails when two slots of the same list target the same
+// fields[...] key, which would make one silently overwrite the other in the
+// generated apply method. Only reachable through a `sparsefields:key` override,
+// since json tags are unique within a struct.
+func assertUniqueEntityKeys(slots []slot, ownerName string) error {
+	seen := make(map[string]string, len(slots))
+	for _, s := range slots {
+		if other, ok := seen[s.EntityKey]; ok {
+			return fmt.Errorf("slots %s and %s of %s both target fields[%s]", other, s.GoName, ownerName, s.EntityKey)
+		}
+		seen[s.EntityKey] = s.GoName
+	}
+	return nil
 }
 
 // extractFields returns the json-tagged fields of a struct, in source order.
@@ -591,9 +646,13 @@ func extractSlots(st *ast.StructType, ownerName string, fieldTypeOf map[string]s
 				return nil, fmt.Errorf("slice field %s.%s uses element type %s which has no `%s` marker",
 					ownerName, field.Names[0].Name, elem.Name, markerEntity)
 			}
+			entityKey, err := slotEntityKey(field, jsonTag, fmt.Sprintf("slice field %s.%s", ownerName, field.Names[0].Name))
+			if err != nil {
+				return nil, err
+			}
 			slots = append(slots, slot{
 				GoName:      field.Names[0].Name,
-				EntityKey:   jsonTag,
+				EntityKey:   entityKey,
 				ElementType: fieldType,
 			})
 		case *ast.StructType:
@@ -641,9 +700,14 @@ func extractIncludedSlots(st *ast.StructType, ownerName string, fieldTypeOf map[
 		if jsonTag == "" || jsonTag == "-" {
 			continue
 		}
+		entityKey, err := slotEntityKey(field, jsonTag,
+			fmt.Sprintf("sideload %s.Included.%s", ownerName, field.Names[0].Name))
+		if err != nil {
+			return nil, err
+		}
 		slots = append(slots, slot{
 			GoName:      field.Names[0].Name,
-			EntityKey:   jsonTag,
+			EntityKey:   entityKey,
 			ElementType: fieldType,
 		})
 	}

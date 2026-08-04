@@ -762,13 +762,13 @@ func (f NotebookListFields) apply(query url.Values) {
 // ProjectBudgetListFields selects sparse-fields slots for ProjectBudgetListResponse. Leave a slot empty to receive the
 // API default for that entity; populate it to restrict the attributes returned.
 type ProjectBudgetListFields struct {
-	// Budgets controls fields[budgets]=… on the response.
+	// Budgets controls fields[projectBudgets]=… on the response.
 	Budgets []ProjectBudgetField
 }
 
 // apply writes every populated slot to query as a fields[entity]=… parameter.
 func (f ProjectBudgetListFields) apply(query url.Values) {
-	twapi.ApplySparseFields(query, "budgets", f.Budgets)
+	twapi.ApplySparseFields(query, "projectBudgets", f.Budgets)
 }
 
 // ProjectCategoryListFields selects sparse-fields slots for ProjectCategoryListResponse. Leave a slot empty to receive the
