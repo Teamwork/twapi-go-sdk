@@ -46,6 +46,29 @@ func TestProjectBudgetListRequestGeneration(t *testing.T) {
 	}
 }
 
+func TestProjectBudgetListRequestGeneration_Page(t *testing.T) {
+	req := projects.NewProjectBudgetListRequest()
+	req.Filters.Page = 3
+	req.Filters.PageSize = 250
+
+	httpReq, err := req.HTTPRequest(context.Background(), "https://test.com")
+	if err != nil {
+		t.Fatalf("unexpected error creating HTTP request: %s", err)
+	}
+
+	query, err := url.ParseQuery(httpReq.URL.RawQuery)
+	if err != nil {
+		t.Fatalf("failed to parse query string: %s", err)
+	}
+
+	if query.Get("page") != "3" {
+		t.Errorf("expected page=3 but got %q", query.Get("page"))
+	}
+	if query.Get("pageSize") != "250" {
+		t.Errorf("expected pageSize=250 but got %q", query.Get("pageSize"))
+	}
+}
+
 func TestProjectBudgetListRequestGeneration_AllOptional(t *testing.T) {
 	req := projects.NewProjectBudgetListRequest()
 
