@@ -307,7 +307,7 @@ const (
 	ProjectBudgetFieldNotificationIDs    ProjectBudgetField = "notificationIds"
 	ProjectBudgetFieldCreatedBy          ProjectBudgetField = "createdByUserId"
 	ProjectBudgetFieldCreatedAt          ProjectBudgetField = "dateCreated"
-	ProjectBudgetFieldUpdatedBy          ProjectBudgetField = "updatedByUserId"
+	ProjectBudgetFieldUpdatedBy          ProjectBudgetField = "updatedBy"
 	ProjectBudgetFieldUpdatedAt          ProjectBudgetField = "dateUpdated"
 	ProjectBudgetFieldCompletedBy        ProjectBudgetField = "completedByUserId"
 	ProjectBudgetFieldCompletedAt        ProjectBudgetField = "dateCompleted"
