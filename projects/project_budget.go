@@ -31,18 +31,33 @@ const (
 	BudgetTypeTime BudgetType = "TIME"
 )
 
-// ProjectBudgetStatus is the status filter value for project budgets.
+// ProjectBudgetStatus is a project budget status, used both to filter and to
+// read the status of a budget. Filters match case-insensitively, budgets report
+// upper case.
 type ProjectBudgetStatus string
 
 const (
-	// ProjectBudgetStatusUpcoming represents an upcoming project budget.
-	ProjectBudgetStatusUpcoming ProjectBudgetStatus = "upcoming"
+	// ProjectBudgetStatusAll matches any status except deleted. Filter only.
+	ProjectBudgetStatusAll ProjectBudgetStatus = "ALL"
 
-	// ProjectBudgetStatusActive represents an active project budget.
-	ProjectBudgetStatusActive ProjectBudgetStatus = "active"
+	// ProjectBudgetStatusUpcoming represents a budget that hasn't started.
+	ProjectBudgetStatusUpcoming ProjectBudgetStatus = "UPCOMING"
 
-	// ProjectBudgetStatusComplete represents a completed project budget.
-	ProjectBudgetStatusComplete ProjectBudgetStatus = "complete"
+	// ProjectBudgetStatusActive represents a started, unfinished budget.
+	ProjectBudgetStatusActive ProjectBudgetStatus = "ACTIVE"
+
+	// ProjectBudgetStatusCompleted represents an ended budget. Filter only:
+	// ended budgets report ProjectBudgetStatusArchived.
+	ProjectBudgetStatusCompleted ProjectBudgetStatus = "COMPLETED"
+
+	// ProjectBudgetStatusArchived represents an ended, undeleted budget.
+	ProjectBudgetStatusArchived ProjectBudgetStatus = "ARCHIVED"
+
+	// ProjectBudgetStatusDeleted represents a deleted budget.
+	ProjectBudgetStatusDeleted ProjectBudgetStatus = "DELETED"
+
+	// ProjectBudgetStatusInvalid represents a budget with contradictory dates.
+	ProjectBudgetStatusInvalid ProjectBudgetStatus = "INVALID"
 )
 
 // ProjectBudgetExpenseType represents the type of expense for a project budget.
@@ -194,7 +209,8 @@ type ProjectBudgetListRequestFilters struct {
 	// ProjectIDs filters budgets to one or more projects.
 	ProjectIDs []int64
 
-	// Status filters budgets by status.
+	// Status filters budgets by status. Values outside the ProjectBudgetStatus
+	// constants get a 400 "unknown project budget status".
 	Status ProjectBudgetStatus
 
 	// Limit limits the number of items returned by the endpoint.
