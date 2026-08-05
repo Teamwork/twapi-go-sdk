@@ -300,6 +300,13 @@ type ProjectCategoryGetRequestPath struct {
 type ProjectCategoryGetRequest struct {
 	// Path contains the path parameters for the request.
 	Path ProjectCategoryGetRequestPath
+
+	// Fields restricts the attributes returned for the project category. Each
+	// slot of ProjectCategoryGetFields is a separate `fields[entity]=…`
+	// selection; populated slots restrict the response, empty slots return the
+	// API default. Use the generated ProjectCategoryField constants to ensure
+	// values match real attributes.
+	Fields ProjectCategoryGetFields
 }
 
 // NewProjectCategoryGetRequest creates a new ProjectCategoryGetRequest with the
@@ -321,6 +328,10 @@ func (p ProjectCategoryGetRequest) HTTPRequest(ctx context.Context, server strin
 		return nil, err
 	}
 
+	query := req.URL.Query()
+	p.Fields.apply(query)
+	req.URL.RawQuery = query.Encode()
+
 	return req, nil
 }
 
@@ -328,6 +339,8 @@ func (p ProjectCategoryGetRequest) HTTPRequest(ctx context.Context, server strin
 // project category.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/categories/get-projects-api-v3-projectcategories-category-id-json
+//
+// sparsefields:get
 type ProjectCategoryGetResponse struct {
 	ProjectCategory ProjectCategory `json:"projectCategory"`
 }

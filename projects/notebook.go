@@ -372,6 +372,13 @@ type NotebookGetRequestPath struct {
 type NotebookGetRequest struct {
 	// Path contains the path parameters for the request.
 	Path NotebookGetRequestPath
+
+	// Fields restricts the attributes returned for the notebook. Each slot of
+	// NotebookGetFields is a separate `fields[entity]=…` selection; populated
+	// slots restrict the response, empty slots return the API default. Use the
+	// generated NotebookField constants to ensure values match real
+	// attributes.
+	Fields NotebookGetFields
 }
 
 // NewNotebookGetRequest creates a new NotebookGetRequest with the provided
@@ -393,12 +400,18 @@ func (m NotebookGetRequest) HTTPRequest(ctx context.Context, server string) (*ht
 		return nil, err
 	}
 
+	query := req.URL.Query()
+	m.Fields.apply(query)
+	req.URL.RawQuery = query.Encode()
+
 	return req, nil
 }
 
 // NotebookGetResponse contains all the information related to a notebook.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/notebooks/get-projects-api-v3-notebooks-notebook-id-json
+//
+// sparsefields:get
 type NotebookGetResponse struct {
 	Notebook Notebook `json:"notebook"`
 }

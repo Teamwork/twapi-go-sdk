@@ -440,6 +440,12 @@ type TimelogGetRequestPath struct {
 type TimelogGetRequest struct {
 	// Path contains the path parameters for the request.
 	Path TimelogGetRequestPath
+
+	// Fields restricts the attributes returned for the timelog. Each slot of
+	// TimelogGetFields is a separate `fields[entity]=…` selection; populated
+	// slots restrict the response, empty slots return the API default. Use the
+	// generated TimelogField constants to ensure values match real attributes.
+	Fields TimelogGetFields
 }
 
 // NewTimelogGetRequest creates a new TimelogGetRequest with the provided
@@ -461,12 +467,18 @@ func (t TimelogGetRequest) HTTPRequest(ctx context.Context, server string) (*htt
 		return nil, err
 	}
 
+	query := req.URL.Query()
+	t.Fields.apply(query)
+	req.URL.RawQuery = query.Encode()
+
 	return req, nil
 }
 
 // TimelogGetResponse contains all the information related to a timelog.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/time-tracking/get-projects-api-v3-time-timelog-id-json
+//
+// sparsefields:get
 type TimelogGetResponse struct {
 	Timelog Timelog `json:"timelog"`
 }

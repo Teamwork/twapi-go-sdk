@@ -305,6 +305,12 @@ type JobRoleGetRequestPath struct {
 type JobRoleGetRequest struct {
 	// Path contains the path parameters for the request.
 	Path JobRoleGetRequestPath
+
+	// Fields restricts the attributes returned for the job role. Each slot of
+	// JobRoleGetFields is a separate `fields[entity]=…` selection; populated
+	// slots restrict the response, empty slots return the API default. Use the
+	// generated JobRoleField constants to ensure values match real attributes.
+	Fields JobRoleGetFields
 }
 
 // NewJobRoleGetRequest creates a new JobRoleGetRequest with the provided job
@@ -326,12 +332,18 @@ func (s JobRoleGetRequest) HTTPRequest(ctx context.Context, server string) (*htt
 		return nil, err
 	}
 
+	query := req.URL.Query()
+	s.Fields.apply(query)
+	req.URL.RawQuery = query.Encode()
+
 	return req, nil
 }
 
 // JobRoleGetResponse contains all the information related to a job role.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/job-roles/get-projects-api-v3-jobroles-job-role-id-json
+//
+// sparsefields:get
 type JobRoleGetResponse struct {
 	JobRole JobRole `json:"jobRole"`
 }

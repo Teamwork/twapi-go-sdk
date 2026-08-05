@@ -696,6 +696,13 @@ type ProjectGetRequest struct {
 
 	// Filters contains the filters for loading a single project.
 	Filters ProjectRequestFilters
+
+	// Fields restricts the attributes returned for the project and each of its
+	// sideloads. Each slot of ProjectGetFields is a separate
+	// `fields[entity]=…` selection; populated slots restrict the response,
+	// empty slots return the API default. Use the generated ProjectField
+	// constants to ensure values match real attributes.
+	Fields ProjectGetFields
 }
 
 // NewProjectGetRequest creates a new ProjectGetRequest with the provided
@@ -718,12 +725,18 @@ func (p ProjectGetRequest) HTTPRequest(ctx context.Context, server string) (*htt
 	}
 	p.Filters.apply(req)
 
+	query := req.URL.Query()
+	p.Fields.apply(query)
+	req.URL.RawQuery = query.Encode()
+
 	return req, nil
 }
 
 // ProjectGetResponse contains all the information related to a project.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/projects/get-projects-api-v3-projects-project-id-json
+//
+// sparsefields:get
 type ProjectGetResponse struct {
 	Project Project `json:"project"`
 

@@ -570,6 +570,12 @@ type TimerGetRequestPath struct {
 type TimerGetRequest struct {
 	// Path contains the path parameters for the request.
 	Path TimerGetRequestPath
+
+	// Fields restricts the attributes returned for the timer. Each slot of
+	// TimerGetFields is a separate `fields[entity]=…` selection; populated
+	// slots restrict the response, empty slots return the API default. Use the
+	// generated TimerField constants to ensure values match real attributes.
+	Fields TimerGetFields
 }
 
 // NewTimerGetRequest creates a new TimerGetRequest with the provided
@@ -591,12 +597,18 @@ func (t TimerGetRequest) HTTPRequest(ctx context.Context, server string) (*http.
 		return nil, err
 	}
 
+	query := req.URL.Query()
+	t.Fields.apply(query)
+	req.URL.RawQuery = query.Encode()
+
 	return req, nil
 }
 
 // TimerGetResponse contains all the information related to a timer.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/time-tracking/get-projects-api-v3-timers-timer-id-json
+//
+// sparsefields:get
 type TimerGetResponse struct {
 	Timer Timer `json:"timer"`
 }

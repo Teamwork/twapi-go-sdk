@@ -378,6 +378,13 @@ type MilestoneGetRequestPath struct {
 type MilestoneGetRequest struct {
 	// Path contains the path parameters for the request.
 	Path MilestoneGetRequestPath
+
+	// Fields restricts the attributes returned for the milestone. Each slot of
+	// MilestoneGetFields is a separate `fields[entity]=…` selection; populated
+	// slots restrict the response, empty slots return the API default. Use the
+	// generated MilestoneField constants to ensure values match real
+	// attributes.
+	Fields MilestoneGetFields
 }
 
 // NewMilestoneGetRequest creates a new MilestoneGetRequest with the provided
@@ -399,12 +406,18 @@ func (m MilestoneGetRequest) HTTPRequest(ctx context.Context, server string) (*h
 		return nil, err
 	}
 
+	query := req.URL.Query()
+	m.Fields.apply(query)
+	req.URL.RawQuery = query.Encode()
+
 	return req, nil
 }
 
 // MilestoneGetResponse contains all the information related to a milestone.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/milestones/get-projects-api-v3-milestones-mileston-id-json
+//
+// sparsefields:get
 type MilestoneGetResponse struct {
 	Milestone Milestone `json:"milestone"`
 }

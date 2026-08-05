@@ -519,6 +519,12 @@ type CommentGetRequestPath struct {
 type CommentGetRequest struct {
 	// Path contains the path parameters for the request.
 	Path CommentGetRequestPath
+
+	// Fields restricts the attributes returned for the comment. Each slot of
+	// CommentGetFields is a separate `fields[entity]=…` selection; populated
+	// slots restrict the response, empty slots return the API default. Use the
+	// generated CommentField constants to ensure values match real attributes.
+	Fields CommentGetFields
 }
 
 // NewCommentGetRequest creates a new CommentGetRequest with the provided
@@ -540,12 +546,18 @@ func (t CommentGetRequest) HTTPRequest(ctx context.Context, server string) (*htt
 		return nil, err
 	}
 
+	query := req.URL.Query()
+	t.Fields.apply(query)
+	req.URL.RawQuery = query.Encode()
+
 	return req, nil
 }
 
 // CommentGetResponse contains all the information related to a comment.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/comments/get-projects-api-v3-comments-id-json
+//
+// sparsefields:get
 type CommentGetResponse struct {
 	Comment Comment `json:"comments"`
 }

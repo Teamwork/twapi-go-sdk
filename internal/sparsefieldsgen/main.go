@@ -16,15 +16,28 @@
 //     that writes the appropriate fields[entityKey]=… query parameters via
 //     twapi.ApplySparseFields.
 //
-// A third marker applies to individual fields of a marked *ListResponse:
+//   - sparsefields:get [=CustomTypeName]
+//     Marks a *GetResponse struct — the single-entity counterpart of a list.
+//     Emits the same kind of container (e.g. TaskGetFields), with one slot for
+//     the response's entity field and one per entry of its Included sub-struct.
+//     Single-entity v3 endpoints share their query bindings with the plural
+//     endpoint, so the entity key of the main slot is the *plural* entity name
+//     rather than the response's singular envelope key ("message" decodes the
+//     payload, but the selection is fields[messages]=…). The generator takes
+//     that key from the entity's own marked *ListResponse, so a get and its
+//     list can never disagree.
+//
+// A fourth marker applies to individual fields of a marked response:
 //
 //   - sparsefields:key=entityName
-//     Overrides the fields[...] entity key for that slot. The key otherwise
-//     defaults to the field's json tag, which is right whenever the response
-//     envelope key matches the entity name the API recognises. A handful of
-//     endpoints break that assumption — /projects/api/v3/projects/budgets.json
-//     wraps its payload in "budgets" while the entity is "projectBudgets" — and
-//     this marker is how they declare the divergence.
+//     Overrides the fields[...] entity key for that slot. For list slots the
+//     key otherwise defaults to the field's json tag, which is right whenever
+//     the response envelope key matches the entity name the API recognises. A
+//     handful of endpoints break that assumption —
+//     /projects/api/v3/projects/budgets.json wraps its payload in "budgets"
+//     while the entity is "projectBudgets" — and this marker is how they
+//     declare the divergence. On the main slot of a get response it overrides
+//     the key inherited from the entity's list.
 //
 // Usage (typically invoked via //go:generate from the target package):
 //
@@ -56,6 +69,7 @@ import (
 const (
 	markerEntity = "sparsefields:gen"
 	markerList   = "sparsefields:list"
+	markerGet    = "sparsefields:get"
 	markerKey    = "sparsefields:key"
 
 	rootImportPath = "github.com/teamwork/twapi-go-sdk"
@@ -73,9 +87,12 @@ type fieldEntry struct {
 	JSONTag string
 }
 
-type listResponse struct {
+// response is a marked *ListResponse or *GetResponse for which a sparse-fields
+// container is emitted.
+type response struct {
 	StructName    string // e.g. "TaskListResponse"
 	ContainerName string // e.g. "TaskListFields"
+	OwnerName     string // type expected to declare `Fields <ContainerName>`
 	Slots         []slot
 }
 
@@ -83,6 +100,8 @@ type slot struct {
 	GoName      string // field name on the container (e.g. "Tasks")
 	EntityKey   string // JSON tag used in fields[...]= (e.g. "tasks")
 	ElementType string // generated Field-type name (e.g. "TaskField")
+	Entity      string // entity struct name (e.g. "Task")
+	Main        bool   // true for the response's own entity, false for sideloads
 }
 
 func main() {
@@ -107,9 +126,9 @@ func main() {
 	}
 
 	var (
-		entities []entity
-		lists    []listResponse
-		structs  = map[string]*ast.StructType{}
+		entities  []entity
+		responses []response
+		structs   = map[string]*ast.StructType{}
 	)
 	for _, file := range files {
 		indexStructs(file, structs)
@@ -121,25 +140,37 @@ func main() {
 		log.Fatalf("sparsefieldsgen: no `%s` markers found in %s", markerEntity, abs)
 	}
 
-	// Build entity → FieldType lookup, used by the list pass to resolve slot
+	// Build entity → FieldType lookup, used by the response pass to resolve slot
 	// element types (e.g. Task → TaskField).
 	fieldTypeOf := map[string]string{}
 	for _, e := range entities {
 		fieldTypeOf[e.StructName] = e.FieldType
 	}
 
+	// Lists are collected first: the entity key of a get response's main slot is
+	// inherited from the entity's list, so that mapping has to exist before the
+	// get pass runs.
+	var lists []response
 	for _, file := range files {
 		collectLists(file, fieldTypeOf, &lists)
+	}
+	entityKeyOf, err := entityKeys(lists, fieldTypeOf)
+	if err != nil {
+		log.Fatalf("sparsefieldsgen: %v", err)
+	}
+	responses = append(responses, lists...)
+	for _, file := range files {
+		collectGets(file, fieldTypeOf, entityKeyOf, &responses)
 	}
 
 	sort.Slice(entities, func(i, j int) bool {
 		return entities[i].FieldType < entities[j].FieldType
 	})
-	sort.Slice(lists, func(i, j int) bool {
-		return lists[i].ContainerName < lists[j].ContainerName
+	sort.Slice(responses, func(i, j int) bool {
+		return responses[i].ContainerName < responses[j].ContainerName
 	})
 
-	source, err := render(pkgName, entities, lists)
+	source, err := render(pkgName, entities, responses)
 	if err != nil {
 		log.Fatalf("sparsefieldsgen: render: %v", err)
 	}
@@ -149,28 +180,29 @@ func main() {
 		log.Fatalf("sparsefieldsgen: write %s: %v", dest, err)
 	}
 
-	// Generated tests cover the lists whose filter already exposes a
-	// `Fields <Container>` slot. Lists in flight (marker added but filter not
-	// yet wired) are skipped silently so regeneration doesn't break the build.
+	// Generated tests cover the responses whose owner (a list's filters struct or
+	// a get request) already exposes a `Fields <Container>` slot. Responses in
+	// flight (marker added but owner not yet wired) are skipped silently so
+	// regeneration doesn't break the build.
 	entityByField := map[string]entity{}
 	for _, e := range entities {
 		entityByField[e.FieldType] = e
 	}
-	wiredLists := wiredLists(lists, structs)
+	wired := wiredResponses(responses, structs)
 
-	// Static wiring check: a filter declaring `Fields <Container>` must also
+	// Static wiring check: an owner declaring `Fields <Container>` must also
 	// invoke `*.Fields.apply(...)` somewhere in one of its methods, otherwise
 	// the response will silently ignore sparse-field selections. Failing at
-	// generate time prevents a half-wired filter from shipping unnoticed.
-	if missing := unwiredFilters(wiredLists, files); len(missing) > 0 {
-		log.Fatalf("sparsefieldsgen: filters declare a Fields slot but never call `<receiver>.Fields.apply(...)`:\n  "+
+	// generate time prevents a half-wired owner from shipping unnoticed.
+	if missing := unwiredOwners(wired, files); len(missing) > 0 {
+		log.Fatalf("sparsefieldsgen: types declare a Fields slot but never call `<receiver>.Fields.apply(...)`:\n  "+
 			"- %s\n"+
-			"Add `t.Fields.apply(query)` (or equivalent) to each filter's method that mutates the request.",
+			"Add `t.Fields.apply(query)` (or equivalent) to each method that mutates the request.",
 			strings.Join(missing, "\n  - "))
 	}
 
 	testDest := filepath.Join(abs, *outTest)
-	if len(wiredLists) == 0 {
+	if len(wired) == 0 {
 		// Remove any stale generated test file from a previous run so the file
 		// doesn't outlive the markers that produced it.
 		if err := os.Remove(testDest); err != nil && !os.IsNotExist(err) {
@@ -182,7 +214,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("sparsefieldsgen: resolve import path: %v", err)
 	}
-	testSource, err := renderTests(pkgName, importPath, wiredLists, entityByField)
+	testSource, err := renderTests(pkgName, importPath, wired, entityByField)
 	if err != nil {
 		log.Fatalf("sparsefieldsgen: render tests: %v", err)
 	}
@@ -234,36 +266,35 @@ func parsePackage(fset *token.FileSet, dir string, skipName map[string]bool) ([]
 	return files, pkgName, nil
 }
 
-// wiredLists returns the subset of lists whose <Request>Filters struct already
-// exposes a `Fields <Container>` field. Other lists are skipped so emitting a
-// test wouldn't break compilation while the rollout is in progress.
-func wiredLists(lists []listResponse, structs map[string]*ast.StructType) []listResponse {
-	var out []listResponse
-	for _, l := range lists {
-		filtersName := strings.TrimSuffix(l.StructName, "Response") + "RequestFilters"
-		st, ok := structs[filtersName]
+// wiredResponses returns the subset of responses whose owner struct — a list's
+// `<Request>Filters` or a get's `<Resource>GetRequest` — already exposes a
+// `Fields <Container>` field. Other responses are skipped so emitting a test
+// wouldn't break compilation while the rollout is in progress.
+func wiredResponses(responses []response, structs map[string]*ast.StructType) []response {
+	var out []response
+	for _, r := range responses {
+		st, ok := structs[r.OwnerName]
 		if !ok {
 			continue
 		}
-		if hasField(st, "Fields", l.ContainerName) {
-			out = append(out, l)
+		if hasField(st, "Fields", r.ContainerName) {
+			out = append(out, r)
 		}
 	}
 	return out
 }
 
-// unwiredFilters returns one human-readable diagnostic per wired list whose
-// filter declares `Fields <Container>` but never invokes
+// unwiredOwners returns one human-readable diagnostic per wired response whose
+// owner declares `Fields <Container>` but never invokes
 // `<receiver>.Fields.apply(...)` from any of its own methods. An empty result
-// means every wired filter actually pipes its sparse-fields selection through
-// at request-build time.
-func unwiredFilters(lists []listResponse, files []*ast.File) []string {
+// means every wired owner actually pipes its sparse-fields selection through at
+// request-build time.
+func unwiredOwners(responses []response, files []*ast.File) []string {
 	var missing []string
-	for _, l := range lists {
-		filterName := strings.TrimSuffix(l.StructName, "Response") + "RequestFilters"
-		if !hasFieldsApplyCall(files, filterName) {
+	for _, r := range responses {
+		if !hasFieldsApplyCall(files, r.OwnerName) {
 			missing = append(missing, fmt.Sprintf("%s declares `Fields %s` but no method on %s calls `*.Fields.apply(...)`",
-				filterName, l.ContainerName, filterName))
+				r.OwnerName, r.ContainerName, r.OwnerName))
 		}
 	}
 	return missing
@@ -412,9 +443,52 @@ func collectEntities(file *ast.File, structs map[string]*ast.StructType, dst *[]
 	}
 }
 
-// collectLists walks file and appends a listResponse for every struct that
-// carries the sparsefields:list marker.
-func collectLists(file *ast.File, fieldTypeOf map[string]string, dst *[]listResponse) {
+// collectLists walks file and appends a response for every struct that carries
+// the sparsefields:list marker.
+func collectLists(file *ast.File, fieldTypeOf map[string]string, dst *[]response) {
+	collectMarked(file, markerList, dst, func(st *ast.StructType, name string) ([]slot, string, error) {
+		slots, err := extractSlots(st, name, fieldTypeOf)
+		if err != nil {
+			return nil, "", err
+		}
+		if len(slots) == 0 {
+			return nil, "", fmt.Errorf("has no sparse-fields slots (no slice field nor Included struct)")
+		}
+		// A list's filters host the Fields slot, e.g.
+		// TaskListResponse → TaskListRequestFilters.
+		return slots, strings.TrimSuffix(name, "Response") + "RequestFilters", nil
+	})
+}
+
+// collectGets walks file and appends a response for every struct that carries
+// the sparsefields:get marker. entityKeyOf maps an entity struct name to the
+// fields[...] key its list uses, which is what a single-entity endpoint expects
+// too — see extractGetSlots.
+func collectGets(file *ast.File, fieldTypeOf, entityKeyOf map[string]string, dst *[]response) {
+	collectMarked(file, markerGet, dst, func(st *ast.StructType, name string) ([]slot, string, error) {
+		slots, err := extractGetSlots(st, name, fieldTypeOf, entityKeyOf)
+		if err != nil {
+			return nil, "", err
+		}
+		if len(slots) == 0 {
+			return nil, "", fmt.Errorf("has no sparse-fields slots (no entity field nor Included struct)")
+		}
+		// A get request hosts the Fields slot directly — there is no filters
+		// struct — e.g. TaskGetResponse → TaskGetRequest.
+		return slots, strings.TrimSuffix(name, "Response") + "Request", nil
+	})
+}
+
+// collectMarked walks the type declarations of file, and for each struct
+// carrying marker calls extract to obtain the response's slots and the name of
+// the type expected to host its `Fields` slot. Any error from extract is fatal:
+// a marked response that can't be resolved must not be silently dropped.
+func collectMarked(
+	file *ast.File,
+	marker string,
+	dst *[]response,
+	extract func(st *ast.StructType, name string) (slots []slot, owner string, err error),
+) {
 	for _, decl := range file.Decls {
 		gen, ok := decl.(*ast.GenDecl)
 		if !ok || gen.Tok != token.TYPE {
@@ -429,31 +503,55 @@ func collectLists(file *ast.File, fieldTypeOf map[string]string, dst *[]listResp
 			if doc == nil {
 				doc = gen.Doc
 			}
-			container, ok := markerOverride(doc, markerList, defaultContainerName(ts.Name.Name))
+			container, ok := markerOverride(doc, marker, defaultContainerName(ts.Name.Name))
 			if !ok {
 				continue
 			}
 			st, ok := ts.Type.(*ast.StructType)
 			if !ok {
-				log.Fatalf("sparsefieldsgen: %s is marked %q but is not a struct", ts.Name.Name, markerList)
+				log.Fatalf("sparsefieldsgen: %s is marked %q but is not a struct", ts.Name.Name, marker)
 			}
-			slots, err := extractSlots(st, ts.Name.Name, fieldTypeOf)
+			slots, owner, err := extract(st, ts.Name.Name)
 			if err != nil {
 				log.Fatalf("sparsefieldsgen: %s: %v", ts.Name.Name, err)
-			}
-			if len(slots) == 0 {
-				log.Fatalf("sparsefieldsgen: %s has no sparse-fields slots (no slice field nor Included struct)", ts.Name.Name)
 			}
 			if err := assertUniqueEntityKeys(slots, ts.Name.Name); err != nil {
 				log.Fatalf("sparsefieldsgen: %v", err)
 			}
-			*dst = append(*dst, listResponse{
+			*dst = append(*dst, response{
 				StructName:    ts.Name.Name,
 				ContainerName: container,
+				OwnerName:     owner,
 				Slots:         slots,
 			})
 		}
 	}
+}
+
+// entityKeys maps every entity that owns a marked list to the fields[...] key
+// that list's main slot uses — the plural entity name the API recognises. Get
+// responses inherit their main slot's key from this map, so a single-entity
+// endpoint and its list can never disagree on the entity name.
+//
+// Two lists claiming the same entity as their main slot with different keys is
+// a generate-time error: there would be no single answer to inherit.
+func entityKeys(lists []response, fieldTypeOf map[string]string) (map[string]string, error) {
+	keys := make(map[string]string, len(fieldTypeOf))
+	owner := make(map[string]string, len(fieldTypeOf))
+	for _, l := range lists {
+		for _, s := range l.Slots {
+			if !s.Main {
+				continue
+			}
+			if previous, ok := keys[s.Entity]; ok && previous != s.EntityKey {
+				return nil, fmt.Errorf("%s and %s disagree on the entity key of %s (%q vs %q)",
+					owner[s.Entity], l.StructName, s.Entity, previous, s.EntityKey)
+			}
+			keys[s.Entity] = s.EntityKey
+			owner[s.Entity] = l.StructName
+		}
+	}
+	return keys, nil
 }
 
 // defaultContainerName drops a trailing "Response" if present so
@@ -654,10 +752,83 @@ func extractSlots(st *ast.StructType, ownerName string, fieldTypeOf map[string]s
 				GoName:      field.Names[0].Name,
 				EntityKey:   entityKey,
 				ElementType: fieldType,
+				Entity:      elem.Name,
+				Main:        true,
 			})
 		case *ast.StructType:
 			// Anonymous struct field. Only the conventional "Included" container
 			// is walked; "Meta" and similar bookkeeping fields are ignored.
+			if field.Names[0].Name != "Included" {
+				continue
+			}
+			sub, err := extractIncludedSlots(t, ownerName, fieldTypeOf)
+			if err != nil {
+				return nil, err
+			}
+			slots = append(slots, sub...)
+		}
+	}
+	return slots, nil
+}
+
+// extractGetSlots inspects a *GetResponse struct — the single-entity
+// counterpart of a list — and returns one slot per sparse-fields target it
+// exposes:
+//
+//   - the field holding the retrieved entity (a plain struct, not a slice)
+//     becomes the main slot;
+//   - each map field inside the Included sub-struct whose value type has an
+//     entity Field enum becomes a sideload slot, exactly as for a list.
+//
+// The main slot's entity key comes from entityKeyOf rather than from the field's
+// json tag: the v3 handlers bind singular and plural routes to the same query
+// arguments, so the selection is fields[messages]=… even though the payload
+// arrives under "message". Fields whose type has no entity marker (Meta, a
+// named Included container, plain scalars) are skipped, so only entities the
+// generator can type get a slot.
+func extractGetSlots(st *ast.StructType, ownerName string, fieldTypeOf, entityKeyOf map[string]string) ([]slot, error) {
+	var slots []slot
+	for _, field := range st.Fields.List {
+		if len(field.Names) == 0 || field.Tag == nil {
+			continue
+		}
+		tagText, err := strconv.Unquote(field.Tag.Value)
+		if err != nil {
+			return nil, fmt.Errorf("invalid struct tag %s: %w", field.Tag.Value, err)
+		}
+		jsonTag := strings.SplitN(reflect.StructTag(tagText).Get("json"), ",", 2)[0]
+		if jsonTag == "" || jsonTag == "-" {
+			continue
+		}
+
+		switch t := field.Type.(type) {
+		case *ast.Ident, *ast.StarExpr:
+			elem, ok := elementIdent(field.Type)
+			if !ok {
+				continue
+			}
+			fieldType, ok := fieldTypeOf[elem.Name]
+			if !ok {
+				continue
+			}
+			what := fmt.Sprintf("field %s.%s", ownerName, field.Names[0].Name)
+			entityKey, err := slotEntityKey(field, entityKeyOf[elem.Name], what)
+			if err != nil {
+				return nil, err
+			}
+			if entityKey == "" {
+				return nil, fmt.Errorf("%s holds a %s, but no list declares that entity's fields[...] key; "+
+					"mark the entity's list response with `%s` or declare the key here with `%s=entityName`",
+					what, elem.Name, markerList, markerKey)
+			}
+			slots = append(slots, slot{
+				GoName:      field.Names[0].Name,
+				EntityKey:   entityKey,
+				ElementType: fieldType,
+				Entity:      elem.Name,
+				Main:        true,
+			})
+		case *ast.StructType:
 			if field.Names[0].Name != "Included" {
 				continue
 			}
@@ -709,6 +880,7 @@ func extractIncludedSlots(st *ast.StructType, ownerName string, fieldTypeOf map[
 			GoName:      field.Names[0].Name,
 			EntityKey:   entityKey,
 			ElementType: fieldType,
+			Entity:      elem.Name,
 		})
 	}
 	return slots, nil
@@ -735,13 +907,13 @@ func embeddedIdent(expr ast.Expr) (*ast.Ident, bool) {
 	return elementIdent(expr)
 }
 
-func render(pkgName string, entities []entity, lists []listResponse) ([]byte, error) {
+func render(pkgName string, entities []entity, responses []response) ([]byte, error) {
 	var buf bytes.Buffer
 	fmt.Fprintln(&buf, "// Code generated by sparsefieldsgen; DO NOT EDIT.")
 	fmt.Fprintln(&buf)
 	fmt.Fprintf(&buf, "package %s\n\n", pkgName)
 
-	if len(lists) > 0 {
+	if len(responses) > 0 {
 		fmt.Fprintln(&buf, "import (")
 		fmt.Fprintln(&buf, "\t\"net/url\"")
 		fmt.Fprintln(&buf)
@@ -766,7 +938,7 @@ func render(pkgName string, entities []entity, lists []listResponse) ([]byte, er
 		fmt.Fprintln(&buf, ")")
 	}
 
-	for _, l := range lists {
+	for _, l := range responses {
 		fmt.Fprintln(&buf)
 		fmt.Fprintf(&buf, "// %s selects sparse-fields slots for %s. Leave a slot empty to receive the\n",
 			l.ContainerName, l.StructName)
@@ -794,16 +966,16 @@ func render(pkgName string, entities []entity, lists []listResponse) ([]byte, er
 }
 
 // renderTests emits a *_test.go file in the same package as the source
-// (internal tests) containing, for each wired list, two tests:
+// (internal tests) containing, for each wired response, two tests:
 //   - <Container>Apply: populates every slot with its entity's first constant
 //     and asserts the resulting fields[entity]=… query parameters.
 //   - <Container>ZeroValue: ensures a zero-value container emits no fields[*]=…
 //     parameters, guarding against accidental wiring that always writes them.
 //
 // The container's apply method is called directly so the test works for every
-// list whether or not its enclosing request type requires path arguments to
+// response whether or not its enclosing request type requires path arguments to
 // build an HTTP request.
-func renderTests(pkgName, _ string, lists []listResponse, entityByField map[string]entity) ([]byte, error) {
+func renderTests(pkgName, _ string, responses []response, entityByField map[string]entity) ([]byte, error) {
 	var buf bytes.Buffer
 	fmt.Fprintln(&buf, "// Code generated by sparsefieldsgen; DO NOT EDIT.")
 	fmt.Fprintln(&buf)
@@ -815,7 +987,7 @@ func renderTests(pkgName, _ string, lists []listResponse, entityByField map[stri
 	fmt.Fprintln(&buf, "\t\"testing\"")
 	fmt.Fprintln(&buf, ")")
 
-	for _, l := range lists {
+	for _, l := range responses {
 		// Resolve a representative (first) constant per slot, plus its JSON value.
 		type slotConst struct {
 			GoName    string

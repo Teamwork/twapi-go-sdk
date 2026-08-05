@@ -276,6 +276,13 @@ type WorkflowGetRequestPath struct {
 type WorkflowGetRequest struct {
 	// Path contains the path parameters for the request.
 	Path WorkflowGetRequestPath
+
+	// Fields restricts the attributes returned for the workflow. Each slot of
+	// WorkflowGetFields is a separate `fields[entity]=…` selection; populated
+	// slots restrict the response, empty slots return the API default. Use the
+	// generated WorkflowField constants to ensure values match real
+	// attributes.
+	Fields WorkflowGetFields
 }
 
 // NewWorkflowGetRequest creates a new WorkflowGetRequest with the provided
@@ -297,12 +304,18 @@ func (w WorkflowGetRequest) HTTPRequest(ctx context.Context, server string) (*ht
 		return nil, err
 	}
 
+	query := req.URL.Query()
+	w.Fields.apply(query)
+	req.URL.RawQuery = query.Encode()
+
 	return req, nil
 }
 
 // WorkflowGetResponse contains all the information related to a workflow.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/workflows/get-projects-api-v3-workflows-id-json
+//
+// sparsefields:get
 type WorkflowGetResponse struct {
 	// Workflow is the retrieved workflow.
 	Workflow Workflow `json:"workflow"`
