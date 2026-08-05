@@ -382,6 +382,13 @@ type MessageReplyGetRequestPath struct {
 type MessageReplyGetRequest struct {
 	// Path contains the path parameters for the request.
 	Path MessageReplyGetRequestPath
+
+	// Fields restricts the attributes returned for the message reply. Each
+	// slot of MessageReplyGetFields is a separate `fields[entity]=…`
+	// selection; populated slots restrict the response, empty slots return the
+	// API default. Use the generated MessageReplyField constants to ensure
+	// values match real attributes.
+	Fields MessageReplyGetFields
 }
 
 // NewMessageReplyGetRequest creates a new MessageReplyGetRequest with the provided
@@ -403,6 +410,10 @@ func (m MessageReplyGetRequest) HTTPRequest(ctx context.Context, server string) 
 		return nil, err
 	}
 
+	query := req.URL.Query()
+	m.Fields.apply(query)
+	req.URL.RawQuery = query.Encode()
+
 	return req, nil
 }
 
@@ -410,6 +421,8 @@ func (m MessageReplyGetRequest) HTTPRequest(ctx context.Context, server string) 
 // reply.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/message-replies/get-projects-api-v3-messagesreplies-id-json
+//
+// sparsefields:get
 type MessageReplyGetResponse struct {
 	MessageReply MessageReply `json:"messageReply"`
 }

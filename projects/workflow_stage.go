@@ -322,6 +322,13 @@ type WorkflowStageGetRequestPath struct {
 type WorkflowStageGetRequest struct {
 	// Path contains the path parameters for the request.
 	Path WorkflowStageGetRequestPath
+
+	// Fields restricts the attributes returned for the workflow stage. Each
+	// slot of WorkflowStageGetFields is a separate `fields[entity]=…`
+	// selection; populated slots restrict the response, empty slots return the
+	// API default. Use the generated WorkflowStageField constants to ensure
+	// values match real attributes.
+	Fields WorkflowStageGetFields
 }
 
 // NewWorkflowStageGetRequest creates a new WorkflowStageGetRequest with the
@@ -344,6 +351,10 @@ func (w WorkflowStageGetRequest) HTTPRequest(ctx context.Context, server string)
 		return nil, err
 	}
 
+	query := req.URL.Query()
+	w.Fields.apply(query)
+	req.URL.RawQuery = query.Encode()
+
 	return req, nil
 }
 
@@ -351,6 +362,8 @@ func (w WorkflowStageGetRequest) HTTPRequest(ctx context.Context, server string)
 // stage.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/workflows/get-projects-api-v3-workflows-workflow-id-stages-stage-id-json
+//
+// sparsefields:get
 //
 //nolint:lll
 type WorkflowStageGetResponse struct {

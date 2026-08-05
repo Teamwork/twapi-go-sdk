@@ -471,6 +471,13 @@ type CompanyGetRequest struct {
 
 	// Filters contains the filters for loading a single company.
 	Filters CompanyRequestFilters
+
+	// Fields restricts the attributes returned for the company and each of its
+	// sideloads. Each slot of CompanyGetFields is a separate
+	// `fields[entity]=…` selection; populated slots restrict the response,
+	// empty slots return the API default. Use the generated CompanyField
+	// constants to ensure values match real attributes.
+	Fields CompanyGetFields
 }
 
 // NewCompanyGetRequest creates a new CompanyGetRequest with the provided
@@ -493,12 +500,18 @@ func (c CompanyGetRequest) HTTPRequest(ctx context.Context, server string) (*htt
 	}
 	c.Filters.apply(req)
 
+	query := req.URL.Query()
+	c.Fields.apply(query)
+	req.URL.RawQuery = query.Encode()
+
 	return req, nil
 }
 
 // CompanyGetResponse contains all the information related to a client/company.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/companies/get-projects-api-v3-companies-company-id-json
+//
+// sparsefields:get
 type CompanyGetResponse struct {
 	Company Company `json:"company"`
 

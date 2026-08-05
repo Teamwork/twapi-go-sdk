@@ -401,6 +401,12 @@ type UserGetRequestPath struct {
 type UserGetRequest struct {
 	// Path contains the path parameters for the request.
 	Path UserGetRequestPath
+
+	// Fields restricts the attributes returned for the user. Each slot of
+	// UserGetFields is a separate `fields[entity]=…` selection; populated
+	// slots restrict the response, empty slots return the API default. Use the
+	// generated UserField constants to ensure values match real attributes.
+	Fields UserGetFields
 }
 
 // NewUserGetRequest creates a new UserGetRequest with the provided
@@ -422,13 +428,24 @@ func (u UserGetRequest) HTTPRequest(ctx context.Context, server string) (*http.R
 		return nil, err
 	}
 
+	query := req.URL.Query()
+	u.Fields.apply(query)
+	req.URL.RawQuery = query.Encode()
+
 	return req, nil
 }
 
 // UserGetResponse contains all the information related to a user.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/person/get-projects-api-v3-people-person-id-json
+//
+// sparsefields:get
 type UserGetResponse struct {
+	// Unlike most single-entity endpoints, this one does not accept the plural
+	// entity key: `fields[people]` only filters the list envelope, while the
+	// singular payload is filtered by `fields[person]`.
+	//
+	// sparsefields:key=person
 	User User `json:"person"`
 }
 

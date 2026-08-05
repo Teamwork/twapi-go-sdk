@@ -465,6 +465,12 @@ type SkillListResponse struct {
 			HasMore bool `json:"hasMore"`
 		} `json:"page"`
 	} `json:"meta"`
+
+	// The endpoint returns its payload under "skills", but the sparse-fieldsets
+	// query parameter it binds is the singular "fields[skill]", so the key can't
+	// be derived from the json tag here.
+	//
+	// sparsefields:key=skill
 	Skills []Skill `json:"skills"`
 }
 

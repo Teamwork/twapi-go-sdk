@@ -660,6 +660,13 @@ type TaskGetRequest struct {
 
 	// Filters contains the filters for loading a single task.
 	Filters TaskRequestFilters
+
+	// Fields restricts the attributes returned for the task and each of its
+	// sideloads. Each slot of TaskGetFields is a separate `fields[entity]=…`
+	// selection; populated slots restrict the response, empty slots return the
+	// API default. Use the generated TaskField constants to ensure values
+	// match real attributes.
+	Fields TaskGetFields
 }
 
 // NewTaskGetRequest creates a new TaskGetRequest with the provided
@@ -682,12 +689,18 @@ func (t TaskGetRequest) HTTPRequest(ctx context.Context, server string) (*http.R
 	}
 	t.Filters.apply(req)
 
+	query := req.URL.Query()
+	t.Fields.apply(query)
+	req.URL.RawQuery = query.Encode()
+
 	return req, nil
 }
 
 // TaskGetResponse contains all the information related to a task.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/tasks/get-projects-api-v3-tasks-task-id-json
+//
+// sparsefields:get
 type TaskGetResponse struct {
 	Task Task `json:"task"`
 

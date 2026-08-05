@@ -324,6 +324,13 @@ type TasklistGetRequestPath struct {
 type TasklistGetRequest struct {
 	// Path contains the path parameters for the request.
 	Path TasklistGetRequestPath
+
+	// Fields restricts the attributes returned for the tasklist. Each slot of
+	// TasklistGetFields is a separate `fields[entity]=…` selection; populated
+	// slots restrict the response, empty slots return the API default. Use the
+	// generated TasklistField constants to ensure values match real
+	// attributes.
+	Fields TasklistGetFields
 }
 
 // NewTasklistGetRequest creates a new TasklistGetRequest with the provided
@@ -345,12 +352,18 @@ func (t TasklistGetRequest) HTTPRequest(ctx context.Context, server string) (*ht
 		return nil, err
 	}
 
+	query := req.URL.Query()
+	t.Fields.apply(query)
+	req.URL.RawQuery = query.Encode()
+
 	return req, nil
 }
 
 // TasklistGetResponse contains all the information related to a tasklist.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/task-lists/get-projects-api-v3-tasklists-tasklist-id
+//
+// sparsefields:get
 type TasklistGetResponse struct {
 	Tasklist Tasklist `json:"tasklist"`
 }
