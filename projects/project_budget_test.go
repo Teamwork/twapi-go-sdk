@@ -32,8 +32,8 @@ func TestProjectBudgetListRequestGeneration(t *testing.T) {
 	if query.Get("projectIds") != "1215814" {
 		t.Errorf("expected projectIds=1215814 but got %q", query.Get("projectIds"))
 	}
-	if query.Get("status") != "upcoming" {
-		t.Errorf("expected status=upcoming but got %q", query.Get("status"))
+	if query.Get("status") != "UPCOMING" {
+		t.Errorf("expected status=UPCOMING but got %q", query.Get("status"))
 	}
 	if query.Get("limit") != "1" {
 		t.Errorf("expected limit=1 but got %q", query.Get("limit"))
