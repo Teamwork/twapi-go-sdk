@@ -594,7 +594,7 @@ func (f ActivityListFields) apply(query url.Values) {
 // CalendarEventListFields selects sparse-fields slots for CalendarEventListResponse. Leave a slot empty to receive the
 // API default for that entity; populate it to restrict the attributes returned.
 type CalendarEventListFields struct {
-	// Events controls fields[events]=… on the response.
+	// Events controls fields[calendarsEvents]=… on the response.
 	Events []CalendarEventField
 	// Users controls fields[users]=… on the response.
 	Users []UserField
@@ -612,7 +612,7 @@ type CalendarEventListFields struct {
 
 // apply writes every populated slot to query as a fields[entity]=… parameter.
 func (f CalendarEventListFields) apply(query url.Values) {
-	twapi.ApplySparseFields(query, "events", f.Events)
+	twapi.ApplySparseFields(query, "calendarsEvents", f.Events)
 	twapi.ApplySparseFields(query, "users", f.Users)
 	twapi.ApplySparseFields(query, "projects", f.Projects)
 	twapi.ApplySparseFields(query, "tasks", f.Tasks)

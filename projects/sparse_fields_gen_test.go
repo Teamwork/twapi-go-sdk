@@ -54,13 +54,13 @@ func TestCalendarEventListFieldsApply(t *testing.T) {
 	query := url.Values{}
 	fields.apply(query)
 	checks := map[string]string{
-		"fields[events]":    "id",
-		"fields[users]":     "id",
-		"fields[projects]":  "id",
-		"fields[tasks]":     "id",
-		"fields[tasklists]": "id",
-		"fields[companies]": "id",
-		"fields[timelogs]":  "id",
+		"fields[calendarsEvents]": "id",
+		"fields[users]":           "id",
+		"fields[projects]":        "id",
+		"fields[tasks]":           "id",
+		"fields[tasklists]":       "id",
+		"fields[companies]":       "id",
+		"fields[timelogs]":        "id",
 	}
 	for key, want := range checks {
 		if got := query.Get(key); got != want {
