@@ -123,6 +123,10 @@ type SearchRequestFilters struct {
 	// Include contains additional related information to include in the response
 	// as a sideload.
 	Include []SearchRequestSideload
+
+	// Fields selects sparse fieldsets for the sideloaded entities. Leave a slot
+	// empty to receive the API default for that entity.
+	Fields SearchFields
 }
 
 func (s SearchRequestFilters) apply(req *http.Request) {
@@ -156,6 +160,7 @@ func (s SearchRequestFilters) apply(req *http.Request) {
 		}
 		query.Set("include", strings.Join(include, ","))
 	}
+	s.Fields.apply(query)
 
 	// By default the API returns results ordered by updated date. To ensure we
 	// get the most relevant results, we set the orderBy parameter to relevance.
@@ -201,6 +206,8 @@ func (s SearchRequest) HTTPRequest(ctx context.Context, server string) (*http.Re
 // SearchResponse contains search results matching the request filters.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/search/get-projects-api-v3-search-json
+//
+// sparsefields:list
 type SearchResponse struct {
 	request SearchRequest
 
@@ -213,6 +220,8 @@ type SearchResponse struct {
 	// Items is the list of search results matching the request filters. Each item
 	// contains a relationship to the actual item, which can be found as a
 	// sideload.
+	//
+	// sparsefields:skip
 	Items []SearchItem `json:"search"`
 
 	// Included contains related objects included in the response.

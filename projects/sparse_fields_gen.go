@@ -96,6 +96,19 @@ const (
 	CommentFieldDeletedAt    CommentField = "dateDeleted"
 )
 
+// CommentSideloadField identifies a JSON-tagged attribute of CommentSideload usable for v3 sparse fieldsets.
+type CommentSideloadField string
+
+// List of possible CommentSideload fields.
+const (
+	CommentSideloadFieldID       CommentSideloadField = "id"
+	CommentSideloadFieldBody     CommentSideloadField = "title"
+	CommentSideloadFieldObject   CommentSideloadField = "object"
+	CommentSideloadFieldProject  CommentSideloadField = "project"
+	CommentSideloadFieldPostedBy CommentSideloadField = "postedBy"
+	CommentSideloadFieldPostedAt CommentSideloadField = "postedDateTime"
+)
+
 // CompanyField identifies a JSON-tagged attribute of Company usable for v3 sparse fieldsets.
 type CompanyField string
 
@@ -925,6 +938,51 @@ func (f ProjectListFields) apply(query url.Values) {
 	twapi.ApplySparseFields(query, "projectCategories", f.ProjectCategories)
 	twapi.ApplySparseFields(query, "customfields", f.CustomFields)
 	twapi.ApplySparseFields(query, "customfieldProjects", f.CustomFieldValues)
+}
+
+// SearchFields selects sparse-fields slots for SearchResponse. Leave a slot empty to receive the
+// API default for that entity; populate it to restrict the attributes returned.
+type SearchFields struct {
+	// Comments controls fields[comments]=… on the response.
+	Comments []CommentSideloadField
+	// Companies controls fields[companies]=… on the response.
+	Companies []CompanyField
+	// Links controls fields[links]=… on the response.
+	Links []LinkField
+	// Messages controls fields[messages]=… on the response.
+	Messages []MessageField
+	// Milestones controls fields[milestones]=… on the response.
+	Milestones []MilestoneField
+	// Notebooks controls fields[notebooks]=… on the response.
+	Notebooks []NotebookField
+	// Projects controls fields[projects]=… on the response.
+	Projects []ProjectField
+	// Tasklists controls fields[tasklists]=… on the response.
+	Tasklists []TasklistField
+	// Tasks controls fields[tasks]=… on the response.
+	Tasks []TaskField
+	// Teams controls fields[teams]=… on the response.
+	Teams []TeamField
+	// Timelogs controls fields[timelogs]=… on the response.
+	Timelogs []TimelogField
+	// Users controls fields[users]=… on the response.
+	Users []UserField
+}
+
+// apply writes every populated slot to query as a fields[entity]=… parameter.
+func (f SearchFields) apply(query url.Values) {
+	twapi.ApplySparseFields(query, "comments", f.Comments)
+	twapi.ApplySparseFields(query, "companies", f.Companies)
+	twapi.ApplySparseFields(query, "links", f.Links)
+	twapi.ApplySparseFields(query, "messages", f.Messages)
+	twapi.ApplySparseFields(query, "milestones", f.Milestones)
+	twapi.ApplySparseFields(query, "notebooks", f.Notebooks)
+	twapi.ApplySparseFields(query, "projects", f.Projects)
+	twapi.ApplySparseFields(query, "tasklists", f.Tasklists)
+	twapi.ApplySparseFields(query, "tasks", f.Tasks)
+	twapi.ApplySparseFields(query, "teams", f.Teams)
+	twapi.ApplySparseFields(query, "timelogs", f.Timelogs)
+	twapi.ApplySparseFields(query, "users", f.Users)
 }
 
 // SkillListFields selects sparse-fields slots for SkillListResponse. Leave a slot empty to receive the

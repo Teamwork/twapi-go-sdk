@@ -27,7 +27,12 @@
 //     that key from the entity's own marked *ListResponse, so a get and its
 //     list can never disagree.
 //
-// A fourth marker applies to individual fields of a marked response:
+// Two more markers apply to individual fields of a marked response:
+//
+//   - sparsefields:skip
+//     Excludes the field from slot generation. Used when a response's main
+//     slice holds relationships rather than a sparse-fields-capable entity
+//     (e.g. SearchResponse.Items).
 //
 //   - sparsefields:key=entityName
 //     Overrides the fields[...] entity key for that slot. For list slots the
@@ -71,6 +76,7 @@ const (
 	markerList   = "sparsefields:list"
 	markerGet    = "sparsefields:get"
 	markerKey    = "sparsefields:key"
+	markerSkip   = "sparsefields:skip"
 
 	rootImportPath = "github.com/teamwork/twapi-go-sdk"
 	rootImportName = "twapi"
@@ -721,7 +727,7 @@ func extractFields(
 func extractSlots(st *ast.StructType, ownerName string, fieldTypeOf map[string]string) ([]slot, error) {
 	var slots []slot
 	for _, field := range st.Fields.List {
-		if len(field.Names) == 0 || field.Tag == nil {
+		if len(field.Names) == 0 || field.Tag == nil || hasSkipMarker(field) {
 			continue
 		}
 		tagText, err := strconv.Unquote(field.Tag.Value)
@@ -789,7 +795,7 @@ func extractSlots(st *ast.StructType, ownerName string, fieldTypeOf map[string]s
 func extractGetSlots(st *ast.StructType, ownerName string, fieldTypeOf, entityKeyOf map[string]string) ([]slot, error) {
 	var slots []slot
 	for _, field := range st.Fields.List {
-		if len(field.Names) == 0 || field.Tag == nil {
+		if len(field.Names) == 0 || field.Tag == nil || hasSkipMarker(field) {
 			continue
 		}
 		tagText, err := strconv.Unquote(field.Tag.Value)
@@ -847,7 +853,7 @@ func extractGetSlots(st *ast.StructType, ownerName string, fieldTypeOf, entityKe
 func extractIncludedSlots(st *ast.StructType, ownerName string, fieldTypeOf map[string]string) ([]slot, error) {
 	var slots []slot
 	for _, field := range st.Fields.List {
-		if len(field.Names) == 0 || field.Tag == nil {
+		if len(field.Names) == 0 || field.Tag == nil || hasSkipMarker(field) {
 			continue
 		}
 		mt, ok := field.Type.(*ast.MapType)
@@ -884,6 +890,17 @@ func extractIncludedSlots(st *ast.StructType, ownerName string, fieldTypeOf map[
 		})
 	}
 	return slots, nil
+}
+
+// hasSkipMarker reports whether a field opts out of slot generation via
+// `sparsefields:skip` on its doc or trailing comment.
+func hasSkipMarker(field *ast.Field) bool {
+	for _, doc := range []*ast.CommentGroup{field.Doc, field.Comment} {
+		if _, ok := markerOverride(doc, markerSkip, ""); ok {
+			return true
+		}
+	}
+	return false
 }
 
 // elementIdent returns an unqualified ident for a same-package type reference,
