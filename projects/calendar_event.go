@@ -371,6 +371,12 @@ type CalendarEventListResponse struct {
 	} `json:"meta"`
 
 	// Events contains the calendar events.
+	//
+	// The endpoint returns its payload under "events", but the sparse-fieldsets
+	// query parameter it binds is "fields[calendarsEvents]", so the key can't be
+	// derived from the json tag here.
+	//
+	// sparsefields:key=calendarsEvents
 	Events []CalendarEvent `json:"events"`
 
 	// Included contains related objects included in the response.
