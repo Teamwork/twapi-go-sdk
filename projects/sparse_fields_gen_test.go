@@ -815,6 +815,59 @@ func TestProjectListFieldsZeroValue(t *testing.T) {
 	}
 }
 
+// TestSearchFieldsApply verifies that populated SearchFields slots emit the
+// expected fields[entity]=… query parameters.
+func TestSearchFieldsApply(t *testing.T) {
+	fields := SearchFields{
+		Comments:   []CommentSideloadField{CommentSideloadFieldID},
+		Companies:  []CompanyField{CompanyFieldID},
+		Links:      []LinkField{LinkFieldID},
+		Messages:   []MessageField{MessageFieldID},
+		Milestones: []MilestoneField{MilestoneFieldID},
+		Notebooks:  []NotebookField{NotebookFieldID},
+		Projects:   []ProjectField{ProjectFieldID},
+		Tasklists:  []TasklistField{TasklistFieldID},
+		Tasks:      []TaskField{TaskFieldID},
+		Teams:      []TeamField{TeamFieldID},
+		Timelogs:   []TimelogField{TimelogFieldID},
+		Users:      []UserField{UserFieldID},
+	}
+	query := url.Values{}
+	fields.apply(query)
+	checks := map[string]string{
+		"fields[comments]":   "id",
+		"fields[companies]":  "id",
+		"fields[links]":      "id",
+		"fields[messages]":   "id",
+		"fields[milestones]": "id",
+		"fields[notebooks]":  "id",
+		"fields[projects]":   "id",
+		"fields[tasklists]":  "id",
+		"fields[tasks]":      "id",
+		"fields[teams]":      "id",
+		"fields[timelogs]":   "id",
+		"fields[users]":      "id",
+	}
+	for key, want := range checks {
+		if got := query.Get(key); got != want {
+			t.Errorf("%s = %q, want %q", key, got, want)
+		}
+	}
+}
+
+// TestSearchFieldsZeroValue verifies that an unset SearchFields emits no
+// fields[*]=… query parameters.
+func TestSearchFieldsZeroValue(t *testing.T) {
+	var fields SearchFields
+	query := url.Values{}
+	fields.apply(query)
+	for key := range query {
+		if strings.HasPrefix(key, "fields[") {
+			t.Errorf("unexpected sparse-fields parameter %q on zero-value container", key)
+		}
+	}
+}
+
 // TestSkillListFieldsApply verifies that populated SkillListFields slots emit the
 // expected fields[entity]=… query parameters.
 func TestSkillListFieldsApply(t *testing.T) {

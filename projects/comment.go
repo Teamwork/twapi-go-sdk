@@ -87,6 +87,8 @@ type Comment struct {
 
 // CommentSideload contains minimal information about a comment, used for
 // sideloading in other API responses.
+//
+// sparsefields:gen
 type CommentSideload struct {
 	// ID is the unique identifier of the comment.
 	ID int64 `json:"id"`
