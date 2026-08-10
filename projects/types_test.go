@@ -186,6 +186,11 @@ func TestLegacyNumericList_UnmarshalJSON(t *testing.T) {
 		input: `null`,
 		want:  nil,
 	}, {
+		// the same field arrives as a bare number when there is a single ID
+		name:  "bare number",
+		input: `12345`,
+		want:  projects.LegacyNumericList{12345},
+	}, {
 		name:  "json array of numbers",
 		input: `[12345,12346]`,
 		want:  projects.LegacyNumericList{12345, 12346},

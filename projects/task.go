@@ -672,9 +672,9 @@ func (t TaskMoveRequest) HTTPRequest(ctx context.Context, server string) (*http.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v1/tasks/put-tasks-id-move-json
 type TaskMoveResponse struct {
-	// AffectedTaskIDs lists predecessors and dependents of the moved task, not
-	// what moved: it excludes the task itself and is empty when it has no
-	// dependencies. Read the subtree to learn what changed tasklist.
+	// AffectedTaskIDs is a partial list, with duplicates: the moved task and its
+	// direct children, but not deeper descendants, which move all the same. Read
+	// the subtree to learn what changed tasklist.
 	AffectedTaskIDs LegacyNumericList `json:"affectedTaskIds"`
 
 	// AffectedTasklistIDs is the tasklist the task left and the one it joined.
