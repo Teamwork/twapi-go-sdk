@@ -79,11 +79,21 @@ func (l LegacyNumericList) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON decodes the comma-separated string the legacy API produces, e.g.
-// "12345,12346". A JSON array is accepted too; null and "" decode to nil.
+// "12345,12346". A bare number and a JSON array are accepted too, since the same
+// field arrives in all three shapes; null and "" decode to nil.
 func (l *LegacyNumericList) UnmarshalJSON(data []byte) error {
 	data = bytes.TrimSpace(data)
 	if len(data) == 0 || bytes.Equal(data, []byte("null")) {
 		*l = nil
+		return nil
+	}
+
+	if data[0] != '"' && data[0] != '[' {
+		var id int64
+		if err := json.Unmarshal(data, &id); err != nil {
+			return err
+		}
+		*l = LegacyNumericList{id}
 		return nil
 	}
 
