@@ -13,6 +13,8 @@ import (
 var (
 	_ twapi.HTTPRequester = (*WorkflowStageTaskMoveRequest)(nil)
 	_ twapi.HTTPResponser = (*WorkflowStageTaskMoveResponse)(nil)
+	_ twapi.HTTPRequester = (*WorkflowStageTasksMoveRequest)(nil)
+	_ twapi.HTTPResponser = (*WorkflowStageTasksMoveResponse)(nil)
 )
 
 // WorkflowStageTaskMoveRequestPath contains the path parameters for moving
@@ -105,4 +107,92 @@ func WorkflowStageTaskMove(
 	req WorkflowStageTaskMoveRequest,
 ) (*WorkflowStageTaskMoveResponse, error) {
 	return twapi.Execute[WorkflowStageTaskMoveRequest, *WorkflowStageTaskMoveResponse](ctx, engine, req)
+}
+
+// WorkflowStageTasksMoveRequestPath contains the path parameters for moving
+// several tasks to a workflow stage.
+type WorkflowStageTasksMoveRequestPath struct {
+	// WorkflowID is the identifier of the workflow that contains the stage to
+	// which the tasks will be moved.
+	WorkflowID int64
+
+	// StageID is the identifier of the stage to which the tasks will be moved.
+	StageID int64
+}
+
+// WorkflowStageTasksMoveRequest represents the request body for moving several
+// tasks to a workflow stage in a single call.
+//
+// WorkflowStageTaskMoveRequest carries its task in the path, costing one request
+// per task. This one takes them in the body. Tasks are appended to the end of the
+// stage in the order given, so use the singular request to position a task.
+//
+// The endpoint rejects unknown body fields, so do not add any the server does not
+// declare.
+//
+// https://apidocs.teamwork.com/guides/teamwork/workflows-api-getting-started-guide
+type WorkflowStageTasksMoveRequest struct {
+	// Path contains the path parameters for the request.
+	Path WorkflowStageTasksMoveRequestPath `json:"-"`
+
+	// TaskIDs are the tasks to move into the stage. An empty slice does nothing.
+	TaskIDs []int64 `json:"taskIds"`
+}
+
+// NewWorkflowStageTasksMoveRequest creates a new WorkflowStageTasksMoveRequest
+// with the provided workflow, stage and task IDs.
+func NewWorkflowStageTasksMoveRequest(workflowID, stageID int64, taskIDs ...int64) WorkflowStageTasksMoveRequest {
+	return WorkflowStageTasksMoveRequest{
+		Path: WorkflowStageTasksMoveRequestPath{
+			WorkflowID: workflowID,
+			StageID:    stageID,
+		},
+		TaskIDs: taskIDs,
+	}
+}
+
+// HTTPRequest creates an HTTP request for the WorkflowStageTasksMoveRequest.
+func (w WorkflowStageTasksMoveRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
+	uri := fmt.Sprintf("%s/projects/api/v3/workflows/%d/stages/%d/tasks.json",
+		server, w.Path.WorkflowID, w.Path.StageID)
+
+	var body bytes.Buffer
+	if err := json.NewEncoder(&body).Encode(w); err != nil {
+		return nil, fmt.Errorf("failed to encode workflow stage tasks move request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, uri, &body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	return req, nil
+}
+
+// WorkflowStageTasksMoveResponse represents the response body for moving several
+// tasks to a workflow stage. The endpoint answers with the outcome in its status
+// code alone.
+//
+// https://apidocs.teamwork.com/guides/teamwork/workflows-api-getting-started-guide
+type WorkflowStageTasksMoveResponse struct{}
+
+// HandleHTTPResponse handles the HTTP response for the
+// WorkflowStageTasksMoveResponse. If some unexpected HTTP status code is
+// returned by the API, a twapi.HTTPError is returned.
+func (*WorkflowStageTasksMoveResponse) HandleHTTPResponse(resp *http.Response) error {
+	if resp.StatusCode != http.StatusNoContent {
+		return twapi.NewHTTPError(resp, "failed to move tasks to workflow stage")
+	}
+	return nil
+}
+
+// WorkflowStageTasksMove moves several tasks to a workflow stage in a single
+// call.
+func WorkflowStageTasksMove(
+	ctx context.Context,
+	engine *twapi.Engine,
+	req WorkflowStageTasksMoveRequest,
+) (*WorkflowStageTasksMoveResponse, error) {
+	return twapi.Execute[WorkflowStageTasksMoveRequest, *WorkflowStageTasksMoveResponse](ctx, engine, req)
 }

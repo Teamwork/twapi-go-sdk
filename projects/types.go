@@ -1,6 +1,7 @@
 package projects
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -75,6 +76,46 @@ func (l LegacyNumericList) MarshalJSON() ([]byte, error) {
 		result = append(result, strconv.FormatInt(id, 10))
 	}
 	return fmt.Appendf(nil, `"%s"`, strings.Join(result, ",")), nil
+}
+
+// UnmarshalJSON decodes the comma-separated string the legacy API produces, e.g.
+// "12345,12346". A JSON array is accepted too; null and "" decode to nil.
+func (l *LegacyNumericList) UnmarshalJSON(data []byte) error {
+	data = bytes.TrimSpace(data)
+	if len(data) == 0 || bytes.Equal(data, []byte("null")) {
+		*l = nil
+		return nil
+	}
+
+	if data[0] == '[' {
+		var ids []LegacyNumber
+		if err := json.Unmarshal(data, &ids); err != nil {
+			return err
+		}
+		*l = make(LegacyNumericList, 0, len(ids))
+		for _, id := range ids {
+			*l = append(*l, int64(id))
+		}
+		return nil
+	}
+
+	var str string
+	if err := json.Unmarshal(data, &str); err != nil {
+		return err
+	}
+	*l = nil
+	for part := range strings.SplitSeq(str, ",") {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		id, err := strconv.ParseInt(part, 10, 64)
+		if err != nil {
+			return fmt.Errorf("invalid numeric list item %q: %w", part, err)
+		}
+		*l = append(*l, id)
+	}
+	return nil
 }
 
 // Add adds a numeric value to the LegacyNumericList.

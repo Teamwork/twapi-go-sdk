@@ -33,6 +33,28 @@ func ExampleWorkflowStageTaskMove() {
 	// Output: moved workflow stage task
 }
 
+func ExampleWorkflowStageTasksMove() {
+	address, stop, err := startWorkflowStageTaskServer() // mock server for demonstration purposes
+	if err != nil {
+		fmt.Printf("failed to start server: %s", err)
+		return
+	}
+	defer stop()
+
+	ctx := context.Background()
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
+
+	_, err = projects.WorkflowStageTasksMove(ctx, engine,
+		projects.NewWorkflowStageTasksMoveRequest(123, 456, 789, 790, 791))
+	if err != nil {
+		fmt.Printf("failed to move workflow stage tasks: %s", err)
+	} else {
+		fmt.Println("moved workflow stage tasks")
+	}
+
+	// Output: moved workflow stage tasks
+}
+
 func startWorkflowStageTaskServer() (string, func(), error) {
 	ln, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
@@ -51,6 +73,19 @@ func startWorkflowStageTaskServer() (string, func(), error) {
 				return
 			}
 			if r.PathValue("workflowId") != "123" {
+				http.Error(w, "Not Found", http.StatusNotFound)
+				return
+			}
+			w.WriteHeader(http.StatusNoContent)
+		},
+	)
+	mux.HandleFunc("POST /projects/api/v3/workflows/{workflowId}/stages/{stageId}/tasks",
+		func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("Content-Type") != "application/json" {
+				http.Error(w, "Unsupported Media Type", http.StatusUnsupportedMediaType)
+				return
+			}
+			if r.PathValue("workflowId") != "123" || r.PathValue("stageId") != "456" {
 				http.Error(w, "Not Found", http.StatusNotFound)
 				return
 			}

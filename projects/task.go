@@ -22,6 +22,8 @@ var (
 	_ twapi.HTTPResponser = (*TaskDeleteResponse)(nil)
 	_ twapi.HTTPRequester = (*TaskCompleteRequest)(nil)
 	_ twapi.HTTPResponser = (*TaskCompleteResponse)(nil)
+	_ twapi.HTTPRequester = (*TaskMoveRequest)(nil)
+	_ twapi.HTTPResponser = (*TaskMoveResponse)(nil)
 	_ twapi.HTTPRequester = (*TaskGetRequest)(nil)
 	_ twapi.HTTPResponser = (*TaskGetResponse)(nil)
 	_ twapi.HTTPRequester = (*TaskListRequest)(nil)
@@ -372,11 +374,16 @@ type TaskUpdateRequest struct {
 	EstimatedMinutes *int64 `json:"estimatedMinutes,omitempty"`
 
 	// TasklistID is the identifier of the tasklist that will contain the task. If
-	// provided, the task will be moved to this tasklist.
+	// provided, the task and its subtasks are moved to this tasklist. The task
+	// keeps its own parent only if that parent is already in the destination,
+	// otherwise it becomes top-level. Use TaskMoveRequest to move a task to
+	// another project.
 	TasklistID *int64 `json:"tasklistId,omitempty"`
 
 	// ParentTaskID is the identifier of the parent task, if this task is a
-	// subtask. If provided, the task will be moved under this parent task.
+	// subtask. If provided, the task will be moved under this parent task, which
+	// must share the task's tasklist. Nil leaves the link alone;
+	// TaskDetachFromParent promotes the task to top level.
 	ParentTaskID *int64 `json:"parentTaskId,omitempty"`
 
 	// Assignees is the list of users, teams or clients/companies assigned to this
@@ -594,6 +601,110 @@ func TaskComplete(
 	req TaskCompleteRequest,
 ) (*TaskCompleteResponse, error) {
 	return twapi.Execute[TaskCompleteRequest, *TaskCompleteResponse](ctx, engine, req)
+}
+
+// TaskDetachFromParent is the ParentTaskID value that detaches a subtask,
+// promoting it to top level. Null does nothing.
+const TaskDetachFromParent int64 = 0
+
+// TaskMoveRequestPath contains the path parameters for moving a task.
+type TaskMoveRequestPath struct {
+	// ID is the unique identifier of the task to be moved.
+	ID int64
+}
+
+// TaskMoveRequest represents the request body for moving a task to another
+// tasklist.
+//
+// TaskUpdateRequest.TasklistID also moves a task, and carries the subtree just as
+// this does. Use this one to move a task to a tasklist in another project, which
+// the v3 endpoint rejects.
+//
+// https://apidocs.teamwork.com/docs/teamwork/v1/tasks/put-tasks-id-move-json
+type TaskMoveRequest struct {
+	// Path contains the path parameters for the request.
+	Path TaskMoveRequestPath `json:"-"`
+
+	// TasklistID is the tasklist that will receive the task, along with its
+	// subtasks. It may belong to another project. Zero means the Inbox list.
+	TasklistID int64 `json:"taskListId"`
+
+	// ParentTaskID sets the moved task's parent. Nil detaches, unlike elsewhere in
+	// the SDK — pass the current parent to keep the task a subtask.
+	ParentTaskID *int64 `json:"parentTaskId,omitempty"`
+
+	// RemoveDependencies drops the task's dependencies instead of carrying them.
+	RemoveDependencies bool `json:"removeDependencies,omitempty"`
+}
+
+// NewTaskMoveRequest creates a new TaskMoveRequest with the provided task and
+// tasklist IDs. Both are required to move a task.
+func NewTaskMoveRequest(taskID, tasklistID int64) TaskMoveRequest {
+	return TaskMoveRequest{
+		Path: TaskMoveRequestPath{
+			ID: taskID,
+		},
+		TasklistID: tasklistID,
+	}
+}
+
+// HTTPRequest creates an HTTP request for the TaskMoveRequest.
+func (t TaskMoveRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
+	uri := server + "/tasks/" + strconv.FormatInt(t.Path.ID, 10) + "/move.json"
+
+	// no envelope on this endpoint, unlike task create and update
+	var body bytes.Buffer
+	if err := json.NewEncoder(&body).Encode(t); err != nil {
+		return nil, fmt.Errorf("failed to encode move task request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, uri, &body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	return req, nil
+}
+
+// TaskMoveResponse represents the response body for moving a task to another
+// tasklist.
+//
+// https://apidocs.teamwork.com/docs/teamwork/v1/tasks/put-tasks-id-move-json
+type TaskMoveResponse struct {
+	// AffectedTaskIDs lists predecessors and dependents of the moved task, not
+	// what moved: it excludes the task itself and is empty when it has no
+	// dependencies. Read the subtree to learn what changed tasklist.
+	AffectedTaskIDs LegacyNumericList `json:"affectedTaskIds"`
+
+	// AffectedTasklistIDs is the tasklist the task left and the one it joined.
+	AffectedTasklistIDs LegacyNumericList `json:"affectedTaskListIds"`
+
+	// AffectedProjectIDs is set when the move crossed projects.
+	AffectedProjectIDs LegacyNumericList `json:"affectedProjectIds"`
+}
+
+// HandleHTTPResponse handles the HTTP response for the TaskMoveResponse. If some
+// unexpected HTTP status code is returned by the API, a twapi.HTTPError is
+// returned.
+func (t *TaskMoveResponse) HandleHTTPResponse(resp *http.Response) error {
+	if resp.StatusCode != http.StatusOK {
+		return twapi.NewHTTPError(resp, "failed to move task")
+	}
+	if err := json.NewDecoder(resp.Body).Decode(t); err != nil {
+		return fmt.Errorf("failed to decode move task response: %w", err)
+	}
+	return nil
+}
+
+// TaskMove moves a task, together with every subtask beneath it, to another
+// tasklist using the provided request and returns the response.
+func TaskMove(
+	ctx context.Context,
+	engine *twapi.Engine,
+	req TaskMoveRequest,
+) (*TaskMoveResponse, error) {
+	return twapi.Execute[TaskMoveRequest, *TaskMoveResponse](ctx, engine, req)
 }
 
 // TaskRequestSideload contains the possible sideload options when loading

@@ -169,6 +169,24 @@ Why: surfaces typos at compile time, makes the legal value set self-documenting 
 
 Always hard-code `skipCounts=true` in the filter's `apply()` rather than exposing it as an option. Total counts are derivable from `(page * pageSize) + 1` and `HasMore`, so leaving the option open just lets callers opt into a slower API call by mistake. The list response's `Meta` should mirror the pattern in [Pagination (list responses)](#pagination-list-responses) and expose only `HasMore` — never `Offset`, `Size`, or `Count`.
 
+### v1 and v3 are not interchangeable for the same operation
+
+Several resources are reachable through both API versions, and the newer route is not always the one that does more. `comment.go`, `link.go` and `message.go` already write through v1 while reading through v3, because that is where the working endpoint is.
+
+Moving a task between tasklists is reachable three ways, and **all three carry the task's subtasks**, so "does it cascade?" is not what separates them:
+
+- `PUT /projects/api/v3/tasks/{id}.json` (`TaskUpdateRequest.TasklistID`). Clears the moved task's own parent link, since a subtask may not live outside its parent's tasklist. A `parentTaskId` sent alongside must already be in the destination, or the call fails. Until an API fix in 2026-08 it failed for *any* subtask, sent parent or not.
+- `PUT /tasks/{id}.json`, the v1 generic edit, envelope `{"task":…}` or `{"todo-item":…}`. Clears the parent link too, but silently ignores a `parentTaskId` repeating the current parent instead of failing.
+- `PUT /tasks/{id}/move.json` (`TaskMoveRequest`), purpose-built, parameters at the top level of the body. Preserves the parent link when asked, and is the only one that moves a task to a tasklist in another project — v3 answers 422 for that. It also takes a board-column parameter, deliberately unmodelled: columns are superseded by workflows.
+
+Rules that follow:
+
+1. v1 and v3 routes for the "same" operation are separate implementations, not one behind two doors. A finding on one says nothing about the other; verify both.
+2. When a write appears in more than one place, look for the purpose-built route before extending the generic one. A `move` or `complete` endpoint usually exists and does more.
+3. Do not trust an `affected*Ids` field to be a manifest of what changed. On the v1 move, `affectedTaskIds` is dependency bookkeeping: it holds predecessors and dependents, never the moved task, and is empty when there are none. On the v3 update it really is the subtasks that moved, but only two levels deep — a move cascades to the whole subtree, so deeper descendants change tasklist without appearing. `affectedTaskListIds` and `affectedProjectIds` are the source and destination, and are reliable.
+4. Legacy payloads spell things differently and the difference is load-bearing: `taskListId` versus v3's `tasklistId`, IDs returned as a comma-separated string (`LegacyNumericList`) rather than a JSON array, and `0` rather than `null` as the value that clears a relationship (`TaskDetachFromParent`). Kebab and camel keys are interchangeable (`todo-item`, `todoItem`), but snake case is not.
+5. A live call confirms what happened once. It does not show which parameter was ignored, or which of several plausible causes produced an error — so treat one successful response as weak evidence for how an endpoint behaves in general.
+
 ### HTTPRequest implementation (POST/PUT/PATCH)
 
 ```go
