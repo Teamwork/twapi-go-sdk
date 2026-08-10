@@ -102,6 +102,31 @@ func ExampleTaskComplete() {
 	// Output: task completed!
 }
 
+func ExampleTaskMove() {
+	address, stop, err := startTaskServer() // mock server for demonstration purposes
+	if err != nil {
+		fmt.Printf("failed to start server: %s", err)
+		return
+	}
+	defer stop()
+
+	ctx := context.Background()
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
+
+	// the task keeps its subtasks either way; this keeps its own parent too
+	taskRequest := projects.NewTaskMoveRequest(12345, 888)
+	taskRequest.ParentTaskID = new(int64(999))
+
+	taskResponse, err := projects.TaskMove(ctx, engine, taskRequest)
+	if err != nil {
+		fmt.Printf("failed to move task: %s", err)
+	} else {
+		fmt.Printf("moved task between tasklists %v\n", taskResponse.AffectedTasklistIDs)
+	}
+
+	// Output: moved task between tasklists [777 888]
+}
+
 func ExampleTaskGet() {
 	address, stop, err := startTaskServer() // mock server for demonstration purposes
 	if err != nil {
@@ -200,6 +225,20 @@ func startTaskServer() (string, func(), error) {
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = fmt.Fprintln(w, `{"STATUS":"OK"}`)
+	})
+	mux.HandleFunc("PUT /tasks/{id}/move", func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Content-Type") != "application/json" {
+			http.Error(w, "Unsupported Media Type", http.StatusUnsupportedMediaType)
+			return
+		}
+		if r.PathValue("id") != "12345" {
+			http.Error(w, "Not Found", http.StatusNotFound)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		// affectedTaskIds is dependency bookkeeping, empty here
+		_, _ = fmt.Fprintln(w, `{"affectedTaskIds":"","affectedTaskListIds":"777,888","STATUS":"OK"}`)
 	})
 	mux.HandleFunc("GET /projects/api/v3/tasks/{id}", func(w http.ResponseWriter, r *http.Request) {
 		if r.PathValue("id") != "12345" {

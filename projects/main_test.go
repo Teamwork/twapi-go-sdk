@@ -299,6 +299,27 @@ func createTask(t testEngine, tasklistID int64) (int64, func(), error) {
 	}, nil
 }
 
+func createSubtask(t testEngine, tasklistID, parentTaskID int64) (int64, func(), error) {
+	taskResponse, err := projects.TaskCreate(t.Context(), engine, projects.TaskCreateRequest{
+		Path: projects.TaskCreateRequestPath{
+			TasklistID: tasklistID,
+		},
+		Name:         fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
+		ParentTaskID: &parentTaskID,
+	})
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to create subtask for test: %w", err)
+	}
+	id := taskResponse.Task.ID
+	return id, func() {
+		ctx := context.Background() // t.Context is always canceled in cleanup
+		_, err := projects.TaskDelete(ctx, engine, projects.NewTaskDeleteRequest(id))
+		if err != nil {
+			t.Errorf("failed to delete subtask after test: %s", err)
+		}
+	}, nil
+}
+
 func createUser(t testEngine) (int64, func(), error) {
 	user, err := projects.UserCreate(t.Context(), engine, projects.NewUserCreateRequest(
 		fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),

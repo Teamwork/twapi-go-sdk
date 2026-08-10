@@ -158,3 +158,85 @@ func TestLegacyUserGroups_IsEmpty(t *testing.T) {
 		})
 	}
 }
+
+func TestLegacyNumericList_UnmarshalJSON(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		want    projects.LegacyNumericList
+		wantErr bool
+	}{{
+		name:  "comma separated string",
+		input: `"12345,12346,12347"`,
+		want:  projects.LegacyNumericList{12345, 12346, 12347},
+	}, {
+		name:  "single value",
+		input: `"12345"`,
+		want:  projects.LegacyNumericList{12345},
+	}, {
+		name:  "padded values",
+		input: `"12345, 12346"`,
+		want:  projects.LegacyNumericList{12345, 12346},
+	}, {
+		name:  "empty string",
+		input: `""`,
+		want:  nil,
+	}, {
+		name:  "null",
+		input: `null`,
+		want:  nil,
+	}, {
+		name:  "json array of numbers",
+		input: `[12345,12346]`,
+		want:  projects.LegacyNumericList{12345, 12346},
+	}, {
+		name:  "json array of quoted numbers",
+		input: `["12345","12346"]`,
+		want:  projects.LegacyNumericList{12345, 12346},
+	}, {
+		name:    "not a number",
+		input:   `"12345,abc"`,
+		wantErr: true,
+	}, {
+		name:    "wrong type",
+		input:   `{"id":1}`,
+		wantErr: true,
+	}}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got projects.LegacyNumericList
+			err := json.Unmarshal([]byte(tt.input), &got)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected an error but got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+			if !slices.Equal(got, tt.want) {
+				t.Errorf("got %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestLegacyNumericList_RoundTrip(t *testing.T) {
+	want := projects.LegacyNumericList{12345, 12346, 12347}
+
+	encoded, err := json.Marshal(want)
+	if err != nil {
+		t.Fatalf("unexpected marshal error: %s", err)
+	}
+
+	var got projects.LegacyNumericList
+	if err := json.Unmarshal(encoded, &got); err != nil {
+		t.Fatalf("unexpected unmarshal error: %s", err)
+	}
+
+	if !slices.Equal(got, want) {
+		t.Errorf("round trip mismatch: got %v, want %v", got, want)
+	}
+}
