@@ -26,6 +26,40 @@ var (
 // https://support.teamwork.com/projects/using-teamwork/search-command-center
 type SearchItem twapi.Relationship
 
+// Highlights returns the highlighted match fragments for the search item,
+// mapping a document field name (e.g. taskName, body) to text fragments where
+// matched terms are wrapped in <em> tags. It returns nil when the search was
+// not executed with IncludeHighlights or no highlights are available for the
+// item. The fragment text is not HTML-escaped, so escape it before rendering
+// as HTML.
+func (s SearchItem) Highlights() map[string][]string {
+	fields, ok := s.Meta["highlights"].(map[string]any)
+	if !ok {
+		return nil
+	}
+	var highlights map[string][]string
+	for field, value := range fields {
+		rawFragments, ok := value.([]any)
+		if !ok {
+			continue
+		}
+		var fragments []string
+		for _, rawFragment := range rawFragments {
+			if fragment, ok := rawFragment.(string); ok {
+				fragments = append(fragments, fragment)
+			}
+		}
+		if fragments == nil {
+			continue
+		}
+		if highlights == nil {
+			highlights = make(map[string][]string)
+		}
+		highlights[field] = fragments
+	}
+	return highlights
+}
+
 // SearchRequestPath contains the path parameters for loading multiple
 // searches.
 type SearchRequestPath struct{}
@@ -113,6 +147,15 @@ type SearchRequestFilters struct {
 	// searching for items updated more than 5 years ago. The default is false.
 	ExtendedSearch *bool
 
+	// IncludeHighlights is an optional flag to include highlighted match
+	// fragments for each result in the item's meta, retrievable via the
+	// SearchItem.Highlights method. Fragments mark matched terms with <em> and
+	// </em> tags; the surrounding text is not HTML-escaped, so escape it before
+	// rendering as HTML. Highlights are only available on standard searches —
+	// extended and other database-backed searches return no highlights. The
+	// default is false.
+	IncludeHighlights *bool
+
 	// Cursor is an optional cursor to retrieve the next set of results.
 	Cursor string
 
@@ -146,6 +189,9 @@ func (s SearchRequestFilters) apply(req *http.Request) {
 	}
 	if s.ExtendedSearch != nil {
 		query.Set("extendedSearch", strconv.FormatBool(*s.ExtendedSearch))
+	}
+	if s.IncludeHighlights != nil {
+		query.Set("includeHighlights", strconv.FormatBool(*s.IncludeHighlights))
 	}
 	if s.Cursor != "" {
 		query.Set("cursor", s.Cursor)
