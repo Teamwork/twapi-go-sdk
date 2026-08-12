@@ -63,6 +63,9 @@ type Tag struct {
 	// Name is the name of the tag.
 	Name string `json:"name"`
 
+	// Color is the color of the tag, represented as a hexadecimal color code.
+	Color string `json:"color"`
+
 	// Project is the project the tag belongs to.
 	Project *twapi.Relationship `json:"project"`
 }
@@ -75,15 +78,21 @@ type TagCreateRequest struct {
 	// 50 characters.
 	Name string `json:"name"`
 
+	// Color is the color of the tag, represented as a hexadecimal color code. This
+	// field is optional. If not provided, a default color will be assigned.
+	Color *string `json:"color,omitempty"`
+
 	// ProjectID is the unique identifier of the project the tag belongs to. This
 	// is for project-scoped tags.
 	ProjectID *int64 `json:"projectId,omitempty"`
 }
 
 // NewTagCreateRequest creates a new TagCreateRequest with the provided name.
-func NewTagCreateRequest(name string) TagCreateRequest {
+func NewTagCreateRequest(name string, color *string, projectID *int64) TagCreateRequest {
 	return TagCreateRequest{
-		Name: name,
+		Name:      name,
+		Color:     color,
+		ProjectID: projectID,
 	}
 }
 
@@ -161,6 +170,10 @@ type TagUpdateRequest struct {
 	// Name is the name of the tag. It must be less than 50 characters when
 	// provided.
 	Name *string `json:"name,omitempty"`
+
+	// Color is the color of the tag, represented as a hexadecimal color code. When
+	// provided, it must be a valid hexadecimal color code.
+	Color *string `json:"color,omitempty"`
 
 	// ProjectID is the unique identifier of the project the tag belongs to. This
 	// is for project-scoped tags.

@@ -20,7 +20,7 @@ func TestTagCreate(t *testing.T) {
 		input projects.TagCreateRequest
 	}{{
 		name:  "only required fields",
-		input: projects.NewTagCreateRequest(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100))),
+		input: projects.NewTagCreateRequest(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)), nil, nil),
 	}, {
 		name: "all fields",
 		input: projects.TagCreateRequest{
