@@ -23,7 +23,7 @@ func ExampleTagCreate() {
 	ctx := context.Background()
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
-	tagResponse, err := projects.TagCreate(ctx, engine, projects.NewTagCreateRequest("Test Tag"))
+	tagResponse, err := projects.TagCreate(ctx, engine, projects.NewTagCreateRequest("Test Tag", new("#e8e8e8"), nil))
 	if err != nil {
 		fmt.Printf("failed to create tag: %s", err)
 	} else {
