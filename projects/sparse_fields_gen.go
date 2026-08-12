@@ -389,6 +389,7 @@ type TagField string
 const (
 	TagFieldID      TagField = "id"
 	TagFieldName    TagField = "name"
+	TagFieldColor   TagField = "color"
 	TagFieldProject TagField = "project"
 )
 
