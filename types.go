@@ -54,8 +54,19 @@ type Relationship struct {
 type OptionalDateTime time.Time
 
 // MarshalJSON encodes the OptionalDateTime as a string in the format
-// "2006-01-02T15:04:05Z07:00".
+// "2006-01-02T15:04:05Z07:00", or as null when unset.
+//
+// The zero value must round-trip back to null rather than to the year-1
+// timestamp time.Time would produce. The API spells "unset" as an empty string
+// on some fields, and encoding/json allocates the pointer before calling
+// UnmarshalJSON, so an unset value reaches this method as a non-nil pointer to
+// the zero time. Emitting the year-1 timestamp there would report a date the
+// API never sent — and would break consumers that derive a JSON Schema from
+// these models, since the value no longer matches the field's declared shape.
 func (d OptionalDateTime) MarshalJSON() ([]byte, error) {
+	if time.Time(d).IsZero() {
+		return []byte("null"), nil
+	}
 	return time.Time(d).MarshalJSON()
 }
 
