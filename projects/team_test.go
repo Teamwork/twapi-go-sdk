@@ -2,6 +2,7 @@ package projects_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"testing"
@@ -210,5 +211,100 @@ func TestTeamList(t *testing.T) {
 				t.Errorf("unexpected error: %s", err)
 			}
 		})
+	}
+}
+
+// TestTeamDeletedAtEncoding guards the JSON shape of Team.DeletedAt, the SDK's
+// only twapi.OptionalDateTime field. Consumers that derive a JSON Schema from
+// these models by reflection — the MCP server does — declare the field once and
+// then validate every response against it, so a value that re-encodes as a
+// timestamp where the model says "unset" makes the whole response unusable.
+//
+// The empty string is the case to watch: the API sends it for every live team,
+// and encoding/json allocates the pointer before OptionalDateTime.UnmarshalJSON
+// runs, so the field survives the round trip as a non-nil pointer to the zero
+// time rather than as nil.
+func TestTeamDeletedAtEncoding(t *testing.T) {
+	tests := []struct {
+		name     string
+		payload  string
+		wantNil  bool
+		wantJSON string
+	}{{
+		name:     "empty string for a live team",
+		payload:  `{"team":{"id":"1","name":"Live","deleted":false,"deletedDate":""}}`,
+		wantNil:  false,
+		wantJSON: "null",
+	}, {
+		name:     "null",
+		payload:  `{"team":{"id":"2","name":"Live","deleted":false,"deletedDate":null}}`,
+		wantNil:  true,
+		wantJSON: "null",
+	}, {
+		name:     "absent",
+		payload:  `{"team":{"id":"3","name":"Live","deleted":false}}`,
+		wantNil:  true,
+		wantJSON: "null",
+	}, {
+		name:     "timestamp for a deleted team",
+		payload:  `{"team":{"id":"4","name":"Gone","deleted":true,"deletedDate":"2026-01-02T03:04:05Z"}}`,
+		wantNil:  false,
+		wantJSON: `"2026-01-02T03:04:05Z"`,
+	}}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var response projects.TeamGetResponse
+			if err := json.Unmarshal([]byte(tt.payload), &response); err != nil {
+				t.Fatalf("unexpected error decoding %s: %s", tt.payload, err)
+			}
+
+			if isNil := response.Team.DeletedAt == nil; isNil != tt.wantNil {
+				t.Errorf("expected DeletedAt nil to be %t but got %t", tt.wantNil, isNil)
+			}
+
+			encoded, err := json.Marshal(response.Team.DeletedAt)
+			if err != nil {
+				t.Fatalf("unexpected error encoding: %s", err)
+			}
+			if string(encoded) != tt.wantJSON {
+				t.Errorf("expected deletedDate to encode as %s but got %s", tt.wantJSON, encoded)
+			}
+		})
+	}
+}
+
+// TestTeamListDeletedAtEncoding covers the same ground as
+// TestTeamDeletedAtEncoding for the list envelope, which is where the failure
+// was first reported: one live team in a page was enough to reject the response.
+func TestTeamListDeletedAtEncoding(t *testing.T) {
+	payload := `{"teams":[
+		{"id":"1","name":"Live","deleted":false,"deletedDate":""},
+		{"id":"2","name":"Gone","deleted":true,"deletedDate":"2026-01-02T03:04:05Z"}
+	]}`
+
+	var response projects.TeamListResponse
+	if err := json.Unmarshal([]byte(payload), &response); err != nil {
+		t.Fatalf("unexpected error decoding: %s", err)
+	}
+	if len(response.Teams) != 2 {
+		t.Fatalf("expected 2 teams but got %d", len(response.Teams))
+	}
+
+	encoded, err := json.Marshal(response.Teams)
+	if err != nil {
+		t.Fatalf("unexpected error encoding: %s", err)
+	}
+
+	var decoded []map[string]any
+	if err := json.Unmarshal(encoded, &decoded); err != nil {
+		t.Fatalf("unexpected error re-decoding: %s", err)
+	}
+
+	if got := decoded[0]["deletedDate"]; got != nil {
+		t.Errorf("expected the live team to encode deletedDate as null but got %v", got)
+	}
+	if got := decoded[1]["deletedDate"]; got != "2026-01-02T03:04:05Z" {
+		t.Errorf("expected the deleted team to keep its timestamp but got %v", got)
 	}
 }
