@@ -426,6 +426,20 @@ func createTeam(t testEngine) (int64, func(), error) {
 	}, nil
 }
 
+// createPendingFile uploads a file and returns its reference. There is no
+// cleanup function: a pending file that is never attached is not visible
+// anywhere, and the API offers no way to discard one. Attaching the returned
+// reference consumes it, so each caller needs its own.
+func createPendingFile(t testEngine) (projects.PendingFileRef, error) {
+	name := fmt.Sprintf("test%d%d.txt", time.Now().UnixNano(), rand.Intn(100))
+	pendingFile, err := projects.PendingFileCreate(t.Context(), engine,
+		projects.NewPendingFileCreateRequestFromBytes(name, []byte("This is a test file")))
+	if err != nil {
+		return "", fmt.Errorf("failed to create pending file for test: %w", err)
+	}
+	return pendingFile.PendingFile.Ref, nil
+}
+
 func createCommentInTask(t testEngine, taskID int64) (int64, func(), error) {
 	comment, err := projects.CommentCreate(t.Context(), engine, projects.CommentCreateRequest{
 		Path: projects.CommentCreateRequestPath{
