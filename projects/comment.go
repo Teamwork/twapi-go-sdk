@@ -224,6 +224,13 @@ type CommentCreateRequest struct {
 	// the new comment. It can be a CommentNotifyAll, CommentNotifyFollowers, or
 	// CommentNotifyGroup. If not provided, no notifications will be sent.
 	Notify commentNotifier `json:"notify,omitempty"`
+
+	// PendingFileAttachments are files uploaded with PendingFileCreate that will
+	// be attached to the comment. Attaching consumes the references.
+	//
+	// This endpoint cannot attach a file that already exists in the project;
+	// unlike tasks, it accepts pending file references only.
+	PendingFileAttachments []PendingFileRef `json:"pendingFileAttachments,omitempty"`
 }
 
 // NewCommentCreateRequestInFileVersion creates a new CommentCreateRequest with
@@ -382,6 +389,14 @@ type CommentUpdateRequest struct {
 	// the new comment. It can be a CommentNotifyAll, CommentNotifyFollowers, or
 	// CommentNotifyGroup. If not provided, no notifications will be sent.
 	Notify commentNotifier `json:"notify,omitempty"`
+
+	// PendingFileAttachments are files uploaded with PendingFileCreate that will
+	// be attached to the comment. Attaching consumes the references, and is
+	// additive: files already attached to the comment are left alone.
+	//
+	// This endpoint cannot attach a file that already exists in the project;
+	// unlike tasks, it accepts pending file references only.
+	PendingFileAttachments []PendingFileRef `json:"pendingFileAttachments,omitempty"`
 }
 
 // NewCommentUpdateRequest creates a new CommentUpdateRequest with the

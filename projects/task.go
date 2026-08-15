@@ -175,6 +175,46 @@ type TaskPredecessor struct {
 	Type TaskPredecessorType `json:"type"`
 }
 
+// TaskAttachmentFile references a file that already exists in the task's
+// project, so that it is also attached to the task.
+type TaskAttachmentFile struct {
+	// ID is the unique identifier of the existing file.
+	ID int64 `json:"id"`
+
+	// CategoryID files the attachment under a specific file category. When it is
+	// not provided the API files it under a category named "Task Attachments",
+	// creating that category if the project does not have it yet.
+	CategoryID *int64 `json:"categoryId,omitempty"`
+}
+
+// TaskAttachmentPendingFile references a file uploaded with PendingFileCreate
+// that is not attached to anything yet. Attaching it consumes the reference.
+type TaskAttachmentPendingFile struct {
+	// Reference is the pending file reference from PendingFileCreate.
+	Reference PendingFileRef `json:"reference"`
+
+	// CategoryID files the attachment under a specific file category. When it is
+	// not provided the API files it under a category named "Task Attachments",
+	// creating that category if the project does not have it yet.
+	CategoryID *int64 `json:"categoryId,omitempty"`
+}
+
+// TaskAttachments is the set of files to attach to a task. Attaching is always
+// additive: files already attached to the task are left alone.
+type TaskAttachments struct {
+	// Files are files that already exist in the task's project.
+	Files []TaskAttachmentFile `json:"files,omitempty"`
+
+	// PendingFiles are files uploaded with PendingFileCreate.
+	PendingFiles []TaskAttachmentPendingFile `json:"pendingFiles,omitempty"`
+}
+
+// IsZero reports whether no attachment was requested, so that the field is
+// omitted from the request instead of being sent as an empty object.
+func (t TaskAttachments) IsZero() bool {
+	return len(t.Files) == 0 && len(t.PendingFiles) == 0
+}
+
 // TaskWorkflowStage represents the workflow stage associated with a task. This
 // is used when creating or updating a task to set the workflow stage of the
 // task.
@@ -245,6 +285,10 @@ type TaskCreateRequest struct {
 	// Predecessors is the list of task predecessors associated with this task.
 	Predecessors []TaskPredecessor `json:"-"`
 
+	// Attachments is the set of files to attach to the task: files that already
+	// exist in the project, files uploaded with PendingFileCreate, or both.
+	Attachments TaskAttachments `json:"-"`
+
 	// ChangeFollowers is the list of users, teams or clients/companies that will
 	// receive notifications when the task is updated.
 	ChangeFollowers UserGroups `json:"changeFollowers,omitzero"`
@@ -277,10 +321,12 @@ func (t TaskCreateRequest) HTTPRequest(ctx context.Context, server string) (*htt
 		Task         TaskCreateRequest `json:"task"`
 		Options      TaskOptions       `json:"taskOptions"`
 		Predecessors []TaskPredecessor `json:"predecessors,omitempty"`
+		Attachments  TaskAttachments   `json:"attachments,omitzero"`
 	}{
 		Task:         t,
 		Options:      t.Options,
 		Predecessors: t.Predecessors,
+		Attachments:  t.Attachments,
 	}
 
 	var body bytes.Buffer
@@ -396,6 +442,11 @@ type TaskUpdateRequest struct {
 	// Predecessors is the list of task predecessors associated with this task.
 	Predecessors []TaskPredecessor `json:"-"`
 
+	// Attachments is the set of files to attach to the task: files that already
+	// exist in the project, files uploaded with PendingFileCreate, or both. It is
+	// additive, so files already attached to the task are left alone.
+	Attachments TaskAttachments `json:"-"`
+
 	// ChangeFollowers is the list of users, teams or clients/companies that will
 	// receive notifications when the task is updated.
 	ChangeFollowers *UserGroups `json:"changeFollowers,omitempty"`
@@ -427,10 +478,12 @@ func (t TaskUpdateRequest) HTTPRequest(ctx context.Context, server string) (*htt
 		Task         TaskUpdateRequest `json:"task"`
 		Options      TaskOptions       `json:"taskOptions"`
 		Predecessors []TaskPredecessor `json:"predecessors,omitempty"`
+		Attachments  TaskAttachments   `json:"attachments,omitzero"`
 	}{
 		Task:         t,
 		Options:      t.Options,
 		Predecessors: t.Predecessors,
+		Attachments:  t.Attachments,
 	}
 
 	var body bytes.Buffer

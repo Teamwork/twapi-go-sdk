@@ -168,6 +168,14 @@ type MessageCreateRequest struct {
 	// the new message. It can be a MessageNotifyAll, or MessageNotifyGroup. If
 	// not provided, no notifications will be sent.
 	Notify messageNotifier `json:"notify,omitempty"`
+
+	// Attachments are the identifiers of files that already exist in the
+	// project and will be attached to the message.
+	Attachments LegacyNumericList `json:"attachments,omitempty"`
+
+	// PendingFileAttachments are files uploaded with PendingFileCreate that will
+	// be attached to the message. Attaching consumes the references.
+	PendingFileAttachments []PendingFileRef `json:"pendingFileAttachments,omitempty"`
 }
 
 // NewMessageCreateRequest creates a new MessageCreateRequest with the provided
@@ -277,6 +285,15 @@ type MessageUpdateRequest struct {
 	// the new message. It can be a MessageNotifyAll, or MessageNotifyGroup. If
 	// not provided, no notifications will be sent.
 	Notify messageNotifier `json:"notify,omitempty"`
+
+	// Attachments are the identifiers of files that already exist in the
+	// project and will be attached to the message.
+	Attachments LegacyNumericList `json:"attachments,omitempty"`
+
+	// PendingFileAttachments are files uploaded with PendingFileCreate that will
+	// be attached to the message. Attaching consumes the references, and is
+	// additive: files already attached to the message are left alone.
+	PendingFileAttachments []PendingFileRef `json:"pendingFileAttachments,omitempty"`
 }
 
 // NewMessageUpdateRequest creates a new MessageUpdateRequest with the provided

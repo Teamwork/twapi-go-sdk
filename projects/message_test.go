@@ -64,6 +64,46 @@ func TestMessageCreate(t *testing.T) {
 	}
 }
 
+// TestMessageCreateWithAttachment covers attaching a file to a new message.
+func TestMessageCreateWithAttachment(t *testing.T) {
+	if engine == nil {
+		t.Skip("Skipping test because the engine is not initialized")
+	}
+
+	ref, err := createPendingFile(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := t.Context()
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	t.Cleanup(cancel)
+
+	messageRequest := projects.NewMessageCreateRequest(
+		testResources.ProjectID,
+		fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
+		"This is a test message",
+	)
+	messageRequest.PendingFileAttachments = []projects.PendingFileRef{ref}
+
+	message, err := projects.MessageCreate(ctx, engine, messageRequest)
+	t.Cleanup(func() {
+		if err != nil {
+			return
+		}
+		ctx := context.Background() // t.Context is always canceled in cleanup
+		if _, err := projects.MessageDelete(ctx, engine,
+			projects.NewMessageDeleteRequest(int64(message.ID))); err != nil {
+			t.Errorf("failed to delete message after test: %s", err)
+		}
+	})
+	if err != nil {
+		t.Errorf("unexpected error: %s", err)
+	} else if message.ID == 0 {
+		t.Error("expected a valid message ID but got 0")
+	}
+}
+
 func TestMessageUpdate(t *testing.T) {
 	if engine == nil {
 		t.Skip("Skipping test because the engine is not initialized")
