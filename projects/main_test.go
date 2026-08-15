@@ -433,11 +433,31 @@ func createTeam(t testEngine) (int64, func(), error) {
 func createPendingFile(t testEngine) (projects.PendingFileRef, error) {
 	name := fmt.Sprintf("test%d%d.txt", time.Now().UnixNano(), rand.Intn(100))
 	pendingFile, err := projects.PendingFileCreate(t.Context(), engine,
-		projects.NewPendingFileCreateRequestFromBytes(name, []byte("This is a test file")))
+		projects.NewPendingFileCreateRequest(name, []byte("This is a test file")))
 	if err != nil {
 		return "", fmt.Errorf("failed to create pending file for test: %w", err)
 	}
 	return pendingFile.PendingFile.Ref, nil
+}
+
+// createFile uploads a file and adds it to a project's files area, so that the
+// caller has an identifier it can attach elsewhere and delete afterwards.
+func createFile(t testEngine, projectID int64) (int64, func(), error) {
+	ref, err := createPendingFile(t)
+	if err != nil {
+		return 0, nil, err
+	}
+	file, err := projects.FileCreate(t.Context(), engine, projects.NewFileCreateRequest(projectID, ref))
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to create file for test: %w", err)
+	}
+	id := int64(file.ID)
+	return id, func() {
+		ctx := context.Background() // t.Context is always canceled in cleanup
+		if _, err := projects.FileDelete(ctx, engine, projects.NewFileDeleteRequest(id)); err != nil {
+			t.Errorf("failed to delete file after test: %s", err)
+		}
+	}, nil
 }
 
 func createCommentInTask(t testEngine, taskID int64) (int64, func(), error) {

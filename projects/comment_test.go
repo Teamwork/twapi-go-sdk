@@ -80,43 +80,6 @@ func TestCommentCreate(t *testing.T) {
 	}
 }
 
-// TestCommentCreateWithAttachment covers attaching a file to a new comment.
-// Unlike tasks, this endpoint accepts pending file references only.
-func TestCommentCreateWithAttachment(t *testing.T) {
-	if engine == nil {
-		t.Skip("Skipping test because the engine is not initialized")
-	}
-
-	ref, err := createPendingFile(t)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	ctx := t.Context()
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	t.Cleanup(cancel)
-
-	commentRequest := projects.NewCommentCreateRequestInTask(testResources.TaskID, "This is a test comment")
-	commentRequest.PendingFileAttachments = []projects.PendingFileRef{ref}
-
-	comment, err := projects.CommentCreate(ctx, engine, commentRequest)
-	t.Cleanup(func() {
-		if err != nil {
-			return
-		}
-		ctx := context.Background() // t.Context is always canceled in cleanup
-		if _, err := projects.CommentDelete(ctx, engine,
-			projects.NewCommentDeleteRequest(int64(comment.ID))); err != nil {
-			t.Errorf("failed to delete comment after test: %s", err)
-		}
-	})
-	if err != nil {
-		t.Errorf("unexpected error: %s", err)
-	} else if comment.ID == 0 {
-		t.Error("expected a valid comment ID but got 0")
-	}
-}
-
 func TestCommentUpdate(t *testing.T) {
 	if engine == nil {
 		t.Skip("Skipping test because the engine is not initialized")

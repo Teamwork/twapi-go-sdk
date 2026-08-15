@@ -24,7 +24,7 @@ func ExamplePendingFileCreate() {
 	ctx := context.Background()
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
-	pendingFileRequest := projects.NewPendingFileCreateRequestFromBytes("plan.md", []byte("# Plan\n"))
+	pendingFileRequest := projects.NewPendingFileCreateRequest("plan.md", []byte("# Plan\n"))
 
 	pendingFileResponse, err := projects.PendingFileCreate(ctx, engine, pendingFileRequest)
 	if err != nil {
