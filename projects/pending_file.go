@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"mime/multipart"
 	"net/http"
 
@@ -41,25 +40,23 @@ type PendingFileCreateRequest struct {
 	// harder for the recipient to open.
 	FileName string
 
-	// Contents is the file body. It is fully read when the request is built.
-	Contents io.Reader
+	// Contents is the file body.
+	//
+	// This is a byte slice rather than an io.Reader because a multipart body has
+	// to be assembled in full before it is sent, so a reader would be drained
+	// into a buffer anyway. Holding the bytes keeps the request re-executable,
+	// which the rest of the SDK assumes: a request value can be executed more
+	// than once, and a drained reader would silently upload an empty file the
+	// second time. Read a file in with os.ReadFile.
+	Contents []byte
 }
 
 // NewPendingFileCreateRequest creates a new PendingFileCreateRequest with the
 // provided required fields.
-func NewPendingFileCreateRequest(fileName string, contents io.Reader) PendingFileCreateRequest {
+func NewPendingFileCreateRequest(fileName string, contents []byte) PendingFileCreateRequest {
 	return PendingFileCreateRequest{
 		FileName: fileName,
 		Contents: contents,
-	}
-}
-
-// NewPendingFileCreateRequestFromBytes creates a new PendingFileCreateRequest
-// from a file already held in memory.
-func NewPendingFileCreateRequestFromBytes(fileName string, contents []byte) PendingFileCreateRequest {
-	return PendingFileCreateRequest{
-		FileName: fileName,
-		Contents: bytes.NewReader(contents),
 	}
 }
 
@@ -70,7 +67,7 @@ func (p PendingFileCreateRequest) HTTPRequest(ctx context.Context, server string
 	switch {
 	case p.FileName == "":
 		return nil, fmt.Errorf("pending file requires a file name")
-	case p.Contents == nil:
+	case len(p.Contents) == 0:
 		return nil, fmt.Errorf("pending file requires the file contents")
 	}
 
@@ -82,8 +79,8 @@ func (p PendingFileCreateRequest) HTTPRequest(ctx context.Context, server string
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode create pending file request: %w", err)
 	}
-	if _, err := io.Copy(part, p.Contents); err != nil {
-		return nil, fmt.Errorf("failed to read pending file contents: %w", err)
+	if _, err := part.Write(p.Contents); err != nil {
+		return nil, fmt.Errorf("failed to encode create pending file request: %w", err)
 	}
 	if err := writer.Close(); err != nil {
 		return nil, fmt.Errorf("failed to encode create pending file request: %w", err)

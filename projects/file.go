@@ -85,6 +85,13 @@ func NewFileCreateRequest(projectID int64, pendingFileRef PendingFileRef) FileCr
 
 // HTTPRequest creates an HTTP request for the FileCreateRequest.
 func (f FileCreateRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
+	switch {
+	case f.Path.ProjectID <= 0:
+		return nil, fmt.Errorf("file requires a project")
+	case f.PendingFileRef == "":
+		return nil, fmt.Errorf("file requires a pending file reference")
+	}
+
 	uri := fmt.Sprintf("%s/projects/%d/files.json", server, f.Path.ProjectID)
 
 	payload := struct {
@@ -110,8 +117,10 @@ func (f FileCreateRequest) HTTPRequest(ctx context.Context, server string) (*htt
 //
 // https://apidocs.teamwork.com/docs/teamwork/v1/files/post-projects-id-files-json
 type FileCreateResponse struct {
-	// ID is the unique identifier of the created file.
-	ID LegacyNumber `json:"fileId"`
+	// ID is the unique identifier of the created file. The API also returns it as
+	// "fileId" and "fileIds", but "id" is the documented field and the one every
+	// other v1 create response in this package uses.
+	ID LegacyNumber `json:"id"`
 }
 
 // HandleHTTPResponse handles the HTTP response for the FileCreateResponse. If

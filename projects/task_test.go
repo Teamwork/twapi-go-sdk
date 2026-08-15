@@ -103,78 +103,78 @@ func TestTaskCreate(t *testing.T) {
 	}
 }
 
-// TestTaskCreateWithAttachment covers attaching a file while creating the task.
-// The assertion is only that the write was accepted: the SDK has no endpoint for
-// reading a task's files back, so the attachment itself cannot be verified here.
-func TestTaskCreateWithAttachment(t *testing.T) {
+// TestTaskAttachments covers attaching a file when creating a task and to a task
+// that already exists.
+//
+// The file is added to the project first so that the test owns an identifier it
+// can delete afterwards. Attaching a pending file reference directly works the
+// same way, but the API creates the project file itself and returns no way to
+// find it, so a test doing that would leave a file behind on every run. The
+// encoding of both forms is covered by TestAttachmentsEncoding.
+//
+// The assertion here is only that the write was accepted: the SDK has no
+// endpoint for reading a task's files back.
+func TestTaskAttachments(t *testing.T) {
 	if engine == nil {
 		t.Skip("Skipping test because the engine is not initialized")
 	}
 
-	ref, err := createPendingFile(t)
+	fileID, fileCleanup, err := createFile(t, testResources.ProjectID)
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Cleanup(fileCleanup)
 
-	ctx := t.Context()
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	t.Cleanup(cancel)
-
-	taskRequest := projects.NewTaskCreateRequest(
-		testResources.TasklistID,
-		fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
-	)
-	taskRequest.Attachments = projects.TaskAttachments{
-		PendingFiles: []projects.TaskAttachmentPendingFile{{Reference: ref}},
+	attachments := projects.TaskAttachments{
+		Files: []projects.TaskAttachmentFile{{ID: fileID}},
 	}
 
-	task, err := projects.TaskCreate(ctx, engine, taskRequest)
-	t.Cleanup(func() {
+	t.Run("create", func(t *testing.T) {
+		ctx := t.Context()
+		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		t.Cleanup(cancel)
+
+		taskRequest := projects.NewTaskCreateRequest(
+			testResources.TasklistID,
+			fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
+		)
+		taskRequest.Attachments = attachments
+
+		task, err := projects.TaskCreate(ctx, engine, taskRequest)
+		t.Cleanup(func() {
+			if err != nil {
+				return
+			}
+			ctx := context.Background() // t.Context is always canceled in cleanup
+			if _, err := projects.TaskDelete(ctx, engine, projects.NewTaskDeleteRequest(task.Task.ID)); err != nil {
+				t.Errorf("failed to delete task after test: %s", err)
+			}
+		})
 		if err != nil {
-			return
-		}
-		ctx := context.Background() // t.Context is always canceled in cleanup
-		if _, err := projects.TaskDelete(ctx, engine, projects.NewTaskDeleteRequest(task.Task.ID)); err != nil {
-			t.Errorf("failed to delete task after test: %s", err)
+			t.Errorf("unexpected error: %s", err)
+		} else if task.Task.ID == 0 {
+			t.Error("expected a valid task ID but got 0")
 		}
 	})
-	if err != nil {
-		t.Errorf("unexpected error: %s", err)
-	} else if task.Task.ID == 0 {
-		t.Error("expected a valid task ID but got 0")
-	}
-}
 
-// TestTaskUpdateWithAttachment covers attaching a file to a task that already
-// exists. Attaching is additive, so it does not disturb the task's other files.
-func TestTaskUpdateWithAttachment(t *testing.T) {
-	if engine == nil {
-		t.Skip("Skipping test because the engine is not initialized")
-	}
+	t.Run("update", func(t *testing.T) {
+		taskID, taskCleanup, err := createTask(t, testResources.TasklistID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(taskCleanup)
 
-	taskID, taskCleanup, err := createTask(t, testResources.TasklistID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(taskCleanup)
+		ctx := t.Context()
+		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		t.Cleanup(cancel)
 
-	ref, err := createPendingFile(t)
-	if err != nil {
-		t.Fatal(err)
-	}
+		taskRequest := projects.NewTaskUpdateRequest(taskID)
+		taskRequest.Attachments = attachments
 
-	ctx := t.Context()
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	t.Cleanup(cancel)
-
-	taskRequest := projects.NewTaskUpdateRequest(taskID)
-	taskRequest.Attachments = projects.TaskAttachments{
-		PendingFiles: []projects.TaskAttachmentPendingFile{{Reference: ref}},
-	}
-
-	if _, err := projects.TaskUpdate(ctx, engine, taskRequest); err != nil {
-		t.Errorf("unexpected error: %s", err)
-	}
+		if _, err := projects.TaskUpdate(ctx, engine, taskRequest); err != nil {
+			t.Errorf("unexpected error: %s", err)
+		}
+	})
 }
 
 func TestTaskUpdate(t *testing.T) {
