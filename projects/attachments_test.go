@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"testing"
 
@@ -223,6 +224,9 @@ func encodeRequestBody(t *testing.T, requester twapi.HTTPRequester) map[string]a
 	if err != nil {
 		t.Fatalf("failed to build the request: %s", err)
 	}
+	if httpRequest.Body == nil {
+		t.Fatalf("expected a request body, got none")
+	}
 	var body map[string]any
 	if err := json.NewDecoder(httpRequest.Body).Decode(&body); err != nil {
 		t.Fatalf("failed to decode the request body: %s", err)
@@ -257,7 +261,7 @@ func assertSubset(t *testing.T, path string, want, got any) {
 			t.Fatalf("%s: expected %d items, got %d (%v)", path, len(want), len(gotSlice), gotSlice)
 		}
 		for i, value := range want {
-			assertSubset(t, path, value, gotSlice[i])
+			assertSubset(t, fmt.Sprintf("%s[%d]", path, i), value, gotSlice[i])
 		}
 	default:
 		if want != got {

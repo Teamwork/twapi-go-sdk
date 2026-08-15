@@ -71,9 +71,15 @@ func (p PendingFileCreateRequest) HTTPRequest(ctx context.Context, server string
 		return nil, fmt.Errorf("pending file requires the file contents")
 	}
 
+	// Unlike the other v1 routes in this package, which hang off the bare server
+	// root, this upload endpoint genuinely lives under /projects/api/v1/.
 	uri := server + "/projects/api/v1/pendingfiles.json"
 
 	var body bytes.Buffer
+	// The file bytes dominate the body; the multipart framing (boundary plus the
+	// part headers and CRLFs) is a couple hundred bytes, so presizing turns the
+	// assembly into a single allocation and copy.
+	body.Grow(len(p.Contents) + 512)
 	writer := multipart.NewWriter(&body)
 	part, err := writer.CreateFormFile("file", p.FileName)
 	if err != nil {
