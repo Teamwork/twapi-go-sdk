@@ -117,9 +117,7 @@ func (f FileCreateRequest) HTTPRequest(ctx context.Context, server string) (*htt
 //
 // https://apidocs.teamwork.com/docs/teamwork/v1/files/post-projects-id-files-json
 type FileCreateResponse struct {
-	// ID is the unique identifier of the created file. The API also returns it as
-	// "fileId" and "fileIds", but "id" is the documented field and the one every
-	// other v1 create response in this package uses.
+	// ID is the unique identifier of the created file.
 	ID LegacyNumber `json:"id"`
 }
 
@@ -130,8 +128,18 @@ func (f *FileCreateResponse) HandleHTTPResponse(resp *http.Response) error {
 	if resp.StatusCode != http.StatusCreated {
 		return twapi.NewHTTPError(resp, "failed to create file")
 	}
-	if err := json.NewDecoder(resp.Body).Decode(f); err != nil {
+	// "id" is the documented field and the one every other v1 create response in
+	// this package uses, but this endpoint also returns it as "fileId"; accept
+	// that as a fallback so a payload carrying only one of them still resolves.
+	var body struct {
+		ID     LegacyNumber `json:"id"`
+		FileID LegacyNumber `json:"fileId"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
 		return fmt.Errorf("failed to decode create file response: %w", err)
+	}
+	if f.ID = body.ID; f.ID == 0 {
+		f.ID = body.FileID
 	}
 	if f.ID == 0 {
 		return fmt.Errorf("create file response does not contain a valid identifier")

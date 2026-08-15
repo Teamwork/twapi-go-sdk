@@ -78,7 +78,9 @@ func TestFileDelete(t *testing.T) {
 		t.Skip("Skipping test because the engine is not initialized")
 	}
 
-	ref, err := createPendingFile(t)
+	// createFile uploads and files the file; its cleanup is discarded because
+	// deleting it is what this test does.
+	fileID, _, err := createFile(t, testResources.ProjectID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,12 +89,7 @@ func TestFileDelete(t *testing.T) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	t.Cleanup(cancel)
 
-	file, err := projects.FileCreate(ctx, engine, projects.NewFileCreateRequest(testResources.ProjectID, ref))
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if _, err := projects.FileDelete(ctx, engine, projects.NewFileDeleteRequest(int64(file.ID))); err != nil {
+	if _, err := projects.FileDelete(ctx, engine, projects.NewFileDeleteRequest(fileID)); err != nil {
 		t.Errorf("unexpected error: %s", err)
 	}
 }

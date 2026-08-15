@@ -287,7 +287,8 @@ type MessageUpdateRequest struct {
 	Notify messageNotifier `json:"notify,omitempty"`
 
 	// Attachments are the identifiers of files that already exist in the
-	// project and will be attached to the message.
+	// project and will be attached to the message. Attaching is additive: files
+	// already attached to the message are left alone.
 	Attachments LegacyNumericList `json:"attachments,omitempty"`
 
 	// PendingFileAttachments are files uploaded with PendingFileCreate that will
