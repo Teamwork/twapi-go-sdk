@@ -40,10 +40,11 @@ func TestListOrderingApplied(t *testing.T) {
 		name: "activity",
 		req: func() twapi.HTTPRequester {
 			req := projects.NewActivityListRequest()
+			req.Filters.OrderBy = projects.ActivityOrderByActivityDatetime
 			req.Filters.OrderMode = twapi.OrderModeDescending
 			return req
 		}(),
-		want: map[string]string{"orderMode": "desc"},
+		want: map[string]string{"orderBy": "activityDatetime", "orderMode": "desc"},
 	}, {
 		name: "calendar",
 		req: func() twapi.HTTPRequester {
@@ -330,7 +331,7 @@ func TestListOrderingOmittedWhenUnset(t *testing.T) {
 		req  twapi.HTTPRequester
 		keys []string
 	}{
-		{name: "activity", req: projects.ActivityListRequest{}, keys: []string{"orderMode"}},
+		{name: "activity", req: projects.ActivityListRequest{}, keys: []string{"orderBy", "orderMode"}},
 		{name: "calendar", req: projects.CalendarListRequest{}, keys: []string{"orderBy", "orderMode"}},
 		{name: "calendar event", req: projects.CalendarEventListRequest{}, keys: []string{"orderBy", "orderMode"}},
 		{name: "comment", req: projects.CommentListRequest{}, keys: []string{"orderBy", "orderMode"}},
