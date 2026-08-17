@@ -387,6 +387,11 @@ type SkillListRequestFilters struct {
 	// as a sideload.
 	Include []SkillListRequestSideload
 
+	// CountMode selects whether the API computes the exact number of skills
+	// matching the filters, reported in Meta.Page.Count. Defaults to
+	// twapi.ListCountModeDefault, which leaves the decision to the API.
+	CountMode twapi.ListCountMode
+
 	// Fields restricts the attributes returned for the skill and each of its
 	// sideloads. Each slot of SkillListFields is a separate `fields[entity]=…`
 	// selection; populated slots restrict the response, empty slots return the
@@ -414,6 +419,7 @@ func (s SkillListRequestFilters) apply(req *http.Request) {
 		query.Set("include", strings.Join(include, ","))
 	}
 	s.Fields.apply(query)
+	s.CountMode.Apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -460,11 +466,7 @@ func (s SkillListRequest) HTTPRequest(ctx context.Context, server string) (*http
 type SkillListResponse struct {
 	request SkillListRequest
 
-	Meta struct {
-		Page struct {
-			HasMore bool `json:"hasMore"`
-		} `json:"page"`
-	} `json:"meta"`
+	Meta twapi.ListMeta `json:"meta"`
 
 	// The endpoint returns its payload under "skills", but the sparse-fieldsets
 	// query parameter it binds is the singular "fields[skill]", so the key can't
@@ -492,6 +494,7 @@ func (s *SkillListResponse) HandleHTTPResponse(resp *http.Response) error {
 // pagination purposes, so the Iterate method can return the next page.
 func (s *SkillListResponse) SetRequest(req SkillListRequest) {
 	s.request = req
+	s.Meta.ResolveCount(req.Filters.CountMode)
 }
 
 // Iterate returns the request set to the next page, if available. If there are

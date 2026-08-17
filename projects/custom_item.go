@@ -531,6 +531,12 @@ type CustomItemListRequestFilters struct {
 	// PageSize is the number of custom items to retrieve per page. Defaults
 	// to 50.
 	PageSize int64
+
+	// CountMode selects whether the API computes the exact number of custom item
+	// types matching the filters, reported in Meta.Page.Count. Defaults to
+	// twapi.ListCountModeSkip, matching what this SDK requests for this
+	// endpoint.
+	CountMode twapi.ListCountMode
 }
 
 func (c CustomItemListRequestFilters) apply(req *http.Request) {
@@ -570,7 +576,7 @@ func (c CustomItemListRequestFilters) apply(req *http.Request) {
 	if c.PageSize > 0 {
 		query.Set("pageSize", strconv.FormatInt(c.PageSize, 10))
 	}
-	query.Set("skipCounts", "true")
+	c.CountMode.Apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -590,8 +596,9 @@ func NewCustomItemListRequest(projectID int64) CustomItemListRequest {
 	return CustomItemListRequest{
 		Path: CustomItemListRequestPath{ProjectID: projectID},
 		Filters: CustomItemListRequestFilters{
-			Page:     1,
-			PageSize: 50,
+			Page:      1,
+			PageSize:  50,
+			CountMode: twapi.ListCountModeSkip,
 		},
 	}
 }
@@ -618,11 +625,7 @@ type CustomItemListResponse struct {
 	request CustomItemListRequest
 
 	// Meta contains pagination information for the response.
-	Meta struct {
-		Page struct {
-			HasMore bool `json:"hasMore"`
-		} `json:"page"`
-	} `json:"meta"`
+	Meta twapi.ListMeta `json:"meta"`
 
 	// CustomItems is the list of custom item types matching the request
 	// filters.
@@ -673,6 +676,7 @@ func (c *CustomItemListResponse) HandleHTTPResponse(resp *http.Response) error {
 // via Iterate.
 func (c *CustomItemListResponse) SetRequest(req CustomItemListRequest) {
 	c.request = req
+	c.Meta.ResolveCount(req.Filters.CountMode)
 }
 
 // Iterate returns the request set to the next page, if available. If there

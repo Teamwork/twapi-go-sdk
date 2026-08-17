@@ -149,6 +149,11 @@ type RateUserGetRequestFilters struct {
 
 	// Include specifies which related data to include. Supports: "projects".
 	Include []RateUserGetRequestSideload
+
+	// CountMode selects whether the API computes the exact number of rates
+	// matching the filters, reported in Meta.Page.Count. Defaults to
+	// twapi.ListCountModeDefault, which leaves the decision to the API.
+	CountMode twapi.ListCountMode
 }
 
 func (r RateUserGetRequestFilters) apply(req *http.Request) {
@@ -178,6 +183,7 @@ func (r RateUserGetRequestFilters) apply(req *http.Request) {
 		}
 		query.Set("include", strings.Join(include, ","))
 	}
+	r.CountMode.Apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -235,14 +241,7 @@ type RateUserGetResponse struct {
 	UserCost *int64 `json:"userCost,omitempty"`
 
 	// Meta contains pagination information.
-	Meta struct {
-		Page struct {
-			PageOffset int64 `json:"pageOffset"`
-			PageSize   int64 `json:"pageSize"`
-			Count      int64 `json:"count"`
-			HasMore    bool  `json:"hasMore"`
-		} `json:"page"`
-	} `json:"meta"`
+	Meta twapi.ListMeta `json:"meta"`
 
 	// Included contains related data.
 	Included struct {
@@ -263,6 +262,13 @@ func (r *RateUserGetResponse) HandleHTTPResponse(resp *http.Response) error {
 	return nil
 }
 
+// SetRequest sets the request used to load this response. The endpoint pages
+// its rates without an Iterate method, so this exists only to reconcile
+// Meta.Page.Count with the count mode the request asked for.
+func (r *RateUserGetResponse) SetRequest(req RateUserGetRequest) {
+	r.Meta.ResolveCount(req.Filters.CountMode)
+}
+
 // RateUserGet retrieves a user's rates using the provided request and returns
 // the response.
 func RateUserGet(
@@ -281,6 +287,11 @@ type RateInstallationUserListRequestFilters struct {
 
 	// PageSize is the number of rates to retrieve per page. Defaults to 50.
 	PageSize int64
+
+	// CountMode selects whether the API computes the exact number of user rates
+	// matching the filters, reported in Meta.Page.Count. Defaults to
+	// twapi.ListCountModeDefault, which leaves the decision to the API.
+	CountMode twapi.ListCountMode
 }
 
 func (r RateInstallationUserListRequestFilters) apply(req *http.Request) {
@@ -291,6 +302,7 @@ func (r RateInstallationUserListRequestFilters) apply(req *http.Request) {
 	if r.PageSize > 0 {
 		query.Set("pageSize", strconv.FormatInt(r.PageSize, 10))
 	}
+	r.CountMode.Apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -337,11 +349,7 @@ type RateInstallationUserListResponse struct {
 	request RateInstallationUserListRequest
 
 	// Meta contains pagination information.
-	Meta struct {
-		Page struct {
-			HasMore bool `json:"hasMore"`
-		} `json:"page"`
-	} `json:"meta"`
+	Meta twapi.ListMeta `json:"meta"`
 
 	// UserRates contains the list of user rates.
 	UserRates []struct {
@@ -375,6 +383,7 @@ func (r *RateInstallationUserListResponse) HandleHTTPResponse(resp *http.Respons
 // SetRequest sets the request used to load this response.
 func (r *RateInstallationUserListResponse) SetRequest(req RateInstallationUserListRequest) {
 	r.request = req
+	r.Meta.ResolveCount(req.Filters.CountMode)
 }
 
 // Iterate returns the request set to the next page, if available.
@@ -953,6 +962,11 @@ type RateProjectUserListRequestFilters struct {
 
 	// PageSize is the number of rates to retrieve per page. Defaults to 50.
 	PageSize int64
+
+	// CountMode selects whether the API computes the exact number of project
+	// user rates matching the filters, reported in Meta.Page.Count. Defaults to
+	// twapi.ListCountModeDefault, which leaves the decision to the API.
+	CountMode twapi.ListCountMode
 }
 
 func (r RateProjectUserListRequestFilters) apply(req *http.Request) {
@@ -972,6 +986,7 @@ func (r RateProjectUserListRequestFilters) apply(req *http.Request) {
 	if r.PageSize > 0 {
 		query.Set("pageSize", strconv.FormatInt(r.PageSize, 10))
 	}
+	r.CountMode.Apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -1057,11 +1072,7 @@ type RateProjectUserListResponse struct {
 	request RateProjectUserListRequest
 
 	// Meta contains pagination information.
-	Meta struct {
-		Page struct {
-			HasMore bool `json:"hasMore"`
-		} `json:"page"`
-	} `json:"meta"`
+	Meta twapi.ListMeta `json:"meta"`
 
 	// UserRates contains the list of effective user project rates.
 	UserRates []EffectiveUserProjectRate `json:"userRates"`
@@ -1090,6 +1101,7 @@ func (r *RateProjectUserListResponse) HandleHTTPResponse(resp *http.Response) er
 // SetRequest sets the request used to load this response.
 func (r *RateProjectUserListResponse) SetRequest(req RateProjectUserListRequest) {
 	r.request = req
+	r.Meta.ResolveCount(req.Filters.CountMode)
 }
 
 // Iterate returns the request set to the next page, if available.
@@ -1346,6 +1358,12 @@ type RateProjectUserHistoryGetRequestFilters struct {
 
 	// Include specifies which related data to include.
 	Include []RateProjectUserHistoryGetRequestSideload
+
+	// CountMode selects whether the API computes the exact number of rate
+	// history entries matching the filters, reported in Meta.Page.Count.
+	// Defaults to twapi.ListCountModeDefault, which leaves the decision to the
+	// API.
+	CountMode twapi.ListCountMode
 }
 
 func (r RateProjectUserHistoryGetRequestFilters) apply(req *http.Request) {
@@ -1370,6 +1388,7 @@ func (r RateProjectUserHistoryGetRequestFilters) apply(req *http.Request) {
 			query.Add("include", string(include))
 		}
 	}
+	r.CountMode.Apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -1437,11 +1456,7 @@ type RateProjectUserHistoryGetResponse struct {
 	request RateProjectUserHistoryGetRequest
 
 	// Meta contains pagination information.
-	Meta struct {
-		Page struct {
-			HasMore bool `json:"hasMore"`
-		} `json:"page"`
-	} `json:"meta"`
+	Meta twapi.ListMeta `json:"meta"`
 
 	// UserRateHistory contains the list of historical rates.
 	UserRateHistory []UserRateHistory `json:"userRateHistory"`
@@ -1469,6 +1484,7 @@ func (r *RateProjectUserHistoryGetResponse) HandleHTTPResponse(resp *http.Respon
 // SetRequest sets the request used to load this response.
 func (r *RateProjectUserHistoryGetResponse) SetRequest(req RateProjectUserHistoryGetRequest) {
 	r.request = req
+	r.Meta.ResolveCount(req.Filters.CountMode)
 }
 
 // Iterate returns the request set to the next page, if available.

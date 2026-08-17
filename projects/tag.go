@@ -388,6 +388,11 @@ type TagListRequestFilters struct {
 	// PageSize is the number of tags to retrieve per page. Defaults to 50.
 	PageSize int64
 
+	// CountMode selects whether the API computes the exact number of tags
+	// matching the filters, reported in Meta.Page.Count. Defaults to
+	// twapi.ListCountModeDefault, which leaves the decision to the API.
+	CountMode twapi.ListCountMode
+
 	// Fields restricts the attributes returned for the tag and each of its
 	// sideloads. Each slot of TagListFields is a separate `fields[entity]=…`
 	// selection; populated slots restrict the response, empty slots return the
@@ -418,6 +423,7 @@ func (t TagListRequestFilters) apply(req *http.Request) {
 		query.Set("pageSize", strconv.FormatInt(t.PageSize, 10))
 	}
 	t.Fields.apply(query)
+	t.CountMode.Apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -461,12 +467,8 @@ func (t TagListRequest) HTTPRequest(ctx context.Context, server string) (*http.R
 type TagListResponse struct {
 	request TagListRequest
 
-	Meta struct {
-		Page struct {
-			HasMore bool `json:"hasMore"`
-		} `json:"page"`
-	} `json:"meta"`
-	Tags []Tag `json:"tags"`
+	Meta twapi.ListMeta `json:"meta"`
+	Tags []Tag          `json:"tags"`
 }
 
 // HandleHTTPResponse handles the HTTP response for the TagListResponse. If some
@@ -487,6 +489,7 @@ func (t *TagListResponse) HandleHTTPResponse(resp *http.Response) error {
 // pagination purposes, so the Iterate method can return the next page.
 func (t *TagListResponse) SetRequest(req TagListRequest) {
 	t.request = req
+	t.Meta.ResolveCount(req.Filters.CountMode)
 }
 
 // Iterate returns the request set to the next page, if available. If there are

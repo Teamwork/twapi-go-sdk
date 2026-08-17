@@ -473,6 +473,11 @@ type MilestoneListRequestFilters struct {
 	// PageSize is the number of milestones to retrieve per page. Defaults to 50.
 	PageSize int64
 
+	// CountMode selects whether the API computes the exact number of milestones
+	// matching the filters, reported in Meta.Page.Count. Defaults to
+	// twapi.ListCountModeDefault, which leaves the decision to the API.
+	CountMode twapi.ListCountMode
+
 	// Fields restricts the attributes returned for the milestone and each of its
 	// sideloads. Each slot of MilestoneListFields is a separate
 	// `fields[entity]=…` selection; populated slots restrict the response, empty
@@ -503,6 +508,7 @@ func (m MilestoneListRequestFilters) apply(req *http.Request) {
 		query.Set("pageSize", strconv.FormatInt(m.PageSize, 10))
 	}
 	m.Fields.apply(query)
+	m.CountMode.Apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -557,12 +563,8 @@ func (m MilestoneListRequest) HTTPRequest(ctx context.Context, server string) (*
 type MilestoneListResponse struct {
 	request MilestoneListRequest
 
-	Meta struct {
-		Page struct {
-			HasMore bool `json:"hasMore"`
-		} `json:"page"`
-	} `json:"meta"`
-	Milestones []Milestone `json:"milestones"`
+	Meta       twapi.ListMeta `json:"meta"`
+	Milestones []Milestone    `json:"milestones"`
 }
 
 // HandleHTTPResponse handles the HTTP response for the MilestoneListResponse. If
@@ -583,6 +585,7 @@ func (m *MilestoneListResponse) HandleHTTPResponse(resp *http.Response) error {
 // pagination purposes, so the Iterate method can return the next page.
 func (m *MilestoneListResponse) SetRequest(req MilestoneListRequest) {
 	m.request = req
+	m.Meta.ResolveCount(req.Filters.CountMode)
 }
 
 // Iterate returns the request set to the next page, if available. If there

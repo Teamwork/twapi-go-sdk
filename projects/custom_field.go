@@ -709,6 +709,11 @@ type CustomFieldListRequestFilters struct {
 	// 50.
 	PageSize int64
 
+	// CountMode selects whether the API computes the exact number of custom
+	// fields matching the filters, reported in Meta.Page.Count. Defaults to
+	// twapi.ListCountModeDefault, which leaves the decision to the API.
+	CountMode twapi.ListCountMode
+
 	// Fields restricts the attributes returned for the custom field and each of
 	// its sideloads. Each slot of CustomFieldListFields is a separate
 	// `fields[entity]=…` selection; populated slots restrict the response, empty
@@ -768,6 +773,7 @@ func (c CustomFieldListRequestFilters) apply(req *http.Request) {
 		query.Set("pageSize", strconv.FormatInt(c.PageSize, 10))
 	}
 	c.Fields.apply(query)
+	c.CountMode.Apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -814,11 +820,7 @@ type CustomFieldListResponse struct {
 	request CustomFieldListRequest
 
 	// Meta contains the pagination information for the response.
-	Meta struct {
-		Page struct {
-			HasMore bool `json:"hasMore"`
-		} `json:"page"`
-	} `json:"meta"`
+	Meta twapi.ListMeta `json:"meta"`
 
 	// CustomFields is the list of custom fields matching the request filters.
 	CustomFields []CustomField `json:"customfields"`
@@ -841,6 +843,7 @@ func (c *CustomFieldListResponse) HandleHTTPResponse(resp *http.Response) error 
 // pagination purposes, so the Iterate method can return the next page.
 func (c *CustomFieldListResponse) SetRequest(req CustomFieldListRequest) {
 	c.request = req
+	c.Meta.ResolveCount(req.Filters.CountMode)
 }
 
 // Iterate returns the request set to the next page, if available. If there are

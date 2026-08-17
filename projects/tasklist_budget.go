@@ -145,6 +145,11 @@ type TasklistBudgetListRequestFilters struct {
 	// Include specifies sideloaded entities to include in the response.
 	Include []TasklistBudgetListRequestSideload
 
+	// CountMode selects whether the API computes the exact number of tasklist
+	// budgets matching the filters, reported in Meta.Page.Count. Defaults to
+	// twapi.ListCountModeDefault, which leaves the decision to the API.
+	CountMode twapi.ListCountMode
+
 	// Fields restricts the attributes returned for the tasklist budget and each
 	// of its sideloads. Each slot of TasklistBudgetListFields is a separate
 	// `fields[entity]=…` selection; populated slots restrict the response, empty
@@ -179,6 +184,7 @@ func (p TasklistBudgetListRequestFilters) apply(req *http.Request) {
 		query.Set("include", strings.Join(include, ","))
 	}
 	p.Fields.apply(query)
+	p.CountMode.Apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -230,11 +236,7 @@ func (p TasklistBudgetListRequest) HTTPRequest(ctx context.Context, server strin
 type TasklistBudgetListResponse struct {
 	request TasklistBudgetListRequest
 
-	Meta struct {
-		Page struct {
-			HasMore bool `json:"hasMore"`
-		} `json:"page"`
-	} `json:"meta"`
+	Meta twapi.ListMeta `json:"meta"`
 
 	TasklistBudgets []TasklistBudget `json:"tasklistBudgets"`
 
@@ -262,6 +264,7 @@ func (p *TasklistBudgetListResponse) HandleHTTPResponse(resp *http.Response) err
 // pagination purposes, so the Iterate method can return the next page.
 func (p *TasklistBudgetListResponse) SetRequest(req TasklistBudgetListRequest) {
 	p.request = req
+	p.Meta.ResolveCount(req.Filters.CountMode)
 }
 
 // Iterate returns the request set to the next page, if available. If there

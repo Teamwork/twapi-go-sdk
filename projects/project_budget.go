@@ -219,8 +219,7 @@ type ProjectBudgetListRequestFilters struct {
 	// endpoint pages with Page/PageSize and Limit is ignored.
 	Limit int64
 
-	// Page selects the 1-based page of results. The response reports the
-	// resulting offset as Meta.Page.PageOffset, which is Page-1.
+	// Page selects the 1-based page of results.
 	//
 	// Page is ignored when Cursor is set.
 	Page int64
@@ -236,6 +235,11 @@ type ProjectBudgetListRequestFilters struct {
 	// page number. Setting it switches the endpoint into cursor pagination,
 	// where Page and PageSize are ignored and Limit bounds the page.
 	Cursor string
+
+	// CountMode selects whether the API computes the exact number of project
+	// budgets matching the filters, reported in Meta.Page.Count. Defaults to
+	// twapi.ListCountModeDefault, which leaves the decision to the API.
+	CountMode twapi.ListCountMode
 
 	// Fields restricts the attributes returned for the project budget and each
 	// of its sideloads. Each slot of ProjectBudgetListFields is a separate
@@ -270,6 +274,7 @@ func (p ProjectBudgetListRequestFilters) apply(req *http.Request) {
 		query.Set("cursor", p.Cursor)
 	}
 	p.Fields.apply(query)
+	p.CountMode.Apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -312,14 +317,8 @@ type ProjectBudgetListResponse struct {
 	// sparsefields:key=projectBudgets
 	Budgets []ProjectBudget `json:"budgets"`
 
-	Meta struct {
-		Page struct {
-			PageOffset int64 `json:"pageOffset"`
-			PageSize   int64 `json:"pageSize"`
-			Count      int64 `json:"count"`
-			HasMore    bool  `json:"hasMore"`
-		} `json:"page"`
-	} `json:"meta"`
+	// Meta contains metadata about the response, including pagination details.
+	Meta twapi.ListMeta `json:"meta"`
 
 	// Included contains sideloaded entities. The shape depends on selected API
 	// options and can vary, so values are kept as raw JSON blobs.
@@ -337,6 +336,13 @@ func (p *ProjectBudgetListResponse) HandleHTTPResponse(resp *http.Response) erro
 		return fmt.Errorf("failed to decode list project budgets response: %w", err)
 	}
 	return nil
+}
+
+// SetRequest sets the request used to load this response. The endpoint pages
+// with an opaque cursor rather than an Iterate method, so this exists only to
+// reconcile Meta.Page.Count with the count mode the request asked for.
+func (p *ProjectBudgetListResponse) SetRequest(req ProjectBudgetListRequest) {
+	p.Meta.ResolveCount(req.Filters.CountMode)
 }
 
 // ProjectBudgetList retrieves project budgets using the provided request and

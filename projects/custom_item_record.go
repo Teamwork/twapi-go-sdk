@@ -635,6 +635,12 @@ type CustomItemRecordListRequestFilters struct {
 	// PageSize is the number of records to retrieve per page. Defaults to
 	// 50.
 	PageSize int64
+
+	// CountMode selects whether the API computes the exact number of custom item
+	// records matching the filters, reported in Meta.Page.Count. Defaults to
+	// twapi.ListCountModeSkip, matching what this SDK requests for this
+	// endpoint.
+	CountMode twapi.ListCountMode
 }
 
 func (c CustomItemRecordListRequestFilters) apply(req *http.Request) {
@@ -671,7 +677,7 @@ func (c CustomItemRecordListRequestFilters) apply(req *http.Request) {
 	if c.PageSize > 0 {
 		query.Set("pageSize", strconv.FormatInt(c.PageSize, 10))
 	}
-	query.Set("skipCounts", "true")
+	c.CountMode.Apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -691,8 +697,9 @@ func NewCustomItemRecordListRequest(customItemID int64) CustomItemRecordListRequ
 	return CustomItemRecordListRequest{
 		Path: CustomItemRecordListRequestPath{CustomItemID: customItemID},
 		Filters: CustomItemRecordListRequestFilters{
-			Page:     1,
-			PageSize: 50,
+			Page:      1,
+			PageSize:  50,
+			CountMode: twapi.ListCountModeSkip,
 		},
 	}
 }
@@ -719,11 +726,7 @@ type CustomItemRecordListResponse struct {
 	request CustomItemRecordListRequest
 
 	// Meta contains pagination information for the response.
-	Meta struct {
-		Page struct {
-			HasMore bool `json:"hasMore"`
-		} `json:"page"`
-	} `json:"meta"`
+	Meta twapi.ListMeta `json:"meta"`
 
 	// CustomItemRecords is the list of records matching the request
 	// filters.
@@ -746,6 +749,7 @@ func (c *CustomItemRecordListResponse) HandleHTTPResponse(resp *http.Response) e
 // pagination via Iterate.
 func (c *CustomItemRecordListResponse) SetRequest(req CustomItemRecordListRequest) {
 	c.request = req
+	c.Meta.ResolveCount(req.Filters.CountMode)
 }
 
 // Iterate returns the request set to the next page, if available. If there

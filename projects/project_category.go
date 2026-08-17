@@ -382,6 +382,11 @@ type ProjectCategoryListRequestFilters struct {
 	// to 50.
 	PageSize int64
 
+	// CountMode selects whether the API computes the exact number of project
+	// categories matching the filters, reported in Meta.Page.Count. Defaults to
+	// twapi.ListCountModeDefault, which leaves the decision to the API.
+	CountMode twapi.ListCountMode
+
 	// Fields restricts the attributes returned for the project category and each
 	// of its sideloads. Each slot of ProjectCategoryListFields is a separate
 	// `fields[entity]=…` selection; populated slots restrict the response, empty
@@ -402,6 +407,7 @@ func (p ProjectCategoryListRequestFilters) apply(req *http.Request) {
 		query.Set("pageSize", strconv.FormatInt(p.PageSize, 10))
 	}
 	p.Fields.apply(query)
+	p.CountMode.Apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -447,11 +453,7 @@ func (p ProjectCategoryListRequest) HTTPRequest(ctx context.Context, server stri
 type ProjectCategoryListResponse struct {
 	request ProjectCategoryListRequest
 
-	Meta struct {
-		Page struct {
-			HasMore bool `json:"hasMore"`
-		} `json:"page"`
-	} `json:"meta"`
+	Meta              twapi.ListMeta    `json:"meta"`
 	ProjectCategories []ProjectCategory `json:"projectCategories"`
 }
 
@@ -473,6 +475,7 @@ func (p *ProjectCategoryListResponse) HandleHTTPResponse(resp *http.Response) er
 // pagination purposes, so the Iterate method can return the next page.
 func (p *ProjectCategoryListResponse) SetRequest(req ProjectCategoryListRequest) {
 	p.request = req
+	p.Meta.ResolveCount(req.Filters.CountMode)
 }
 
 // Iterate returns the request set to the next page, if available. If there

@@ -609,6 +609,11 @@ type CustomFieldValueListRequestFilters struct {
 	// Defaults to 50.
 	PageSize int64
 
+	// CountMode selects whether the API computes the exact number of custom
+	// field values matching the filters, reported in Meta.Page.Count. Defaults
+	// to twapi.ListCountModeDefault, which leaves the decision to the API.
+	CountMode twapi.ListCountMode
+
 	// Fields restricts the attributes returned for the custom field value and
 	// each of its sideloads. Each slot of CustomFieldValueListFields is a
 	// separate `fields[entity]=…` selection; populated slots restrict the
@@ -633,6 +638,7 @@ func (c CustomFieldValueListRequestFilters) apply(req *http.Request) {
 		query.Set("pageSize", strconv.FormatInt(c.PageSize, 10))
 	}
 	c.Fields.apply(query)
+	c.CountMode.Apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -713,11 +719,7 @@ type CustomFieldValueListResponse struct {
 	request CustomFieldValueListRequest
 
 	// Meta contains the pagination information for the response.
-	Meta struct {
-		Page struct {
-			HasMore bool `json:"hasMore"`
-		} `json:"page"`
-	} `json:"meta"`
+	Meta twapi.ListMeta `json:"meta"`
 
 	// CustomFieldValues is the list of custom field values returned by the
 	// request, regardless of the underlying entity type.
@@ -728,11 +730,9 @@ type CustomFieldValueListResponse struct {
 // regardless of the entity-specific wrapper key returned by the API.
 func (c *CustomFieldValueListResponse) UnmarshalJSON(data []byte) error {
 	var envelope struct {
-		Meta struct {
-			Page struct {
-				HasMore bool `json:"hasMore"`
-			} `json:"page"`
-		} `json:"meta"`
+		// Meta is decoded into the shared type rather than a local struct, so this
+		// envelope cannot silently drop a field the shared type reports.
+		Meta                 twapi.ListMeta     `json:"meta"`
 		CustomFieldTasks     []CustomFieldValue `json:"customfieldTasks"`
 		CustomFieldProjects  []CustomFieldValue `json:"customfieldProjects"`
 		CustomFieldCompanies []CustomFieldValue `json:"customfieldCompanies"`
@@ -740,7 +740,7 @@ func (c *CustomFieldValueListResponse) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &envelope); err != nil {
 		return err
 	}
-	c.Meta.Page.HasMore = envelope.Meta.Page.HasMore
+	c.Meta = envelope.Meta
 	switch {
 	case len(envelope.CustomFieldTasks) > 0:
 		c.CustomFieldValues = envelope.CustomFieldTasks
@@ -769,6 +769,7 @@ func (c *CustomFieldValueListResponse) HandleHTTPResponse(resp *http.Response) e
 // pagination purposes, so the Iterate method can return the next page.
 func (c *CustomFieldValueListResponse) SetRequest(req CustomFieldValueListRequest) {
 	c.request = req
+	c.Meta.ResolveCount(req.Filters.CountMode)
 }
 
 // Iterate returns the request set to the next page, if available. If there are

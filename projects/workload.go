@@ -201,11 +201,7 @@ func (w WorkloadRequest) HTTPRequest(ctx context.Context, server string) (*http.
 // https://apidocs.teamwork.com/docs/teamwork/v3/workload/get-projects-api-v3-workload-json
 type WorkloadResponse struct {
 	// Meta contains metadata about the response, including pagination details.
-	Meta struct {
-		Page struct {
-			HasMore bool `json:"hasMore"`
-		} `json:"page"`
-	} `json:"meta"`
+	Meta twapi.ListMeta `json:"meta"`
 
 	// Workload contains the workload data.
 	Workload Workload `json:"workload"`
