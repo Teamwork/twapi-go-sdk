@@ -201,6 +201,26 @@ func Create(session *session.Session, req ProjectCreateRequest) (*Project, error
    - `Enhancement:` for improvements
    - `Chore:` for maintenance tasks
 
+   The prefix is enforced by the `PR lint` check and it picks the release
+   version: `Feature:` earns a minor bump, everything else a patch. A scope is
+   allowed (`Chore(deps):`), and the lowercase conventional-commits spellings
+   work too (`feat:`, `fix:`).
+
+   Mark a breaking change with `Feature!:` or a `BREAKING CHANGE:` line in the
+   description. It still ships as a **minor**: this is a Go module, so v2 is
+   reached by moving the module path to `/v2`, not by tagging `v2.0.0`. The
+   marker is what puts the breaking change in front of whoever writes the
+   release notes.
+
+   Get it right on the title, not just the commits: a rebase-merged branch is
+   classified by its pull-request title, so `Address review feedback` and
+   friends inside it do not count on their own. To check one before you open the
+   pull request:
+
+   ```bash
+   go run ./cmd/next-version -check-title="Feature: File uploads"
+   ```
+
 2. **Description**: Include:
    - What changes were made and why
    - Any breaking changes
@@ -220,6 +240,32 @@ func Create(session *session.Session, req ProjectCreateRequest) (*Project, error
 - Be responsive to feedback and questions
 - Make requested changes promptly
 - Keep discussions constructive and professional
+
+## Releases
+
+Releases are cut by maintainers from the `Release` workflow's **Run workflow**
+button on `main`. It computes the version from the pull requests merged since the
+last tag, creates the tag and publishes the GitHub release.
+
+- `bump: auto` derives the version from the prefixes. Set it to
+  `patch`/`minor`/`major` to override — `major` only as part of a `/v2`
+  module-path migration.
+- `dry_run: true` reports the version and the per-change table in the run summary
+  without tagging anything.
+- The summary flags any change whose title carries no known prefix. Those count
+  as a patch, so read the list: if one is a feature, the release is
+  under-versioned. It also flags a breaking change shipping inside a minor.
+
+Pushing a `v*.*.*` tag by hand still works and skips the computation.
+
+To preview a version locally:
+
+```bash
+GH_TOKEN=$(gh auth token) go run ./cmd/next-version
+```
+
+See [`cmd/next-version/README.md`](cmd/next-version/README.md) for the full
+prefix table.
 
 ## Reporting Issues
 

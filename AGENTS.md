@@ -81,12 +81,23 @@ twapi-go-sdk/
 ├── projects/              # All API resource implementations (~88 .go files)
 ├── session/               # Authentication strategies
 ├── internal/browser/      # OAuth2 browser launcher
+├── cmd/next-version/      # Computes the release version from the changes
 └── examples/              # Usage examples
 ```
 
 - Module: `github.com/teamwork/twapi-go-sdk`
 - Go 1.24+, minimal external dependencies (only `golang.org/x/sys`)
 - Most work happens in the `projects` package.
+
+---
+
+## Releases and version bumps
+
+- A pull-request title needs one of the prefixes CONTRIBUTING.md lists, and it is load-bearing twice over: the `PR lint` workflow rejects a title without one, and `cmd/next-version` reads it to pick the release bump (`Feature:` → minor, everything else → patch). The *title* is what counts, not the commits: `cmd/next-version` resolves each commit to its merged pull request and folds a rebase-merged branch into one change, so an unprefixed `Address review feedback` inside a `Feature:` pull request is harmless while an unprefixed title silently costs the release its minor bump — which is how v1.21.6 shipped #120 under a patch tag — a `feat:` whose body declared a `BREAKING CHANGE` renaming six exported identifiers, so the release was two levels short.
+- **A breaking change cannot be a major here.** `capMajor` reports the major and tags a minor, because v2 is reached by moving the module path to `/v2`, not by tagging `v2.0.0` — that tag on this path is one `go get` will not resolve. Both reports say so loudly, since consumers get the change on `go get -u`. `-bump=major` exists for a deliberate module-path migration; do not reach for it to "be correct" about semver. `TestBreakingChangeIsCappedAtMinor` pins this, and it is the one substantive difference from the copy of this tool in the MCP server repository — keep the divergence deliberate.
+- `.github/workflows/pr_lint.yaml` enforces the prefix by running `go run ./cmd/next-version -check-title="$PR_TITLE"`, not a third-party action: the vocabulary is `bumpByPrefix` itself, so the door and the release cannot disagree, and no entry has to be added to the organisation's Actions allow-list. Two consequences to preserve: the title reaches the script through `env:`, never `${{ }}` interpolation — it is attacker-controlled text on a fork's pull request — and `checkTitle` validates the prefix against `bumpByPrefix` directly rather than through `classify`, which reports a major for *any* prefix carrying a `!` so a breaking change is never under-versioned. That leniency is right when reading history and wrong at the door: `Whatever!: …` must not pass.
+- Releasing is `workflow_dispatch` on `.github/workflows/release.yaml` with `bump` (auto/patch/minor/major) and `dry_run` inputs; pushing a `v*.*.*` tag by hand still works and skips the computation. The two entry points meet in the `version` job, whose outputs (`version`, `previous_tag`, `sha`, `release`) the release job reads — do not reintroduce a `GITHUB_REF`-derived version, and check out `needs.version.outputs.sha` rather than `github.ref`, which on a dispatch is a branch. The dispatch path cannot create the tag and let the push path take over: a tag created with `GITHUB_TOKEN` does not trigger `on: push: tags`, so it would tag and release nothing.
+- The prefixes CONTRIBUTING.md documents are guarded by `TestEveryContributingPrefixIsMapped`, which parses the `` - `Xxx:` for `` list and asserts each one is both mapped and accepted by the check — keep that list's shape. `.github/dependabot.yml` pins `commit-message.prefix` so its titles keep passing; without it Dependabot infers the prefix from recent history.
 
 ---
 
