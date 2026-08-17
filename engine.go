@@ -104,6 +104,21 @@ func NewEngine(session Session, opts ...EngineOption) *Engine {
 	return e
 }
 
+// HTTPClient returns the client the Engine sends requests with, wrapped in any
+// middlewares added with WithMiddleware. It exists for the few operations that
+// address a service outside the Teamwork API, such as sending a file to a
+// pre-signed storage URL, so that those requests still go through the client and
+// the middlewares the caller configured.
+func (e *Engine) HTTPClient() HTTPClient {
+	return e.client
+}
+
+// Logger returns the logger the Engine reports problems with that are not
+// returned to the caller, such as a response body that fails to close.
+func (e *Engine) Logger() *slog.Logger {
+	return e.logger
+}
+
 // Execute sends an HTTP request using the provided requester and handles the
 // response using the provided responser.
 func Execute[R HTTPRequester, T HTTPResponser](ctx context.Context, engine *Engine, requester R) (T, error) {

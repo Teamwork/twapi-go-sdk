@@ -326,6 +326,23 @@ Rules that follow:
 4. Legacy payloads spell things differently and the difference is load-bearing: `taskListId` versus v3's `tasklistId`, IDs returned as a comma-separated string (`LegacyNumericList`) rather than a JSON array, and `0` rather than `null` as the value that clears a relationship (`TaskDetachFromParent`). Kebab and camel keys are interchangeable (`todo-item`, `todoItem`), but snake case is not.
 5. A live call confirms what happened once. It does not show which parameter was ignored, or which of several plausible causes produced an error — so treat one successful response as weak evidence for how an endpoint behaves in general.
 
+### File uploads are two requests, and only the first reaches the API
+
+Uploading a file is a pre-signed flow (`pending_file.go`):
+
+1. `GET /projects/api/v1/pendingfiles/presignedurl.json?fileName=…&fileSize=…` → `{"ref","url"}`, 200. The reference exists from here on; the URL expires after ten minutes.
+2. `PUT` the bytes to that URL. It addresses the storage service, not the API.
+
+`POST /projects/api/v1/pendingfiles.json` accepts a multipart body and does the same job, but the file passes through the API instead of going straight to storage, so the pre-signed route is the one to use.
+
+What follows from that:
+
+- **The upload must not be authenticated with the Teamwork session.** The URL carries its own credentials in its query, and a request that also carries an `Authorization` header is rejected as two auth mechanisms. This is why step 2 cannot go through `twapi.Execute`, and why `Engine.HTTPClient()` exists — it gives the operation the caller's client and middlewares without the session.
+- **Which headers to send is decided by the URL, not by the environment.** `X-Amz-SignedHeaders` lists the headers the signature covers. One of them missing, or an unsigned `x-amz-*` header added, and the upload fails. The API signs a canned ACL unless the installation's bucket sets one of its own, so read the parameter and repeat `X-Amz-Acl: public-read` only when it is listed there. Three internal clients (`twe2e`, `projectsapitesting`, `deskapi`) each hardcode a different guess at the environment for this instead; do not copy them.
+- **Set the content length.** A body the standard library cannot measure is sent chunked, which the storage service rejects, so `Size` is required and is assigned to `http.Request.ContentLength`.
+- The media type the `PUT` declares is what the stored file keeps — the later copy to the permanent bucket preserves the temporary object's metadata — so it is derived from the file name, with an override for callers who know better.
+- The composite operation (`PendingFileCreate`) is a plain function over both steps, so its request and response types deliberately do not implement `twapi.HTTPRequester`/`HTTPResponser`. The individual steps stay exported (`PendingFilePresignedURL`, `PendingFileUpload`) for callers that stream a large file or hand the URL to a browser.
+
 ### HTTPRequest implementation (POST/PUT/PATCH)
 
 ```go
