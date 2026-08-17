@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log/slog"
 	"mime"
 	"net/http"
 	"net/url"
@@ -23,39 +22,25 @@ var (
 	_ twapi.HTTPResponser = (*PendingFilePresignedURLResponse)(nil)
 )
 
-// PendingFileRef is the handle the API issues for a file that has been uploaded
-// but is not yet attached to anything. Treat it as opaque: it is a token to pass
-// back, not a value to parse.
+// PendingFileRef is the opaque handle the API issues for an uploaded file that
+// is not attached to anything yet. It is consumed the first time it is attached,
+// so each attachment needs its own.
 //
-// A reference is scoped to the installation, does not expire, and is consumed
-// the first time it is attached to something. Attaching the same reference twice
-// fails with "Temporary file reference not found".
-//
-// References are produced by PendingFileCreate, or by PendingFilePresignedURL
-// for a caller running the upload steps itself, and are consumed by the
+// Produced by PendingFileCreate and PendingFilePresignedURL, consumed by the
 // attachment fields on tasks, comments and messages.
 type PendingFileRef string
 
 // PendingFilePresignedURLRequest represents the request for the first step of an
-// upload: reserving space for a file and asking where to send it.
-//
-// The file itself is not part of this request. The API answers with a reference
-// and a pre-signed URL, and the contents then travel straight to the storage
-// service, so they never pass through the API. PendingFileCreate performs both
-// steps; use this request only when the contents are sent by something else, for
-// example a browser that is handed the URL.
+// upload: reserving space and asking where to send the contents. Use
+// PendingFileCreate to run both steps at once.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v1/file-uploading/put-projects-api-v1-pendingfiles-presignedurl-json
 type PendingFilePresignedURLRequest struct {
-	// FileName is the name of the file, including its extension. The name is
-	// stored with the reservation and becomes the name of the attached file, and
-	// its extension decides how the file is presented, so a name without one is
-	// harder for the recipient to open.
+	// FileName is the name of the file, including its extension. It becomes the
+	// name of the attached file.
 	FileName string
 
-	// FileSize is the size of the file in bytes, which the API requires to be
-	// greater than zero. It reserves the space, so it should be the real size of
-	// the contents that follow.
+	// FileSize is the size of the file in bytes. It must be greater than zero.
 	FileSize int64
 }
 
@@ -77,8 +62,7 @@ func (p PendingFilePresignedURLRequest) HTTPRequest(ctx context.Context, server 
 		return nil, fmt.Errorf("pending file requires a size greater than zero")
 	}
 
-	// Unlike the other v1 routes in this package, which hang off the bare server
-	// root, this endpoint genuinely lives under /projects/api/v1/.
+	// Unlike the other v1 routes here, this one lives under /projects/api/v1/.
 	uri := server + "/projects/api/v1/pendingfiles/presignedurl.json"
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, uri, nil)
@@ -99,15 +83,11 @@ func (p PendingFilePresignedURLRequest) HTTPRequest(ctx context.Context, server 
 //
 // https://apidocs.teamwork.com/docs/teamwork/v1/file-uploading/put-projects-api-v1-pendingfiles-presignedurl-json
 type PendingFilePresignedURLResponse struct {
-	// Ref identifies the reserved file until it is attached to something. It only
-	// resolves to a file once the contents have been sent to URL; attaching it
-	// before that fails.
+	// Ref identifies the file, but only resolves once the contents are uploaded.
 	Ref PendingFileRef `json:"ref"`
 
-	// URL is where the contents must be sent with a PUT request. It carries its
-	// own credentials, so a request to it must not also carry the Teamwork
-	// session, and it is short-lived, so it is not worth storing. PendingFileUpload
-	// sends the contents with the headers the URL was signed for.
+	// URL is where the contents must be PUT. It expires in ten minutes and carries
+	// its own credentials, so the request to it must not be authenticated.
 	URL string `json:"url"`
 }
 
@@ -130,9 +110,9 @@ func (p *PendingFilePresignedURLResponse) HandleHTTPResponse(resp *http.Response
 	return nil
 }
 
-// PendingFilePresignedURL reserves space for a file and returns the reference
-// that will identify it along with the URL its contents must be sent to. It is
-// the first of the two steps PendingFileCreate performs.
+// PendingFilePresignedURL reserves space for a file and returns its reference
+// along with the URL the contents must be sent to. First of the two steps
+// PendingFileCreate performs.
 func PendingFilePresignedURL(
 	ctx context.Context,
 	engine *twapi.Engine,
@@ -142,29 +122,24 @@ func PendingFilePresignedURL(
 }
 
 // PendingFileUploadRequest represents the request for the second step of an
-// upload: sending the contents to the URL obtained from
-// PendingFilePresignedURL.
+// upload: sending the contents to the pre-signed URL.
 //
-// This request does not address the Teamwork API but the storage service the
-// pre-signed URL points at, which authenticates it with the credentials in the
-// URL. That is also why it is not a twapi.HTTPRequester: the URL is absolute and
-// the Teamwork session must be left out of it.
+// It addresses the storage service, not the API, and the URL authenticates it,
+// so it is not a twapi.HTTPRequester: it is sent with twapi.Engine.Do.
 type PendingFileUploadRequest struct {
 	// URL is the pre-signed URL from PendingFilePresignedURLResponse.
 	URL string
 
-	// Contents is the file body. It is read once while the request is sent, so a
-	// request value holding a reader cannot be sent twice.
+	// Contents is the file body. It is read once, so the request cannot be sent
+	// twice.
 	Contents io.Reader
 
-	// Size is the number of bytes in Contents. The storage service needs the
-	// length up front, and it is the size the API reserved, so it cannot be
-	// discovered while sending.
+	// Size is the number of bytes in Contents. Required: the storage service needs
+	// the length up front.
 	Size int64
 
-	// ContentType is the media type recorded with the stored file, which decides
-	// whether a browser later displays it or downloads it. When empty it is
-	// derived from the extension of the file name embedded in URL.
+	// ContentType is the media type stored with the file. Defaults to the type of
+	// the extension in URL.
 	ContentType string
 }
 
@@ -179,15 +154,14 @@ func NewPendingFileUploadRequest(uploadURL string, contents io.Reader, size int6
 }
 
 // PendingFileUploadResponse represents the response for sending the contents of
-// a file to a pre-signed URL. The storage service answers with no content of
-// interest; the reference to attach is the one that came back from
-// PendingFilePresignedURL.
+// a file to a pre-signed URL. The storage service returns nothing of interest;
+// the reference to attach came from PendingFilePresignedURL.
 type PendingFileUploadResponse struct{}
 
 // PendingFileUpload sends the contents of a file to the pre-signed URL returned
-// by PendingFilePresignedURL. It is the second of the two steps
-// PendingFileCreate performs, and is exposed for callers that hold the contents
-// as a stream, or that obtained the URL elsewhere.
+// by PendingFilePresignedURL. Second of the two steps PendingFileCreate
+// performs, exposed for callers that stream the contents or got the URL
+// elsewhere.
 func PendingFileUpload(
 	ctx context.Context,
 	engine *twapi.Engine,
@@ -211,43 +185,33 @@ func PendingFileUpload(
 	if err != nil {
 		return nil, err
 	}
-	// A reader the standard library cannot measure leaves the length unset, and
-	// the request would be sent chunked, which the storage service rejects.
+	// An unmeasured reader would be sent chunked, which the storage service rejects.
 	httpReq.ContentLength = req.Size
 
 	contentType := req.ContentType
 	if contentType == "" {
-		// The reference in the URL keeps the extension of the original file name,
-		// which is all there is to go on when the caller did not say.
+		// The reference in the URL keeps the original extension.
 		contentType = contentTypeForFileName(uploadURL.Path)
 	}
 	httpReq.Header.Set("Content-Type", contentType)
 
-	// The signature in the URL covers a set of headers, and the URL itself lists
-	// which ones. A signed header missing from the request, or an x-amz-* header
-	// present that was not signed, and the upload is rejected. Whether the API
-	// signs a canned ACL depends on the installation's bucket, so the URL decides
-	// this rather than a guess at the environment.
+	// The signature covers the headers it lists: one missing, or an unsigned
+	// x-amz-* one added, and the upload fails. Whether the ACL is signed depends on
+	// the installation's bucket, so read it from the URL instead of guessing.
 	signedHeaders := strings.Split(uploadURL.Query().Get("X-Amz-SignedHeaders"), ";")
 	if slices.Contains(signedHeaders, "x-amz-acl") {
 		httpReq.Header.Set("X-Amz-Acl", "public-read")
 	}
 
-	resp, err := engine.HTTPClient().Do(httpReq)
+	resp, err := engine.Do(httpReq)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute request: %w", err)
 	}
 	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			engine.Logger().Error("failed to close response body",
-				slog.String("error", err.Error()),
-			)
-		}
+		_ = resp.Body.Close()
 	}()
 
-	// The response comes from a storage service rather than the Teamwork API, and
-	// which success status it answers with is its own business, so anything in the
-	// 2xx range counts.
+	// The storage service picks its own success status, so accept any 2xx.
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return nil, twapi.NewHTTPError(resp, "failed to upload pending file")
 	}
@@ -260,29 +224,23 @@ func PendingFileUpload(
 // a message.
 type PendingFileCreateRequest struct {
 	// FileName is the name of the file, including its extension. It becomes the
-	// name of the attached file, and its extension decides how the file is
-	// presented, so a name without one is harder for the recipient to open.
+	// name of the attached file.
 	FileName string
 
-	// Contents is the file body. It is read once while the file is sent, so a
-	// request value built from a reader cannot be sent twice.
+	// Contents is the file body. It is read once, so the request cannot be sent
+	// twice.
 	Contents io.Reader
 
-	// Size is the number of bytes in Contents. The API reserves the space before
-	// the contents are sent, so the size has to be known in advance. Both
-	// constructors fill it in.
+	// Size is the number of bytes in Contents. Both constructors fill it in.
 	Size int64
 
-	// ContentType is the media type recorded with the stored file, which decides
-	// whether a browser later displays it or downloads it. When empty it is
-	// derived from the extension of FileName, using the same table as the standard
-	// library, so set it explicitly for a name without a useful extension or for a
-	// type the host does not know about.
+	// ContentType is the media type stored with the file. Defaults to the type of
+	// FileName's extension, as known to the standard library.
 	ContentType string
 }
 
 // NewPendingFileCreateRequest creates a new PendingFileCreateRequest for
-// contents already held in memory.
+// contents held in memory.
 func NewPendingFileCreateRequest(fileName string, contents []byte) PendingFileCreateRequest {
 	return PendingFileCreateRequest{
 		FileName: fileName,
@@ -292,9 +250,8 @@ func NewPendingFileCreateRequest(fileName string, contents []byte) PendingFileCr
 }
 
 // NewPendingFileCreateRequestFromReader creates a new PendingFileCreateRequest
-// for contents read as they are sent, which keeps a large file out of memory.
-// The size has to be known in advance, as it is what the API reserves; for a
-// file on disk it comes from os.File.Stat.
+// for contents read as they are sent, keeping a large file out of memory. The
+// size must be known in advance; for a file on disk it comes from os.File.Stat.
 func NewPendingFileCreateRequestFromReader(
 	fileName string,
 	contents io.Reader,
@@ -313,15 +270,12 @@ type PendingFileCreateResponse struct {
 	Ref PendingFileRef
 }
 
-// PendingFileCreate uploads a file and returns the reference that identifies it.
-// The reference is not attached to anything yet; attaching it is a separate
-// operation on whichever entity should own the file.
+// PendingFileCreate uploads a file and returns the reference identifying it,
+// which a later request attaches to a task, a comment or a message.
 //
-// The upload takes two requests, which this function performs in order: the API
-// reserves space for the file and answers with a pre-signed URL
-// (PendingFilePresignedURL), and the contents are then sent to that URL
-// (PendingFileUpload). The contents travel straight to the storage service
-// rather than through the API, which is what keeps large files viable.
+// It performs both steps of the upload: PendingFilePresignedURL reserves the
+// space, then PendingFileUpload sends the contents straight to storage rather
+// than through the API.
 func PendingFileCreate(
 	ctx context.Context,
 	engine *twapi.Engine,
@@ -343,8 +297,7 @@ func PendingFileCreate(
 	}
 
 	upload := NewPendingFileUploadRequest(presigned.URL, req.Contents, req.Size)
-	// The upload request can only derive the media type from the reference in the
-	// URL, while the original file name is known here.
+	// The file name is known here; the upload only sees the reference in the URL.
 	upload.ContentType = req.ContentType
 	if upload.ContentType == "" {
 		upload.ContentType = contentTypeForFileName(req.FileName)
@@ -356,9 +309,8 @@ func PendingFileCreate(
 	return &PendingFileCreateResponse{Ref: presigned.Ref}, nil
 }
 
-// contentTypeForFileName derives the media type of a file from its extension,
-// falling back to the generic binary type, which is what an unrecognised
-// extension would end up stored as anyway.
+// contentTypeForFileName derives a media type from a file extension, falling
+// back to the generic binary type.
 func contentTypeForFileName(fileName string) string {
 	if contentType := mime.TypeByExtension(path.Ext(fileName)); contentType != "" {
 		return contentType

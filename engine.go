@@ -104,19 +104,14 @@ func NewEngine(session Session, opts ...EngineOption) *Engine {
 	return e
 }
 
-// HTTPClient returns the client the Engine sends requests with, wrapped in any
-// middlewares added with WithMiddleware. It exists for the few operations that
-// address a service outside the Teamwork API, such as sending a file to a
-// pre-signed storage URL, so that those requests still go through the client and
-// the middlewares the caller configured.
-func (e *Engine) HTTPClient() HTTPClient {
-	return e.client
-}
-
-// Logger returns the logger the Engine reports problems with that are not
-// returned to the caller, such as a response body that fails to close.
-func (e *Engine) Logger() *slog.Logger {
-	return e.logger
+// Do sends an already built request through the Engine's client and middlewares,
+// returning the response with its body open for the caller to close.
+//
+// It neither authenticates the request nor derives its URL from the session, so
+// it is only for services outside the Teamwork API, such as a pre-signed storage
+// URL. Use Execute for the API itself.
+func (e *Engine) Do(req *http.Request) (*http.Response, error) {
+	return e.client.Do(req)
 }
 
 // Execute sends an HTTP request using the provided requester and handles the

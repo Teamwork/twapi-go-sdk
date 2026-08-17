@@ -36,10 +36,9 @@ func ExamplePendingFileCreate() {
 	// Output: created pending file with reference tf_12345.md
 }
 
-// ExamplePendingFileUpload runs the two steps of an upload separately, which is
-// what PendingFileCreate does in one call. Doing it by hand is only worthwhile
-// when something other than this process sends the contents, or when they are
-// streamed from somewhere the size is already known.
+// ExamplePendingFileUpload runs the two steps PendingFileCreate groups, which is
+// only worth doing by hand to stream the contents or to let something else send
+// them.
 func ExamplePendingFileUpload() {
 	address, stop, err := startPendingFileServer() // mock server for demonstration purposes
 	if err != nil {
@@ -53,7 +52,7 @@ func ExamplePendingFileUpload() {
 
 	contents := "# Plan\n"
 
-	// First the API reserves the space and says where the contents should go.
+	// The API reserves the space and says where the contents go.
 	presignedResponse, err := projects.PendingFilePresignedURL(ctx, engine,
 		projects.NewPendingFilePresignedURLRequest("plan.md", int64(len(contents))))
 	if err != nil {
@@ -61,8 +60,7 @@ func ExamplePendingFileUpload() {
 		return
 	}
 
-	// Then the contents travel straight to the storage service, without passing
-	// through the API.
+	// The contents then go straight to storage, not through the API.
 	_, err = projects.PendingFileUpload(ctx, engine, projects.NewPendingFileUploadRequest(
 		presignedResponse.URL,
 		strings.NewReader(contents),
@@ -89,10 +87,8 @@ func startPendingFileServer() (string, func(), error) {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}
-		// The real URL points at the storage service and carries an AWS signature;
-		// this one points back at this server so that the example can run offline.
-		// The signature lists the headers it covers, which is what tells the SDK
-		// whether the upload has to repeat the canned ACL.
+		// The real URL points at storage; this one comes back here so the example
+		// runs offline. Its signed headers tell the SDK to repeat the canned ACL.
 		uploadURL := fmt.Sprintf("http://%s/storage/tf_12345.md"+
 			"?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-SignedHeaders=host%%3Bx-amz-acl&X-Amz-Signature=c0ffee", r.Host)
 		w.Header().Set("Content-Type", "application/json")
@@ -113,8 +109,7 @@ func startPendingFileServer() (string, func(), error) {
 
 	server := &http.Server{
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// The upload is the one request that is not authenticated with the
-			// Teamwork session: the pre-signed URL carries its own credentials.
+			// The upload is the one request without the Teamwork session.
 			if !strings.HasPrefix(r.URL.Path, "/storage/") {
 				if r.Header.Get("Authorization") != "Bearer your_token" {
 					http.Error(w, "Unauthorized", http.StatusUnauthorized)
