@@ -334,7 +334,9 @@ func TestListOrderingOmittedWhenUnset(t *testing.T) {
 		{name: "calendar", req: projects.CalendarListRequest{}, keys: []string{"orderBy", "orderMode"}},
 		{name: "calendar event", req: projects.CalendarEventListRequest{}, keys: []string{"orderBy", "orderMode"}},
 		{name: "comment", req: projects.CommentListRequest{}, keys: []string{"orderBy", "orderMode"}},
-		{name: "company", req: projects.CompanyListRequest{}, keys: []string{"orderBy", "orderMode", "orderByCustomFieldId"}},
+		{name: "company", req: projects.CompanyListRequest{}, keys: []string{
+			"orderBy", "orderMode", "orderByCustomFieldId",
+		}},
 		{name: "custom field", req: projects.CustomFieldListRequest{}, keys: []string{"orderBy", "orderMode"}},
 		{
 			// The custom item routes reject a missing path identifier before they
@@ -358,7 +360,9 @@ func TestListOrderingOmittedWhenUnset(t *testing.T) {
 		{name: "message reply", req: projects.MessageReplyListRequest{}, keys: []string{"orderBy", "orderMode"}},
 		{name: "milestone", req: projects.MilestoneListRequest{}, keys: []string{"orderBy", "orderMode"}},
 		{name: "notebook", req: projects.NotebookListRequest{}, keys: []string{"orderBy", "orderMode"}},
-		{name: "project", req: projects.ProjectListRequest{}, keys: []string{"orderBy", "orderMode", "orderByCustomFieldId"}},
+		{name: "project", req: projects.ProjectListRequest{}, keys: []string{
+			"orderBy", "orderMode", "orderByCustomFieldId",
+		}},
 		{name: "rate project user", req: projects.RateProjectUserListRequest{}, keys: []string{"orderBy", "orderMode"}},
 		{
 			name: "rate project user history",
