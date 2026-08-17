@@ -939,6 +939,11 @@ type TaskListRequestFilters struct {
 	// PageSize is the number of tasks to retrieve per page. Defaults to 50.
 	PageSize int64
 
+	// CountMode selects whether the API computes the exact number of tasks
+	// matching the filters, reported in Meta.Page.Count. Defaults to
+	// twapi.ListCountModeDefault, which leaves the decision to the API.
+	CountMode twapi.ListCountMode
+
 	// Fields restricts the attributes returned for the task and each of its
 	// sideloads. Each slot of TaskListFields is a separate `fields[entity]=…`
 	// selection; populated slots restrict the response, empty slots return the
@@ -970,6 +975,7 @@ func (t TaskListRequestFilters) apply(req *http.Request) {
 	querySetBool(query, "onlyUnplanned", t.OnlyUnplanned)
 	querySetInt64(query, "page", t.Page)
 	querySetInt64(query, "pageSize", t.PageSize)
+	t.CountMode.Apply(query)
 	t.Fields.apply(query)
 	req.URL.RawQuery = query.Encode()
 }
@@ -1030,11 +1036,7 @@ type TaskListResponse struct {
 	request TaskListRequest
 
 	// Meta contains metadata about the response, including pagination details.
-	Meta struct {
-		Page struct {
-			HasMore bool `json:"hasMore"`
-		} `json:"page"`
-	} `json:"meta"`
+	Meta twapi.ListMeta `json:"meta"`
 
 	// Tasks is the list of tasks matching the request filters.
 	Tasks []Task `json:"tasks"`
@@ -1071,6 +1073,7 @@ func (t *TaskListResponse) HandleHTTPResponse(resp *http.Response) error {
 // pagination purposes, so the Iterate method can return the next page.
 func (t *TaskListResponse) SetRequest(req TaskListRequest) {
 	t.request = req
+	t.Meta.ResolveCount(req.Filters.CountMode)
 }
 
 // Iterate returns the request set to the next page, if available. If there

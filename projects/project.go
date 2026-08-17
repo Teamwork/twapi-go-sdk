@@ -807,6 +807,11 @@ type ProjectListRequestFilters struct {
 	// PageSize is the number of projects to retrieve per page. Defaults to 50.
 	PageSize int64
 
+	// CountMode selects whether the API computes the exact number of projects
+	// matching the filters, reported in Meta.Page.Count. Defaults to
+	// twapi.ListCountModeDefault, which leaves the decision to the API.
+	CountMode twapi.ListCountMode
+
 	// Fields restricts the attributes returned for the project and each of its
 	// sideloads. Each slot of ProjectListFields is a separate `fields[entity]=…`
 	// selection; populated slots restrict the response, empty slots return the
@@ -847,6 +852,7 @@ func (p ProjectListRequestFilters) apply(req *http.Request) {
 		query.Set("pageSize", strconv.FormatInt(p.PageSize, 10))
 	}
 	p.Fields.apply(query)
+	p.CountMode.Apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -891,11 +897,7 @@ type ProjectListResponse struct {
 	request ProjectListRequest
 
 	// Meta contains metadata about the response, including pagination details.
-	Meta struct {
-		Page struct {
-			HasMore bool `json:"hasMore"`
-		} `json:"page"`
-	} `json:"meta"`
+	Meta twapi.ListMeta `json:"meta"`
 
 	// Projects is the list of projects matching the request filters.
 	Projects []Project `json:"projects"`
@@ -936,6 +938,7 @@ func (p *ProjectListResponse) HandleHTTPResponse(resp *http.Response) error {
 // pagination purposes, so the Iterate method can return the next page.
 func (p *ProjectListResponse) SetRequest(req ProjectListRequest) {
 	p.request = req
+	p.Meta.ResolveCount(req.Filters.CountMode)
 }
 
 // Iterate returns the request set to the next page, if available. If there

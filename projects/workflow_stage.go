@@ -411,6 +411,11 @@ type WorkflowStageListRequestFilters struct {
 	// PageSize is the number of stages to retrieve per page. Defaults to 50.
 	PageSize int64
 
+	// CountMode selects whether the API computes the exact number of workflow
+	// stages matching the filters, reported in Meta.Page.Count. Defaults to
+	// twapi.ListCountModeDefault, which leaves the decision to the API.
+	CountMode twapi.ListCountMode
+
 	// Fields restricts the attributes returned for the workflow stage and each
 	// of its sideloads. Each slot of WorkflowStageListFields is a separate
 	// `fields[entity]=…` selection; populated slots restrict the response, empty
@@ -428,6 +433,7 @@ func (w WorkflowStageListRequestFilters) apply(req *http.Request) {
 		query.Set("pageSize", strconv.FormatInt(w.PageSize, 10))
 	}
 	w.Fields.apply(query)
+	w.CountMode.Apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -479,11 +485,7 @@ func (w WorkflowStageListRequest) HTTPRequest(ctx context.Context, server string
 type WorkflowStageListResponse struct {
 	request WorkflowStageListRequest
 
-	Meta struct {
-		Page struct {
-			HasMore bool `json:"hasMore"`
-		} `json:"page"`
-	} `json:"meta"`
+	Meta twapi.ListMeta `json:"meta"`
 
 	// Stages is the list of workflow stages matching the request filters.
 	Stages []WorkflowStage `json:"stages"`
@@ -506,6 +508,7 @@ func (w *WorkflowStageListResponse) HandleHTTPResponse(resp *http.Response) erro
 // pagination purposes, so the Iterate method can return the next page.
 func (w *WorkflowStageListResponse) SetRequest(req WorkflowStageListRequest) {
 	w.request = req
+	w.Meta.ResolveCount(req.Filters.CountMode)
 }
 
 // Iterate returns the request set to the next page, if available. If there are

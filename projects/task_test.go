@@ -7,6 +7,7 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"slices"
 	"strings"
 	"testing"
@@ -511,6 +512,99 @@ func TestTaskList(t *testing.T) {
 
 			if _, err := projects.TaskList(ctx, engine, tt.input); err != nil {
 				t.Errorf("unexpected error: %s", err)
+			}
+		})
+	}
+}
+
+func TestTaskListCountMode(t *testing.T) {
+	tests := []struct {
+		name              string
+		mode              twapi.ListCountMode
+		expectedSkipCount string
+	}{{
+		name:              "default leaves the decision to the API",
+		mode:              twapi.ListCountModeDefault,
+		expectedSkipCount: "",
+	}, {
+		name:              "exact asks for the count query",
+		mode:              twapi.ListCountModeExact,
+		expectedSkipCount: "false",
+	}, {
+		name:              "skip opts out of the count query",
+		mode:              twapi.ListCountModeSkip,
+		expectedSkipCount: "true",
+	}}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := projects.NewTaskListRequest()
+			req.Filters.CountMode = tt.mode
+
+			httpReq, err := req.HTTPRequest(context.Background(), "https://test.com")
+			if err != nil {
+				t.Fatalf("unexpected error creating HTTP request: %s", err)
+			}
+
+			query, err := url.ParseQuery(httpReq.URL.RawQuery)
+			if err != nil {
+				t.Fatalf("failed to parse query string: %s", err)
+			}
+
+			if got := query.Get("skipCounts"); got != tt.expectedSkipCount {
+				t.Errorf("expected skipCounts=%q but got %q", tt.expectedSkipCount, got)
+			}
+		})
+	}
+}
+
+func TestTaskListResponseCount(t *testing.T) {
+	// the API answers a skipped count with a lower bound derived from the page, so
+	// only a requested count may reach the caller as a total.
+	const payload = `{"meta":{"page":{"count":51,"hasMore":true}},"tasks":[{"id":12345}]}`
+
+	count := int64(51)
+
+	tests := []struct {
+		name          string
+		mode          twapi.ListCountMode
+		expectedCount *int64
+	}{{
+		name:          "default keeps the count",
+		mode:          twapi.ListCountModeDefault,
+		expectedCount: &count,
+	}, {
+		name:          "exact keeps the count",
+		mode:          twapi.ListCountModeExact,
+		expectedCount: &count,
+	}, {
+		name:          "skip drops the lower bound",
+		mode:          twapi.ListCountModeSkip,
+		expectedCount: nil,
+	}}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var response projects.TaskListResponse
+			httpResp := &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader(payload)),
+			}
+			if err := response.HandleHTTPResponse(httpResp); err != nil {
+				t.Fatalf("unexpected error handling response: %s", err)
+			}
+
+			req := projects.NewTaskListRequest()
+			req.Filters.CountMode = tt.mode
+			response.SetRequest(req)
+
+			switch got := response.Meta.Page.Count; {
+			case got == nil && tt.expectedCount != nil:
+				t.Errorf("expected count %d but got nil", *tt.expectedCount)
+			case got != nil && tt.expectedCount == nil:
+				t.Errorf("expected no count but got %d", *got)
+			case got != nil && *got != *tt.expectedCount:
+				t.Errorf("expected count %d but got %d", *tt.expectedCount, *got)
 			}
 		})
 	}

@@ -550,6 +550,11 @@ type UserListRequestFilters struct {
 	// PageSize is the number of users to retrieve per page. Defaults to 50.
 	PageSize int64
 
+	// CountMode selects whether the API computes the exact number of users
+	// matching the filters, reported in Meta.Page.Count. Defaults to
+	// twapi.ListCountModeDefault, which leaves the decision to the API.
+	CountMode twapi.ListCountMode
+
 	// Fields restricts the attributes returned for the user and each of its
 	// sideloads. Each slot of UserListFields is a separate `fields[entity]=…`
 	// selection; populated slots restrict the response, empty slots return the
@@ -573,6 +578,7 @@ func (u UserListRequestFilters) apply(req *http.Request) {
 		query.Set("pageSize", strconv.FormatInt(u.PageSize, 10))
 	}
 	u.Fields.apply(query)
+	u.CountMode.Apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -627,12 +633,8 @@ func (u UserListRequest) HTTPRequest(ctx context.Context, server string) (*http.
 type UserListResponse struct {
 	request UserListRequest
 
-	Meta struct {
-		Page struct {
-			HasMore bool `json:"hasMore"`
-		} `json:"page"`
-	} `json:"meta"`
-	Users []User `json:"people"`
+	Meta  twapi.ListMeta `json:"meta"`
+	Users []User         `json:"people"`
 }
 
 // HandleHTTPResponse handles the HTTP response for the UserListResponse. If
@@ -653,6 +655,7 @@ func (u *UserListResponse) HandleHTTPResponse(resp *http.Response) error {
 // pagination purposes, so the Iterate method can return the next page.
 func (u *UserListResponse) SetRequest(req UserListRequest) {
 	u.request = req
+	u.Meta.ResolveCount(req.Filters.CountMode)
 }
 
 // Iterate returns the request set to the next page, if available. If there are

@@ -237,6 +237,12 @@ type TimeReportListRequestFilters struct {
 	// PageSize is the number of rows to retrieve per page. Defaults to 50.
 	PageSize int64
 
+	// CountMode selects whether the API computes the exact number of time report
+	// entries matching the filters, reported in Meta.Page.Count. Defaults to
+	// twapi.ListCountModeSkip, matching what this SDK requests for this
+	// endpoint.
+	CountMode twapi.ListCountMode
+
 	// Fields restricts the attributes returned for each sideloaded entity. Each
 	// slot of TimeReportListFields is a separate `fields[entity]=…` selection;
 	// populated slots restrict the response, empty slots return the API default.
@@ -322,11 +328,8 @@ func (f TimeReportListRequestFilters) apply(req *http.Request) {
 		query.Set("pageSize", strconv.FormatInt(f.PageSize, 10))
 	}
 
-	// Total counts are derivable from the page window and hasMore, so the slower
-	// counting path is always skipped.
-	query.Set("skipCounts", "true")
-
 	f.Fields.apply(query)
+	f.CountMode.Apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -359,6 +362,7 @@ func NewTimeReportListRequest(
 			EndDate:   endDate,
 			Page:      1,
 			PageSize:  50,
+			CountMode: twapi.ListCountModeSkip,
 		},
 	}
 }
@@ -393,11 +397,7 @@ type TimeReportListResponse struct {
 	request TimeReportListRequest
 
 	// Meta contains metadata about the response, including pagination details.
-	Meta struct {
-		Page struct {
-			HasMore bool `json:"hasMore"`
-		} `json:"page"`
-	} `json:"meta"`
+	Meta twapi.ListMeta `json:"meta"`
 
 	// TimeReport contains the grouped rows of the report. Exactly one slice is
 	// populated, matching the requested dimension.
@@ -430,6 +430,7 @@ func (r *TimeReportListResponse) HandleHTTPResponse(resp *http.Response) error {
 // pagination purposes, so the Iterate method can return the next page.
 func (r *TimeReportListResponse) SetRequest(req TimeReportListRequest) {
 	r.request = req
+	r.Meta.ResolveCount(req.Filters.CountMode)
 }
 
 // Iterate returns the request set to the next page, if available. If there are

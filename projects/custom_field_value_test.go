@@ -2,9 +2,13 @@ package projects_test
 
 import (
 	"context"
+	"io"
+	"net/http"
+	"strings"
 	"testing"
 	"time"
 
+	twapi "github.com/teamwork/twapi-go-sdk"
 	"github.com/teamwork/twapi-go-sdk/projects"
 )
 
@@ -161,5 +165,81 @@ func TestCustomFieldValueList(t *testing.T) {
 	request := projects.NewTaskCustomFieldValueListRequest(testResources.TaskID)
 	if _, err := projects.CustomFieldValueList(ctx, engine, request); err != nil {
 		t.Errorf("unexpected error: %s", err)
+	}
+}
+
+// TestCustomFieldValueListResponseCount covers the decoder rather than the
+// query wiring: this response owns an UnmarshalJSON that has to pick the right
+// entity-specific wrapper key, and the count has to survive that detour for
+// every one of them.
+func TestCustomFieldValueListResponseCount(t *testing.T) {
+	count := int64(51)
+
+	tests := []struct {
+		name    string
+		payload string
+	}{{
+		name:    "task values",
+		payload: `{"meta":{"page":{"count":51,"hasMore":true}},"customfieldTasks":[{"id":12345}]}`,
+	}, {
+		name:    "project values",
+		payload: `{"meta":{"page":{"count":51,"hasMore":true}},"customfieldProjects":[{"id":12345}]}`,
+	}, {
+		name:    "company values",
+		payload: `{"meta":{"page":{"count":51,"hasMore":true}},"customfieldCompanies":[{"id":12345}]}`,
+	}}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var response projects.CustomFieldValueListResponse
+			httpResp := &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader(tt.payload)),
+			}
+			if err := response.HandleHTTPResponse(httpResp); err != nil {
+				t.Fatalf("unexpected error handling response: %s", err)
+			}
+
+			req := projects.NewTaskCustomFieldValueListRequest(777)
+			req.Filters.CountMode = twapi.ListCountModeExact
+			response.SetRequest(req)
+
+			if response.Meta.Page.Count == nil {
+				t.Fatal("expected the count to survive the custom decoder but got nil")
+			}
+			if got := *response.Meta.Page.Count; got != count {
+				t.Errorf("expected count %d but got %d", count, got)
+			}
+			if !response.Meta.Page.HasMore {
+				t.Error("expected hasMore to be true")
+			}
+			if len(response.CustomFieldValues) != 1 {
+				t.Errorf("expected 1 custom field value but got %d", len(response.CustomFieldValues))
+			}
+		})
+	}
+}
+
+// TestCustomFieldValueListResponseSkippedCount asserts the skipped-count
+// reconciliation still applies on this response, since its custom decoder
+// bypasses the shared struct tags.
+func TestCustomFieldValueListResponseSkippedCount(t *testing.T) {
+	const payload = `{"meta":{"page":{"count":51,"hasMore":true}},"customfieldTasks":[{"id":12345}]}`
+
+	var response projects.CustomFieldValueListResponse
+	httpResp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       io.NopCloser(strings.NewReader(payload)),
+	}
+	if err := response.HandleHTTPResponse(httpResp); err != nil {
+		t.Fatalf("unexpected error handling response: %s", err)
+	}
+
+	req := projects.NewTaskCustomFieldValueListRequest(777)
+	req.Filters.CountMode = twapi.ListCountModeSkip
+	response.SetRequest(req)
+
+	if response.Meta.Page.Count != nil {
+		t.Errorf("expected no count but got %d", *response.Meta.Page.Count)
 	}
 }

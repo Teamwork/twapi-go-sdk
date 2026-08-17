@@ -156,6 +156,10 @@ If your resource has a List endpoint, follow the [Sparse fieldsets (list respons
 
 Then wire the Get endpoint the same way via [Sparse fieldsets (get responses)](#sparse-fieldsets-get-responses), after checking the server actually honours the selection on that route — not every singular handler does.
 
+### 7. Count wiring (List endpoints)
+
+Use `twapi.ListMeta` for the response's `Meta`, and give the filters a `CountMode twapi.ListCountMode` slot wired through `Apply` and `ResolveCount`. Nothing generates this, so see [Total counts](#total-counts-skipcounts-on-v3-list-endpoints) for the four steps and, importantly, for why `ResolveCount` is not optional.
+
 ---
 
 ## Request / Response Patterns
@@ -234,9 +238,32 @@ if len(c.Include) > 0 {
 
 Why: surfaces typos at compile time, makes the legal value set self-documenting (and discoverable via `go doc`), and lets us evolve the API by adding constants without breaking callers. The naming convention is `{Resource}{Purpose}` for the type (e.g., `TaskRequestSideload`, `CustomItemRecordOrderBy`) and `{Type}{Value}` for each constant.
 
-### `skipCounts` on v3 list endpoints
+### Total counts (`skipCounts`) on v3 list endpoints
 
-Always hard-code `skipCounts=true` in the filter's `apply()` rather than exposing it as an option. Total counts are derivable from `(page * pageSize) + 1` and `HasMore`, so leaving the option open just lets callers opt into a slower API call by mistake. The list response's `Meta` should mirror the pattern in [Pagination (list responses)](#pagination-list-responses) and expose only `HasMore` — never `Offset`, `Size`, or `Count`.
+The count is real, it is not going away, and the SDK is usually already paying for it. Expose it, but let the caller choose, through the shared `twapi.ListCountMode` — never a per-resource enum, and never a raw `skipCounts` literal in a filter's `apply()`.
+
+`skipCounts` defaults to **false**, so a request that omits the parameter comes back with an exact `count` in `meta.page`. A list that drops the value from its `Meta` is therefore not saving the API any work — it is discarding something already paid for and returned.
+
+What the count costs, in terms a caller can observe:
+
+- It is computed by a dedicated query that applies the same filters as the request. The API caches the result per filter combination, independently of the requested page, so paginating over a result set pays for it once rather than once per page.
+- The cached value is invalidated by writes to the entities being counted, and the narrower the filter the longer it survives. A count scoped to one project, tasklist or milestone outlives one scoped to the whole installation, which any write to any of those entities invalidates. An unscoped exact count is the expensive one to ask for, so say so in the `CountMode` doc comment.
+- Skipping the count is not uniformly the faster choice: the API is also free to use a known total to plan how it loads large result sets. That is why `ListCountModeDefault` exists, leaves the parameter unset, and is the default.
+
+See the public pagination guide for the `meta.page` contract: <https://apidocs.teamwork.com/guides/teamwork/pagination>. Confirm the behaviour of a specific endpoint with a live call — send the same filters twice, once with `skipCounts=true` and once without, and compare `meta.page.count`.
+
+The wiring, four steps, mirroring the sparse-fieldsets recipe:
+
+1. **`CountMode twapi.ListCountMode`** on `*ListRequestFilters`, immediately before the `Fields` slot (which stays last). Document the entity noun and the default.
+2. **`<recv>.CountMode.Apply(query)`** in the filter's `apply()`, just before `req.URL.RawQuery = query.Encode()`.
+3. **`<recv>.Meta.ResolveCount(req.Filters.CountMode)`** in the response's `SetRequest`. This is mandatory: with `skipCounts=true` the server still returns a `count`, but it is the lower bound `(page * pageSize) + 1` it needs to derive `HasMore`. `ResolveCount` drops it so a lower bound can never reach a caller as a total. `Execute` runs `HandleHTTPResponse` before `SetRequest`, which is why the reconciliation lives there and not in the decoder.
+4. **A constructor default of `twapi.ListCountModeSkip`** if — and only if — the endpoint used to hard-code `skipCounts=true`, so existing behaviour is preserved (`custom_item.go`, `custom_item_field.go`, `custom_item_record.go`, `time_report.go`).
+
+A response with no `SetRequest` has nowhere to reconcile the count, so it must not offer `CountMode` at all — `WorkloadResponse` is the one such case. If an endpoint needs the option, give it a `SetRequest` whose only job is the reconciliation (`ProjectBudgetListResponse`, `RateUserGetResponse` both do).
+
+The list response's `Meta` is `twapi.ListMeta` — see [Pagination (list responses)](#pagination-list-responses). Never redeclare the anonymous struct, and never expose `Offset` or `Size`: both are derivable from the request, and `ListMetaPage` deliberately omits them.
+
+A response with its own `UnmarshalJSON` needs one extra check, because the four steps above all pass and the count still never arrives. If the decoder's local envelope redeclares `meta` as an anonymous struct, it decodes only the fields that struct happens to name, and `TestCountWiring` cannot see the omission — the wiring is all present, the count dies in the decoder. Type the envelope's `Meta` field as `twapi.ListMeta` and assign it wholesale (`c.Meta = envelope.Meta`), so the envelope cannot drift from the shared type. `CustomFieldValueListResponse` is the one response in this position; its tests assert the count survives the decoder for every wrapper key the endpoint can return.
 
 ### v1 and v3 are not interchangeable for the same operation
 
@@ -331,21 +358,20 @@ Expected status codes: `201 Created` for create, `200 OK` for get/update/list, `
 
 ### Pagination (list responses)
 
+Every page-paginated list response uses the shared `twapi.ListMeta`, which carries `Page.HasMore` and `Page.Count` (see [Total counts](#total-counts-skipcounts-on-v3-list-endpoints)). Do not redeclare it as an anonymous struct — 33 responses share the one type, so a local copy silently opts that endpoint out of anything added to it later.
+
 ```go
 type MessageListResponse struct {
     request  MessageListRequest  // unexported, set by Execute
 
-    Meta struct {
-        Page struct {
-            HasMore bool `json:"hasMore"`
-        } `json:"page"`
-    } `json:"meta"`
+    Meta twapi.ListMeta `json:"meta"`
 
     Messages []Message `json:"messages"`
 }
 
 func (r *MessageListResponse) SetRequest(req MessageListRequest) {
     r.request = req
+    r.Meta.ResolveCount(req.Filters.CountMode)
 }
 
 func (r *MessageListResponse) Iterate() *MessageListRequest {
@@ -357,6 +383,8 @@ func (r *MessageListResponse) Iterate() *MessageListRequest {
     return &req
 }
 ```
+
+Cursor-paginated endpoints are the exception: they report `prevCursor`/`nextCursor`/`limit` instead of a `page` object, so they keep their own `Meta` (`calendar_event.go`, `search.go`).
 
 ### Sparse fieldsets (list responses)
 
@@ -520,6 +548,8 @@ Defined in the root `twapi` package:
 | `Money`            | `int64` representing cents; use `NewMoney(float64)`             |
 | `NullableInt64`    | Tri-state int (unset / null / value); use `NewNullableInt64` / `NullInt64` |
 | `HTTPError`        | Structured API error; check with `errors.As(err, &httpErr)`     |
+| `ListMeta`         | The `meta` object of a page-paginated v3 list response; holds `Page.HasMore` and `Page.Count` |
+| `ListCountMode`    | Whether the endpoint computes an exact total; `Apply(query)` writes `skipCounts` |
 
 ---
 

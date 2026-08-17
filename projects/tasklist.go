@@ -417,6 +417,11 @@ type TasklistListRequestFilters struct {
 	// default). Set to true to include them.
 	ShowCompleted *bool
 
+	// CountMode selects whether the API computes the exact number of tasklists
+	// matching the filters, reported in Meta.Page.Count. Defaults to
+	// twapi.ListCountModeDefault, which leaves the decision to the API.
+	CountMode twapi.ListCountMode
+
 	// Fields restricts the attributes returned for the tasklist and each of its
 	// sideloads. Each slot of TasklistListFields is a separate
 	// `fields[entity]=…` selection; populated slots restrict the response, empty
@@ -440,6 +445,7 @@ func (t TasklistListRequestFilters) apply(req *http.Request) {
 		query.Set("showCompleted", strconv.FormatBool(*t.ShowCompleted))
 	}
 	t.Fields.apply(query)
+	t.CountMode.Apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -494,12 +500,8 @@ func (t TasklistListRequest) HTTPRequest(ctx context.Context, server string) (*h
 type TasklistListResponse struct {
 	request TasklistListRequest
 
-	Meta struct {
-		Page struct {
-			HasMore bool `json:"hasMore"`
-		} `json:"page"`
-	} `json:"meta"`
-	Tasklists []Tasklist `json:"tasklists"`
+	Meta      twapi.ListMeta `json:"meta"`
+	Tasklists []Tasklist     `json:"tasklists"`
 }
 
 // HandleHTTPResponse handles the HTTP response for the TasklistListResponse. If
@@ -520,6 +522,7 @@ func (t *TasklistListResponse) HandleHTTPResponse(resp *http.Response) error {
 // pagination purposes, so the Iterate method can return the next page.
 func (t *TasklistListResponse) SetRequest(req TasklistListRequest) {
 	t.request = req
+	t.Meta.ResolveCount(req.Filters.CountMode)
 }
 
 // Iterate returns the request set to the next page, if available. If there

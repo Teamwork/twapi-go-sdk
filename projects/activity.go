@@ -198,6 +198,11 @@ type ActivityListRequestFilters struct {
 	// PageSize is the number of activities to retrieve per page. Defaults to 50.
 	PageSize int64
 
+	// CountMode selects whether the API computes the exact number of activities
+	// matching the filters, reported in Meta.Page.Count. Defaults to
+	// twapi.ListCountModeDefault, which leaves the decision to the API.
+	CountMode twapi.ListCountMode
+
 	// Fields restricts the attributes returned for the activity and each of its
 	// sideloads. Each slot of ActivityListFields is a separate `fields[entity]=…`
 	// selection; populated slots restrict the response, empty slots return the
@@ -228,6 +233,7 @@ func (a ActivityListRequestFilters) apply(req *http.Request) {
 		query.Set("pageSize", strconv.FormatInt(a.PageSize, 10))
 	}
 	a.Fields.apply(query)
+	a.CountMode.Apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -282,12 +288,8 @@ func (a ActivityListRequest) HTTPRequest(ctx context.Context, server string) (*h
 type ActivityListResponse struct {
 	request ActivityListRequest
 
-	Meta struct {
-		Page struct {
-			HasMore bool `json:"hasMore"`
-		} `json:"page"`
-	} `json:"meta"`
-	Activities []Activity `json:"activities"`
+	Meta       twapi.ListMeta `json:"meta"`
+	Activities []Activity     `json:"activities"`
 }
 
 // HandleHTTPResponse handles the HTTP response for the ActivityListResponse. If
@@ -308,6 +310,7 @@ func (a *ActivityListResponse) HandleHTTPResponse(resp *http.Response) error {
 // pagination purposes, so the Iterate method can return the next page.
 func (a *ActivityListResponse) SetRequest(req ActivityListRequest) {
 	a.request = req
+	a.Meta.ResolveCount(req.Filters.CountMode)
 }
 
 // Iterate returns the request set to the next page, if available. If there

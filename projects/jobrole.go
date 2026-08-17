@@ -403,6 +403,11 @@ type JobRoleListRequestFilters struct {
 	// as a sideload.
 	Include []JobRoleListRequestSideload
 
+	// CountMode selects whether the API computes the exact number of job roles
+	// matching the filters, reported in Meta.Page.Count. Defaults to
+	// twapi.ListCountModeDefault, which leaves the decision to the API.
+	CountMode twapi.ListCountMode
+
 	// Fields restricts the attributes returned for the job role and each of its
 	// sideloads. Each slot of JobRoleListFields is a separate `fields[entity]=…`
 	// selection; populated slots restrict the response, empty slots return the
@@ -430,6 +435,7 @@ func (s JobRoleListRequestFilters) apply(req *http.Request) {
 		query.Set("include", strings.Join(include, ","))
 	}
 	s.Fields.apply(query)
+	s.CountMode.Apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -477,12 +483,8 @@ func (s JobRoleListRequest) HTTPRequest(ctx context.Context, server string) (*ht
 type JobRoleListResponse struct {
 	request JobRoleListRequest
 
-	Meta struct {
-		Page struct {
-			HasMore bool `json:"hasMore"`
-		} `json:"page"`
-	} `json:"meta"`
-	JobRoles []JobRole `json:"jobRoles"`
+	Meta     twapi.ListMeta `json:"meta"`
+	JobRoles []JobRole      `json:"jobRoles"`
 }
 
 // HandleHTTPResponse handles the HTTP response for the JobRoleListResponse. If
@@ -503,6 +505,7 @@ func (s *JobRoleListResponse) HandleHTTPResponse(resp *http.Response) error {
 // pagination purposes, so the Iterate method can return the next page.
 func (s *JobRoleListResponse) SetRequest(req JobRoleListRequest) {
 	s.request = req
+	s.Meta.ResolveCount(req.Filters.CountMode)
 }
 
 // Iterate returns the request set to the next page, if available. If there are

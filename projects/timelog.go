@@ -566,6 +566,11 @@ type TimelogListRequestFilters struct {
 	// PageSize is the number of timelogs to retrieve per page. Defaults to 50.
 	PageSize int64
 
+	// CountMode selects whether the API computes the exact number of timelogs
+	// matching the filters, reported in Meta.Page.Count. Defaults to
+	// twapi.ListCountModeDefault, which leaves the decision to the API.
+	CountMode twapi.ListCountMode
+
 	// Fields restricts the attributes returned for the timelog and each of its
 	// sideloads. Each slot of TimelogListFields is a separate `fields[entity]=…`
 	// selection; populated slots restrict the response, empty slots return the
@@ -627,6 +632,7 @@ func (t TimelogListRequestFilters) apply(req *http.Request) {
 		query.Set("pageSize", strconv.FormatInt(t.PageSize, 10))
 	}
 	t.Fields.apply(query)
+	t.CountMode.Apply(query)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -685,12 +691,8 @@ func (t TimelogListRequest) HTTPRequest(ctx context.Context, server string) (*ht
 type TimelogListResponse struct {
 	request TimelogListRequest
 
-	Meta struct {
-		Page struct {
-			HasMore bool `json:"hasMore"`
-		} `json:"page"`
-	} `json:"meta"`
-	Timelogs []Timelog `json:"timelogs"`
+	Meta     twapi.ListMeta `json:"meta"`
+	Timelogs []Timelog      `json:"timelogs"`
 }
 
 // HandleHTTPResponse handles the HTTP response for the TimelogListResponse. If
@@ -711,6 +713,7 @@ func (t *TimelogListResponse) HandleHTTPResponse(resp *http.Response) error {
 // pagination purposes, so the Iterate method can return the next page.
 func (t *TimelogListResponse) SetRequest(req TimelogListRequest) {
 	t.request = req
+	t.Meta.ResolveCount(req.Filters.CountMode)
 }
 
 // Iterate returns the request set to the next page, if available. If there

@@ -175,6 +175,51 @@ func ExampleTaskList() {
 	// retrieved task with identifier 12346
 }
 
+func ExampleTaskList_count() {
+	address, stop, err := startTaskServer() // mock server for demonstration purposes
+	if err != nil {
+		fmt.Printf("failed to start server: %s", err)
+		return
+	}
+	defer stop()
+
+	ctx := context.Background()
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
+
+	// scoping the request to a project keeps the count cheap for the API to
+	// compute, as it can cache it until that project's tasks change.
+	tasksRequest := projects.NewTaskListRequest()
+	tasksRequest.Path.ProjectID = 777
+	tasksRequest.Filters.CountMode = twapi.ListCountModeExact
+
+	tasksResponse, err := projects.TaskList(ctx, engine, tasksRequest)
+	switch {
+	case err != nil:
+		fmt.Printf("failed to list tasks: %s", err)
+	case tasksResponse.Meta.Page.Count == nil:
+		fmt.Println("the API did not report the number of matching tasks")
+	default:
+		fmt.Printf("%d tasks match the filters\n", *tasksResponse.Meta.Page.Count)
+	}
+
+	// skipping the count keeps the response cheap, and leaves HasMore as the only
+	// way to know whether more tasks match.
+	tasksRequest.Filters.CountMode = twapi.ListCountModeSkip
+
+	tasksResponse, err = projects.TaskList(ctx, engine, tasksRequest)
+	switch {
+	case err != nil:
+		fmt.Printf("failed to list tasks: %s", err)
+	case tasksResponse.Meta.Page.Count == nil:
+		fmt.Printf("unknown number of matching tasks, more pages: %t\n", tasksResponse.Meta.Page.HasMore)
+	default:
+		fmt.Printf("%d tasks match the filters\n", *tasksResponse.Meta.Page.Count)
+	}
+
+	// Output: 137 tasks match the filters
+	// unknown number of matching tasks, more pages: true
+}
+
 func startTaskServer() (string, func(), error) {
 	ln, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
@@ -249,10 +294,25 @@ func startTaskServer() (string, func(), error) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = fmt.Fprintln(w, `{"task":{"id":12345}}`)
 	})
-	mux.HandleFunc("GET /projects/api/v3/tasks", func(w http.ResponseWriter, _ *http.Request) {
+	listTasks := func(w http.ResponseWriter, r *http.Request) {
+		// the API reports the total when it runs the count query, and a lower bound
+		// derived from the page when it skips it.
+		count := 137
+		if r.URL.Query().Get("skipCounts") == "true" {
+			count = 51
+		}
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = fmt.Fprintln(w, `{"tasks":[{"id":12345},{"id":12346}]}`)
+		_, _ = fmt.Fprintf(w, `{"meta":{"page":{"count":%d,"hasMore":true}},`+
+			`"tasks":[{"id":12345},{"id":12346}]}`+"\n", count)
+	}
+	mux.HandleFunc("GET /projects/api/v3/tasks", listTasks)
+	mux.HandleFunc("GET /projects/api/v3/projects/{id}/tasks", func(w http.ResponseWriter, r *http.Request) {
+		if r.PathValue("id") != "777" {
+			http.Error(w, "Not Found", http.StatusNotFound)
+			return
+		}
+		listTasks(w, r)
 	})
 
 	server := &http.Server{
