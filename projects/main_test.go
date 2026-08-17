@@ -431,7 +431,7 @@ func createPendingFile(t testEngine) (projects.PendingFileRef, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to create pending file for test: %w", err)
 	}
-	return pendingFile.PendingFile.Ref, nil
+	return pendingFile.Ref, nil
 }
 
 // createFile uploads a file and adds it to a project's files area, so that the

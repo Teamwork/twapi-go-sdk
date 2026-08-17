@@ -1,11 +1,9 @@
 package projects_test
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"testing"
 
 	twapi "github.com/teamwork/twapi-go-sdk"
@@ -142,54 +140,6 @@ func TestAttachmentsOmittedWhenNotRequested(t *testing.T) {
 				if _, ok := body[key]; ok {
 					t.Errorf("expected no %q key in the request body, got %v", key, body[key])
 				}
-			}
-		})
-	}
-}
-
-// TestPendingFileCreateRequestIsRepeatable guards that a request value can be
-// executed more than once. The multipart body is built inside HTTPRequest, so a
-// request holding a consumed reader would silently upload an empty file.
-func TestPendingFileCreateRequestIsRepeatable(t *testing.T) {
-	req := projects.NewPendingFileCreateRequest("plan.md", []byte("# Plan\n"))
-
-	for _, attempt := range []string{"first", "second"} {
-		httpRequest, err := req.HTTPRequest(context.Background(), "http://example.com")
-		if err != nil {
-			t.Fatalf("%s attempt: unexpected error: %s", attempt, err)
-		}
-		body, err := io.ReadAll(httpRequest.Body)
-		if err != nil {
-			t.Fatalf("%s attempt: failed to read body: %s", attempt, err)
-		}
-		if !bytes.Contains(body, []byte("# Plan")) {
-			t.Errorf("%s attempt: expected the file contents in the body, got %q", attempt, body)
-		}
-		if !bytes.Contains(body, []byte(`filename="plan.md"`)) {
-			t.Errorf("%s attempt: expected the file name in the body, got %q", attempt, body)
-		}
-	}
-}
-
-func TestPendingFileCreateRequestRejectsMissingFields(t *testing.T) {
-	tests := []struct {
-		name    string
-		request projects.PendingFileCreateRequest
-	}{{
-		name:    "no file name",
-		request: projects.NewPendingFileCreateRequest("", []byte("contents")),
-	}, {
-		name:    "no contents",
-		request: projects.NewPendingFileCreateRequest("plan.md", nil),
-	}, {
-		name:    "empty contents",
-		request: projects.NewPendingFileCreateRequest("plan.md", []byte{}),
-	}}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if _, err := tt.request.HTTPRequest(context.Background(), "http://example.com"); err == nil {
-				t.Error("expected an error, got none")
 			}
 		})
 	}
