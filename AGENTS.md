@@ -4,6 +4,75 @@ This file documents patterns and conventions for AI agents contributing to this 
 
 ---
 
+## This Repository Is Public
+
+**Everything written here is published.** Source, comments, generated files, test
+fixtures, commit messages, PR titles and descriptions, review comments, issue
+text — all of it is world-readable and permanent, since a rewritten history does
+not remove what has already been cloned, cached, or indexed. This file is public
+too, and is bound by its own rules.
+
+Research done to write a change is *not* automatically publishable. Internal
+sources may be used to get the behaviour right; only the resulting public-facing
+behaviour goes into the repository.
+
+### Never write
+
+- **Internal system names.** Private repositories, internal services,
+  deployments, hostnames, dashboards, monitoring or CI tooling, chat channels,
+  wikis, runbooks, or the environments they run in.
+- **Server-side implementation identifiers.** Handler, function, package, type,
+  struct-field or query-argument names read from private backend code. The SDK
+  describes an HTTP API: name routes, parameters and JSON keys, never the code
+  behind them.
+- **Internal tracking references.** Ticket keys, issue numbers, incident IDs,
+  PR links, or commit hashes belonging to private repositories.
+- **Unreleased or embargoed information.** Roadmap items, planned deprecations,
+  dated fixes ("fixed in the 2026-08 release"), feature flags, capacity or
+  traffic figures, or any endpoint not yet documented publicly.
+- **Server defects described as such.** Do not explain a workaround by narrating
+  a backend bug, its root cause, or when it will be fixed — that is a live
+  exploitation hint for a service that is still running the old code. Document
+  what the endpoint does today, from the outside.
+- **Secrets and real data.** Tokens, API keys, passwords, cookies, real
+  installation subdomains, real customer or employee names, emails, or IDs
+  copied from a live account — including inside example output, test fixtures,
+  and error strings.
+
+### Instead
+
+State only what a caller of the public API can observe, and cite public
+documentation (`https://apidocs.teamwork.com/...`) as the source. Where a
+private source was needed, credit it generically.
+
+| Instead of                                                | Write                                                          |
+|-----------------------------------------------------------|----------------------------------------------------------------|
+| "confirm against `internal-api-repo`"                     | "confirm against the API's public documentation, or a live call" |
+| "the `getFoo` handler drops the parsed fields"            | "this endpoint ignores the `fields[...]` selection"            |
+| "broken until the 2026-08 fix"                            | "returns 422 in this case"                                     |
+| "see PROJ-1234"                                           | omit, or describe the behaviour the change addresses           |
+| "tested against `acme.teamwork.com` with token `tw_...`"  | "`example.teamwork.com`", `"token"`                            |
+
+Fixtures follow the existing placeholders: server `http://` + a local test
+address, token `"token"`, IDs like `777` and `12345`.
+
+### Commit messages and PR descriptions
+
+Same rules, plus: keep them to what the change does and why, in terms of the
+public API. No internal links, no ticket keys, no "as discussed in
+<internal channel>", no private reviewer names, no attribution to internal
+services as the source of truth. A reader outside the company must be able to
+understand the message completely.
+
+### Before committing
+
+Re-read the diff as an outsider would and ask whether any line only makes sense
+to someone with access to private systems. If a comment cannot be rewritten
+without an internal reference, drop the comment — the code ships, the reference
+does not.
+
+---
+
 ## Project Structure
 
 ```
@@ -175,7 +244,7 @@ Several resources are reachable through both API versions, and the newer route i
 
 Moving a task between tasklists is reachable three ways, and **all three carry the task's subtasks**, so "does it cascade?" is not what separates them:
 
-- `PUT /projects/api/v3/tasks/{id}.json` (`TaskUpdateRequest.TasklistID`). Clears the moved task's own parent link, since a subtask may not live outside its parent's tasklist. A `parentTaskId` sent alongside must already be in the destination, or the call fails. Until an API fix in 2026-08 it failed for *any* subtask, sent parent or not.
+- `PUT /projects/api/v3/tasks/{id}.json` (`TaskUpdateRequest.TasklistID`). Clears the moved task's own parent link, since a subtask may not live outside its parent's tasklist. A `parentTaskId` sent alongside must already be in the destination, or the call fails.
 - `PUT /tasks/{id}.json`, the v1 generic edit, envelope `{"task":…}` or `{"todo-item":…}`. Clears the parent link too, but silently ignores a `parentTaskId` repeating the current parent instead of failing.
 - `PUT /tasks/{id}/move.json` (`TaskMoveRequest`), purpose-built, parameters at the top level of the body. Preserves the parent link when asked, and is the only one that moves a task to a tasklist in another project — v3 answers 422 for that. It also takes a board-column parameter, deliberately unmodelled: columns are superseded by workflows.
 
@@ -415,11 +484,23 @@ Two things differ from the list recipe:
 
 #### Verifying a get endpoint before wiring it
 
-Sparse fieldsets are not universal on single-entity routes, and an unrecognised or unsupported parameter is silently ignored, so confirm against the server (`projectsapigo`) rather than assuming symmetry with the list:
+Sparse fieldsets are not universal on single-entity routes, and an unsupported or
+unrecognised parameter is silently ignored — the payload comes back complete, with
+no error to signal that the selection was dropped. So do not assume symmetry with
+the list endpoint. Confirm it: call the route with a deliberately narrow selection
+and check that the response actually shrank.
 
-- The handler must pass the parsed fields to `jsonfilter.Marshal(response, fields)`. Several singular handlers pass `nil` and therefore ignore any selection — `getCustomField`, `getCustomFieldValue` and `getTag` all do, which is why `customfield.go`, `custom_field_value.go` and `tag.go` have no `sparsefields:get` marker.
-- The key must reach the response's envelope. `jsonfilter` lowercases both sides, so casing doesn't matter, but the word must match: `arg.SparseFieldsSkills` (`fields[skill]`) maps only to `skills`, so it can't filter the skill get's `{"skill": …}` payload — `skill.go` is unmarked for that reason.
-- v1 endpoints (`link.go`, `team.go` gets) have no sparse-fieldset support at all.
+Three ways a get route can fail to honour it:
+
+- **The route ignores the selection outright.** Verified cases so far:
+  `customfield.go`, `custom_field_value.go` and `tag.go` — all three are
+  deliberately left without a `sparsefields:get` marker.
+- **The key doesn't match the singular envelope.** The word matters (casing does
+  not). `fields[skill]` is a recognised parameter but only filters the plural
+  `skills` payload, so it cannot narrow the skill get's `{"skill": …}` response —
+  `skill.go` is unmarked for that reason.
+- **The route is v1** (`link.go`, `team.go` gets) — no sparse-fieldset support at
+  all.
 
 ---
 
