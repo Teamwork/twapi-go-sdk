@@ -39,9 +39,8 @@ func TestPendingFileCreate(t *testing.T) {
 }
 
 // TestPendingFileCreateUpload pins how the contents reach the storage service.
-// The signature in the pre-signed URL covers a set of headers and lists them, so
-// a header sent that was not signed is as fatal as a signed one left out, and
-// the storage service is the only party that would notice.
+// The signature covers the headers it lists, and only the storage service would
+// notice one sent that was not signed, or a signed one left out.
 func TestPendingFileCreateUpload(t *testing.T) {
 	const contents = "# Plan\n"
 
@@ -51,8 +50,7 @@ func TestPendingFileCreateUpload(t *testing.T) {
 		contentType   string
 		wantACL       string
 	}{{
-		// Installations whose bucket does not set an ACL of its own have the
-		// canned ACL signed into the URL, and then the upload has to repeat it.
+		// Signed into the URL unless the installation's bucket sets its own ACL.
 		name:          "canned ACL signed",
 		signedHeaders: "content-length;host;x-amz-acl",
 		wantACL:       "public-read",
@@ -133,13 +131,11 @@ func TestPendingFileCreateUpload(t *testing.T) {
 			if string(uploaded) != contents {
 				t.Errorf("expected the file contents in the upload, got %q", uploaded)
 			}
-			// The storage service needs the length up front, so a chunked upload,
-			// which is what an unmeasured reader would produce, is rejected.
+			// A chunked upload, which an unmeasured reader produces, is rejected.
 			if upload.ContentLength != int64(len(contents)) {
 				t.Errorf("expected a content length of %d, got %d", len(contents), upload.ContentLength)
 			}
-			// The URL carries its own credentials, and the storage service refuses a
-			// request that also carries the Teamwork session.
+			// The URL carries its own credentials; a second mechanism is refused.
 			if got := upload.Header.Get("Authorization"); got != "" {
 				t.Errorf("expected no authorization on the upload, got %q", got)
 			}
@@ -152,8 +148,7 @@ func TestPendingFileCreateUpload(t *testing.T) {
 					t.Errorf("expected the content type %q, got %q", tt.contentType, got)
 				}
 			default:
-				// Which type an extension maps to comes from the host's table, so only
-				// its presence can be asserted here.
+				// The extension's type comes from the host's table, so only assert it is set.
 				if upload.Header.Get("Content-Type") == "" {
 					t.Error("expected a content type on the upload")
 				}
@@ -182,8 +177,7 @@ func TestPendingFileCreateRejectsMissingFields(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// The reservation is refused before anything is sent, so a client that
-			// reports being used is enough to prove nothing was.
+			// Nothing should be sent: this client fails the test if it is used.
 			testEngine := twapi.NewEngine(
 				session.NewBearerToken("your_token", "http://example.com"),
 				twapi.WithHTTPClient(twapi.HTTPClientFunc(func(*http.Request) (*http.Response, error) {
