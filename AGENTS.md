@@ -238,6 +238,49 @@ if len(c.Include) > 0 {
 
 Why: surfaces typos at compile time, makes the legal value set self-documenting (and discoverable via `go doc`), and lets us evolve the API by adding constants without breaking callers. The naming convention is `{Resource}{Purpose}` for the type (e.g., `TaskRequestSideload`, `CustomItemRecordOrderBy`) and `{Type}{Value}` for each constant.
 
+### Ordering (`orderBy` / `orderMode`)
+
+A list filter exposes ordering as two fields, placed together and documented with
+the endpoint's default:
+
+```go
+// OrderBy is the field to sort the results by. Use the MessageOrderBy
+// constants. The endpoint defaults to createdat.
+OrderBy MessageOrderBy
+
+// OrderMode is the direction to sort the results in. See twapi.OrderMode for
+// the supported values. The endpoint defaults to ascending.
+OrderMode twapi.OrderMode
+```
+
+Rules:
+
+1. **`OrderBy` is a per-resource `{Resource}OrderBy` typedef**, one constant per
+   value the endpoint's apidocs page lists under "Allowed values". Never a bare
+   `string`.
+2. **`OrderMode` is always `twapi.OrderMode`.** Ascending and descending are the
+   only directions the API takes, so the shared type is the whole guard — there
+   is no per-resource order-mode enum and no runtime validation to add.
+3. **Only wire what the endpoint documents.** An unrecognised query key is
+   silently ignored, so a `Fields`-style field on an endpoint that does not
+   support ordering looks functional and does nothing. Some endpoints document
+   `orderMode` but no `orderBy` (`jobrole.go`, `skill.go`, `custom_item_field.go`)
+   — those get `OrderMode` alone. Several document neither (`project_category.go`,
+   `timer.go`, `workflow.go`, the owner-scoped routes in `custom_field_value.go`,
+   the v1 `link.go` list) and are deliberately left without ordering.
+4. **Where `orderBy` accepts `customfield`, carry its companion ID.** Sorting by
+   a custom field also needs `orderByCustomFieldId` (`orderByFieldId` on custom
+   item records), so those filters expose `OrderByCustomFieldID` /
+   `OrderByFieldID` next to `OrderBy`.
+5. **v1 routes spell it differently.** The team list takes `sortBy`/`sortOrder`;
+   the filter still exposes `OrderBy`/`OrderMode` for consistency with the rest
+   of the package and maps them in `apply()`, noting the mapping in the field
+   docs.
+
+`projects/list_ordering_test.go` holds one table per direction — ordering is
+applied, and ordering is absent when unset — and every filter that supports
+ordering belongs in both.
+
 ### Total counts (`skipCounts`) on v3 list endpoints
 
 The count is real, it is not going away, and the SDK is usually already paying for it. Expose it, but let the caller choose, through the shared `twapi.ListCountMode` — never a per-resource enum, and never a raw `skipCounts` literal in a filter's `apply()`.

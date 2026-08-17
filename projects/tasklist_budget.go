@@ -114,13 +114,15 @@ const (
 	TasklistBudgetListRequestSideloadTasklistBudgetNotifications TasklistBudgetListRequestSideload = "tasklistBudgetNotifications"
 )
 
-// TasklistBudgetListRequestOrderBy defines sortable fields for tasklist budget
-// listings.
-type TasklistBudgetListRequestOrderBy string
+// TasklistBudgetOrderBy identifies the attributes a tasklist budget list can be
+// ordered by.
+type TasklistBudgetOrderBy string
 
-// List of valid order by values for TasklistBudgetListRequest.
+// Supported tasklist budget order-by values.
 const (
-	TasklistBudgetListRequestOrderByDateCreated TasklistBudgetListRequestOrderBy = "dateCreated"
+	TasklistBudgetOrderByDateCreated  TasklistBudgetOrderBy = "dateCreated"
+	TasklistBudgetOrderByDisplayOrder TasklistBudgetOrderBy = "displayOrder"
+	TasklistBudgetOrderByID           TasklistBudgetOrderBy = "id"
 )
 
 // TasklistBudgetListRequestFilters contains filters for listing tasklist
@@ -130,7 +132,7 @@ type TasklistBudgetListRequestFilters struct {
 	OrderMode twapi.OrderMode
 
 	// OrderBy specifies the field used for sorting.
-	OrderBy TasklistBudgetListRequestOrderBy
+	OrderBy TasklistBudgetOrderBy
 
 	// ProjectBudgetID is an optional explicit project budget filter. It usually
 	// matches the project budget identifier in the request path.
@@ -207,7 +209,7 @@ func NewTasklistBudgetListRequest(projectBudgetID int64) TasklistBudgetListReque
 		Path: TasklistBudgetListRequestPath{ProjectBudgetID: projectBudgetID},
 		Filters: TasklistBudgetListRequestFilters{
 			OrderMode: twapi.OrderModeAscending,
-			OrderBy:   TasklistBudgetListRequestOrderByDateCreated,
+			OrderBy:   TasklistBudgetOrderByDateCreated,
 			Page:      1,
 			PageSize:  50,
 		},

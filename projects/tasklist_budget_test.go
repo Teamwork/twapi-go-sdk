@@ -12,7 +12,7 @@ import (
 func TestTasklistBudgetListRequestGeneration(t *testing.T) {
 	req := projects.NewTasklistBudgetListRequest(123)
 	req.Filters.OrderMode = twapi.OrderModeDescending
-	req.Filters.OrderBy = projects.TasklistBudgetListRequestOrderByDateCreated
+	req.Filters.OrderBy = projects.TasklistBudgetOrderByDateCreated
 	req.Filters.ProjectBudgetID = 123
 	req.Filters.Page = 2
 	req.Filters.PageSize = 25

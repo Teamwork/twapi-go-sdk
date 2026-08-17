@@ -192,6 +192,13 @@ type ActivityListRequestFilters struct {
 	// LogItemTypes is the list of log item types to filter activities.
 	LogItemTypes []LogItemType
 
+	// OrderMode is the direction to sort the results in. See twapi.OrderMode for
+	// the supported values.
+	//
+	// The endpoint also accepts an orderBy parameter, but its documentation lists
+	// no allowed values, so it is not exposed here.
+	OrderMode twapi.OrderMode
+
 	// Page is the page number to retrieve. Defaults to 1.
 	Page int64
 
@@ -225,6 +232,9 @@ func (a ActivityListRequestFilters) apply(req *http.Request) {
 			logItemTypes[i] = string(logType)
 		}
 		query.Set("activityTypes", strings.Join(logItemTypes, ","))
+	}
+	if a.OrderMode != "" {
+		query.Set("orderMode", string(a.OrderMode))
 	}
 	if a.Page > 0 {
 		query.Set("page", strconv.FormatInt(a.Page, 10))

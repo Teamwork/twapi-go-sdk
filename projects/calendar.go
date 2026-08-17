@@ -197,8 +197,25 @@ func CalendarDelete(
 	return twapi.Execute[CalendarDeleteRequest, *CalendarDeleteResponse](ctx, engine, req)
 }
 
+// CalendarOrderBy identifies the attributes a calendar list can be ordered by.
+type CalendarOrderBy string
+
+// Supported calendar order-by values.
+const (
+	CalendarOrderByName CalendarOrderBy = "name"
+	CalendarOrderByID   CalendarOrderBy = "id"
+)
+
 // CalendarListRequestFilters contains filters for loading calendars.
 type CalendarListRequestFilters struct {
+	// OrderBy is the field to sort the results by. Use the CalendarOrderBy
+	// constants. The endpoint defaults to name.
+	OrderBy CalendarOrderBy
+
+	// OrderMode is the direction to sort the results in. See twapi.OrderMode for
+	// the supported values. The endpoint defaults to ascending.
+	OrderMode twapi.OrderMode
+
 	// Page is the page number for pagination.
 	Page int64
 
@@ -220,6 +237,12 @@ type CalendarListRequestFilters struct {
 
 func (c CalendarListRequestFilters) apply(req *http.Request) {
 	query := req.URL.Query()
+	if c.OrderBy != "" {
+		query.Set("orderBy", string(c.OrderBy))
+	}
+	if c.OrderMode != "" {
+		query.Set("orderMode", string(c.OrderMode))
+	}
 	if c.Page > 0 {
 		query.Set("page", strconv.FormatInt(c.Page, 10))
 	}

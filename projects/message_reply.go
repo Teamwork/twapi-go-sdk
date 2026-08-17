@@ -459,12 +459,30 @@ type MessageReplyListRequestPath struct {
 	MessageID int64
 }
 
+// MessageReplyOrderBy identifies the attributes a message reply list can be
+// ordered by.
+type MessageReplyOrderBy string
+
+// Supported message reply order-by values.
+const (
+	MessageReplyOrderByCreatedAt MessageReplyOrderBy = "createdat"
+	MessageReplyOrderByID        MessageReplyOrderBy = "id"
+)
+
 // MessageReplyListRequestFilters contains the filters for loading multiple
 // message replies.
 type MessageReplyListRequestFilters struct {
 	// SearchTerm is an optional search term to filter message replies by body
 	// content or message title.
 	SearchTerm string
+
+	// OrderBy is the field to sort the results by. Use the MessageReplyOrderBy
+	// constants. The endpoint defaults to createdat.
+	OrderBy MessageReplyOrderBy
+
+	// OrderMode is the direction to sort the results in. See twapi.OrderMode for
+	// the supported values. The endpoint defaults to ascending.
+	OrderMode twapi.OrderMode
 
 	// MessageIDs is an optional list of message IDs to filter message replies by
 	// their parent messages.
@@ -512,6 +530,12 @@ func (m MessageReplyListRequestFilters) apply(req *http.Request) {
 			projectIDs[i] = strconv.FormatInt(id, 10)
 		}
 		query.Set("projectIds", strings.Join(projectIDs, ","))
+	}
+	if m.OrderBy != "" {
+		query.Set("orderBy", string(m.OrderBy))
+	}
+	if m.OrderMode != "" {
+		query.Set("orderMode", string(m.OrderMode))
 	}
 	if m.Page > 0 {
 		query.Set("page", strconv.FormatInt(m.Page, 10))

@@ -613,11 +613,36 @@ type CommentListRequestPath struct {
 	LinkID int64
 }
 
+// CommentOrderBy identifies the attributes a comment list can be ordered by.
+//
+// The notebook and link comment routes take no query parameters at all, so
+// ordering only applies to the other comment routes. CommentOrderByID is
+// documented for /projects/api/v3/comments.json only.
+type CommentOrderBy string
+
+// Supported comment order-by values.
+const (
+	CommentOrderByAll     CommentOrderBy = "all"
+	CommentOrderByDate    CommentOrderBy = "date"
+	CommentOrderByProject CommentOrderBy = "project"
+	CommentOrderByUser    CommentOrderBy = "user"
+	CommentOrderByType    CommentOrderBy = "type"
+	CommentOrderByID      CommentOrderBy = "id"
+)
+
 // CommentListRequestFilters contains the filters for loading multiple comments.
 type CommentListRequestFilters struct {
 	// SearchTerm is an optional search term to filter comments by name, description
 	// or commentlist's name.
 	SearchTerm string
+
+	// OrderBy is the field to sort the results by. Use the CommentOrderBy
+	// constants. The endpoint defaults to date.
+	OrderBy CommentOrderBy
+
+	// OrderMode is the direction to sort the results in. See twapi.OrderMode for
+	// the supported values. The endpoint defaults to ascending.
+	OrderMode twapi.OrderMode
 
 	// UserIDs is an optional list of user IDs to filter comments by users.
 	UserIDs []int64
@@ -659,6 +684,12 @@ func (t CommentListRequestFilters) apply(req *http.Request) {
 	}
 	if !t.UpdatedAfter.IsZero() {
 		query.Set("updatedAfter", t.UpdatedAfter.Format(time.RFC3339))
+	}
+	if t.OrderBy != "" {
+		query.Set("orderBy", string(t.OrderBy))
+	}
+	if t.OrderMode != "" {
+		query.Set("orderMode", string(t.OrderMode))
 	}
 	if t.Page > 0 {
 		query.Set("page", strconv.FormatInt(t.Page, 10))

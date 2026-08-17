@@ -260,8 +260,27 @@ const (
 	CalendarEventListRequestSideloadTimelogs  CalendarEventListRequestSideload = "timelogs"
 )
 
+// CalendarEventOrderBy identifies the attributes a calendar event list can be
+// ordered by.
+type CalendarEventOrderBy string
+
+// Supported calendar event order-by values.
+const (
+	CalendarEventOrderByStartTime CalendarEventOrderBy = "startTime"
+	CalendarEventOrderByUpdated   CalendarEventOrderBy = "updated"
+	CalendarEventOrderByID        CalendarEventOrderBy = "id"
+)
+
 // CalendarEventListRequestFilters contains filters for loading calendar events.
 type CalendarEventListRequestFilters struct {
+	// OrderBy is the field to sort the results by. Use the CalendarEventOrderBy
+	// constants. The endpoint defaults to startTime.
+	OrderBy CalendarEventOrderBy
+
+	// OrderMode is the direction to sort the results in. See twapi.OrderMode for
+	// the supported values. The endpoint defaults to ascending.
+	OrderMode twapi.OrderMode
+
 	// StartedAfterDate filters events that start after this date (YYYY-MM-DD
 	// format).
 	StartedAfterDate twapi.Date
@@ -290,6 +309,12 @@ type CalendarEventListRequestFilters struct {
 
 func (c CalendarEventListRequestFilters) apply(req *http.Request) {
 	query := req.URL.Query()
+	if c.OrderBy != "" {
+		query.Set("orderBy", string(c.OrderBy))
+	}
+	if c.OrderMode != "" {
+		query.Set("orderMode", string(c.OrderMode))
+	}
 	if !c.StartedAfterDate.IsZero() {
 		query.Set("startedAfterDate", c.StartedAfterDate.String())
 	}

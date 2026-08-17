@@ -63,6 +63,7 @@ const (
 	CustomItemRecordOrderByDisplayOrder    CustomItemRecordOrderBy = "displayorder"
 	CustomItemRecordOrderByName            CustomItemRecordOrderBy = "name"
 	CustomItemRecordOrderByCustomItemField CustomItemRecordOrderBy = "customitemfield"
+	CustomItemRecordOrderByID              CustomItemRecordOrderBy = "id"
 )
 
 // CustomItemRecordFieldValues is the field values payload of a record, keyed
@@ -629,6 +630,10 @@ type CustomItemRecordListRequestFilters struct {
 	// OrderMode is the sort direction.
 	OrderMode twapi.OrderMode
 
+	// OrderByFieldID selects the custom item field to sort by. It is only used
+	// when OrderBy is CustomItemRecordOrderByCustomItemField.
+	OrderByFieldID int64
+
 	// Page is the page number to retrieve. Defaults to 1.
 	Page int64
 
@@ -670,6 +675,9 @@ func (c CustomItemRecordListRequestFilters) apply(req *http.Request) {
 	}
 	if c.OrderMode != "" {
 		query.Set("orderMode", string(c.OrderMode))
+	}
+	if c.OrderByFieldID > 0 {
+		query.Set("orderByFieldId", strconv.FormatInt(c.OrderByFieldID, 10))
 	}
 	if c.Page > 0 {
 		query.Set("page", strconv.FormatInt(c.Page, 10))

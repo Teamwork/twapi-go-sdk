@@ -430,11 +430,34 @@ type TeamListRequestPath struct {
 	CompanyID int64
 }
 
+// TeamOrderBy identifies the attributes a team list can be ordered by.
+type TeamOrderBy string
+
+// Supported team order-by values.
+const (
+	TeamOrderByName      TeamOrderBy = "name"
+	TeamOrderByPicker    TeamOrderBy = "picker"
+	TeamOrderByDateAdded TeamOrderBy = "dateAdded"
+)
+
 // TeamListRequestFilters contains the filters for loading multiple
 // teams.
 type TeamListRequestFilters struct {
 	// SearchTerm is an optional search term to filter teams by name or e-mail.
 	SearchTerm string
+
+	// OrderBy is the field to sort the results by. Use the TeamOrderBy
+	// constants. The endpoint defaults to name.
+	//
+	// These are v1 routes, so the value is sent as sortBy rather than orderBy.
+	OrderBy TeamOrderBy
+
+	// OrderMode is the direction to sort the results in. See twapi.OrderMode for
+	// the supported values. The endpoint defaults to ascending.
+	//
+	// These are v1 routes, so the value is sent as sortOrder rather than
+	// orderMode.
+	OrderMode twapi.OrderMode
 
 	// IncludeCompanyTeams indicates whether to include client/company teams in
 	// the response. By default client/company teams are not included.
@@ -475,6 +498,12 @@ func (u TeamListRequestFilters) apply(req *http.Request) {
 	}
 	if u.IncludeSubteams {
 		query.Set("includeSubteams", "true")
+	}
+	if u.OrderBy != "" {
+		query.Set("sortBy", string(u.OrderBy))
+	}
+	if u.OrderMode != "" {
+		query.Set("sortOrder", string(u.OrderMode))
 	}
 	if u.Page > 0 {
 		query.Set("page", strconv.FormatInt(u.Page, 10))
