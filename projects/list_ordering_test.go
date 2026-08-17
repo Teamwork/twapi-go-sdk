@@ -40,11 +40,11 @@ func TestListOrderingApplied(t *testing.T) {
 		name: "activity",
 		req: func() twapi.HTTPRequester {
 			req := projects.NewActivityListRequest()
-			req.Filters.OrderBy = projects.ActivityOrderByActivityDatetime
+			req.Filters.OrderBy = projects.ActivityOrderByDate
 			req.Filters.OrderMode = twapi.OrderModeDescending
 			return req
 		}(),
-		want: map[string]string{"orderBy": "activityDatetime", "orderMode": "desc"},
+		want: map[string]string{"orderBy": "date", "orderMode": "desc"},
 	}, {
 		name: "calendar",
 		req: func() twapi.HTTPRequester {

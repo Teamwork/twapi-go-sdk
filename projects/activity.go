@@ -185,11 +185,11 @@ type ActivityOrderBy string
 
 // Supported activity order-by values.
 const (
-	ActivityOrderByActivityDatetime  ActivityOrderBy = "activityDatetime"
-	ActivityOrderByProjectID         ActivityOrderBy = "projectId"
-	ActivityOrderByUserID            ActivityOrderBy = "userId"
-	ActivityOrderByActivityItemTypes ActivityOrderBy = "activityItemTypes"
-	ActivityOrderByActivityLogID     ActivityOrderBy = "activitylogId"
+	ActivityOrderByDate          ActivityOrderBy = "date"
+	ActivityOrderByProjectID     ActivityOrderBy = "projectId"
+	ActivityOrderByUserID        ActivityOrderBy = "userId"
+	ActivityOrderByActivityTypes ActivityOrderBy = "activityTypes"
+	ActivityOrderByID            ActivityOrderBy = "id"
 )
 
 // ActivityListRequestFilters contains the filters for loading multiple
@@ -205,7 +205,7 @@ type ActivityListRequestFilters struct {
 	LogItemTypes []LogItemType
 
 	// OrderBy is the field to sort the results by. Use the ActivityOrderBy
-	// constants. The endpoint defaults to activityDatetime.
+	// constants. The endpoint defaults to date.
 	OrderBy ActivityOrderBy
 
 	// OrderMode is the direction to sort the results in. See twapi.OrderMode for
