@@ -57,6 +57,7 @@ type CustomItemOrderBy string
 // Supported custom item order-by values.
 const (
 	CustomItemOrderByName CustomItemOrderBy = "name"
+	CustomItemOrderByID   CustomItemOrderBy = "id"
 )
 
 // CustomItem is a user-defined entity type that can be added to a project to

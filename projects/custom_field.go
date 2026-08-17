@@ -135,6 +135,7 @@ const (
 	CustomFieldOrderByProject     CustomFieldOrderBy = "project"
 	CustomFieldOrderByDateCreated CustomFieldOrderBy = "datecreated"
 	CustomFieldOrderByDateUpdated CustomFieldOrderBy = "dateupdated"
+	CustomFieldOrderByID          CustomFieldOrderBy = "id"
 )
 
 // CustomFieldOptions represents type-specific options for a custom field. The

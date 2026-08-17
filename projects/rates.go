@@ -937,12 +937,12 @@ type RateProjectUserListRequestPath struct {
 	ProjectID int64
 }
 
-// RateProjectUserListRequestOrderBy specifies the ordering of results.
-type RateProjectUserListRequestOrderBy string
+// RateProjectUserOrderBy specifies the ordering of results.
+type RateProjectUserOrderBy string
 
 // Supported order by fields.
 const (
-	RateProjectUserListRequestOrderByUsername RateProjectUserListRequestOrderBy = "name"
+	RateProjectUserOrderByName RateProjectUserOrderBy = "name"
 )
 
 // RateProjectUserListRequestFilters contains the filters for listing project
@@ -952,7 +952,7 @@ type RateProjectUserListRequestFilters struct {
 	SearchTerm string
 
 	// OrderBy specifies the ordering of results.
-	OrderBy RateProjectUserListRequestOrderBy
+	OrderBy RateProjectUserOrderBy
 
 	// OrderMode specifies the order direction (asc, desc).
 	OrderMode twapi.OrderMode
@@ -1008,7 +1008,7 @@ func NewRateProjectUserListRequest(projectID int64) RateProjectUserListRequest {
 		Filters: RateProjectUserListRequestFilters{
 			Page:      1,
 			PageSize:  50,
-			OrderMode: "asc",
+			OrderMode: twapi.OrderModeAscending,
 		},
 	}
 }
@@ -1330,12 +1330,12 @@ const (
 	RateProjectUserHistoryGetRequestSideloadUsers      RateProjectUserHistoryGetRequestSideload = "users"
 )
 
-// RateProjectUserHistoryGetRequestOrderBy specifies the ordering of results.
-type RateProjectUserHistoryGetRequestOrderBy string
+// RateProjectUserHistoryOrderBy specifies the ordering of results.
+type RateProjectUserHistoryOrderBy string
 
 // Supported order by fields.
 const (
-	RateProjectUserHistoryGetRequestOrderByUsername RateProjectUserHistoryGetRequestOrderBy = "name"
+	RateProjectUserHistoryOrderByName RateProjectUserHistoryOrderBy = "name"
 )
 
 // RateProjectUserHistoryGetRequestFilters contains the filters for getting
@@ -1345,7 +1345,7 @@ type RateProjectUserHistoryGetRequestFilters struct {
 	SearchTerm string
 
 	// OrderBy specifies the ordering of results.
-	OrderBy RateProjectUserHistoryGetRequestOrderBy
+	OrderBy RateProjectUserHistoryOrderBy
 
 	// OrderMode specifies the order direction (asc, desc).
 	OrderMode twapi.OrderMode
@@ -1413,7 +1413,7 @@ func NewRateProjectUserHistoryGetRequest(projectID int64, userID int64) RateProj
 		Filters: RateProjectUserHistoryGetRequestFilters{
 			Page:      1,
 			PageSize:  50,
-			OrderMode: "asc",
+			OrderMode: twapi.OrderModeAscending,
 		},
 	}
 }

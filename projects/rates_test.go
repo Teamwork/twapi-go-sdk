@@ -405,7 +405,7 @@ func TestRateProjectUserList(t *testing.T) {
 			},
 			Filters: projects.RateProjectUserListRequestFilters{
 				SearchTerm: "test",
-				OrderBy:    projects.RateProjectUserListRequestOrderByUsername,
+				OrderBy:    projects.RateProjectUserOrderByName,
 				OrderMode:  twapi.OrderModeAscending,
 				Page:       1,
 				PageSize:   10,
@@ -419,7 +419,7 @@ func TestRateProjectUserList(t *testing.T) {
 				ProjectID: testResources.ProjectID,
 			},
 			Filters: projects.RateProjectUserListRequestFilters{
-				OrderBy:   projects.RateProjectUserListRequestOrderByUsername,
+				OrderBy:   projects.RateProjectUserOrderByName,
 				OrderMode: twapi.OrderModeDescending,
 				Page:      1,
 				PageSize:  10,
@@ -433,7 +433,7 @@ func TestRateProjectUserList(t *testing.T) {
 				ProjectID: testResources.ProjectID,
 			},
 			Filters: projects.RateProjectUserListRequestFilters{
-				OrderBy:   projects.RateProjectUserListRequestOrderByUsername,
+				OrderBy:   projects.RateProjectUserOrderByName,
 				OrderMode: twapi.OrderModeAscending,
 				Page:      1,
 				PageSize:  20,
@@ -578,7 +578,7 @@ func TestRateProjectUserHistoryGet(t *testing.T) {
 		userID:    testResources.UserID,
 		req: func(projectID int64, userID int64) projects.RateProjectUserHistoryGetRequest {
 			req := projects.NewRateProjectUserHistoryGetRequest(projectID, userID)
-			req.Filters.OrderBy = projects.RateProjectUserHistoryGetRequestOrderByUsername
+			req.Filters.OrderBy = projects.RateProjectUserHistoryOrderByName
 			req.Filters.OrderMode = twapi.OrderModeDescending
 			return req
 		},
@@ -610,7 +610,7 @@ func TestRateProjectUserHistoryGet(t *testing.T) {
 		req: func(projectID int64, userID int64) projects.RateProjectUserHistoryGetRequest {
 			req := projects.NewRateProjectUserHistoryGetRequest(projectID, userID)
 			req.Filters.SearchTerm = "test"
-			req.Filters.OrderBy = projects.RateProjectUserHistoryGetRequestOrderByUsername
+			req.Filters.OrderBy = projects.RateProjectUserHistoryOrderByName
 			req.Filters.OrderMode = twapi.OrderModeDescending
 			req.Filters.Include = []projects.RateProjectUserHistoryGetRequestSideload{
 				projects.RateProjectUserHistoryGetRequestSideloadUsers,

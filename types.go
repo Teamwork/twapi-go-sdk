@@ -200,7 +200,10 @@ func NewMoney(value float64) Money {
 	return Money(value * 100)
 }
 
-// OrderMode specifies the order direction (asc, desc).
+// OrderMode specifies the order direction of a list request. Ascending and
+// descending are the only directions the API recognises, so the two constants
+// below are the full set of usable values; the type exists to keep any other
+// string from reaching a request by mistake.
 type OrderMode string
 
 // Supported order modes.

@@ -454,11 +454,35 @@ type MilestoneListRequestPath struct {
 	ProjectID int64
 }
 
+// MilestoneOrderBy identifies the attributes a milestone list can be ordered
+// by.
+type MilestoneOrderBy string
+
+// Supported milestone order-by values.
+const (
+	MilestoneOrderByDate        MilestoneOrderBy = "date"
+	MilestoneOrderByDateOnly    MilestoneOrderBy = "dateonly"
+	MilestoneOrderByName        MilestoneOrderBy = "name"
+	MilestoneOrderByProject     MilestoneOrderBy = "project"
+	MilestoneOrderByUser        MilestoneOrderBy = "user"
+	MilestoneOrderByDateCreated MilestoneOrderBy = "dateCreated"
+	MilestoneOrderByDateUpdated MilestoneOrderBy = "dateUpdated"
+	MilestoneOrderByID          MilestoneOrderBy = "id"
+)
+
 // MilestoneListRequestFilters contains the filters for loading multiple
 // milestones.
 type MilestoneListRequestFilters struct {
 	// SearchTerm is an optional search term to filter milestones by name.
 	SearchTerm string
+
+	// OrderBy is the field to sort the results by. Use the MilestoneOrderBy
+	// constants. The endpoint defaults to date.
+	OrderBy MilestoneOrderBy
+
+	// OrderMode is the direction to sort the results in. See twapi.OrderMode for
+	// the supported values. The endpoint defaults to ascending.
+	OrderMode twapi.OrderMode
 
 	// TagIDs is an optional list of tag IDs to filter milestones by tags.
 	TagIDs []int64
@@ -500,6 +524,12 @@ func (m MilestoneListRequestFilters) apply(req *http.Request) {
 	}
 	if m.MatchAllTags != nil {
 		query.Set("matchAllTags", strconv.FormatBool(*m.MatchAllTags))
+	}
+	if m.OrderBy != "" {
+		query.Set("orderBy", string(m.OrderBy))
+	}
+	if m.OrderMode != "" {
+		query.Set("orderMode", string(m.OrderMode))
 	}
 	if m.Page > 0 {
 		query.Set("page", strconv.FormatInt(m.Page, 10))

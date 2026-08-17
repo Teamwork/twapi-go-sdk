@@ -483,12 +483,34 @@ func MessageGet(
 	return twapi.Execute[MessageGetRequest, *MessageGetResponse](ctx, engine, req)
 }
 
+// MessageOrderBy identifies the attributes a message list can be ordered by.
+type MessageOrderBy string
+
+// Supported message order-by values.
+const (
+	MessageOrderByCreatedAt MessageOrderBy = "createdat"
+	MessageOrderByUpdatedAt MessageOrderBy = "updatedat"
+	MessageOrderByCategory  MessageOrderBy = "category"
+	MessageOrderByProject   MessageOrderBy = "project"
+	MessageOrderByCreatedBy MessageOrderBy = "createdby"
+	MessageOrderByUnread    MessageOrderBy = "unread"
+	MessageOrderByID        MessageOrderBy = "id"
+)
+
 // MessageListRequestFilters contains the filters for loading multiple
 // messages.
 type MessageListRequestFilters struct {
 	// SearchTerm is an optional search term to filter messages by body content or
 	// title.
 	SearchTerm string
+
+	// OrderBy is the field to sort the results by. Use the MessageOrderBy
+	// constants.
+	OrderBy MessageOrderBy
+
+	// OrderMode is the direction to sort the results in. See twapi.OrderMode for
+	// the supported values. The endpoint defaults to ascending.
+	OrderMode twapi.OrderMode
 
 	// ProjectIDs is an optional list of project IDs to filter messages by
 	// projects.
@@ -541,6 +563,12 @@ func (m MessageListRequestFilters) apply(req *http.Request) {
 	}
 	if m.MatchAllTags != nil {
 		query.Set("matchAllTags", strconv.FormatBool(*m.MatchAllTags))
+	}
+	if m.OrderBy != "" {
+		query.Set("orderBy", string(m.OrderBy))
+	}
+	if m.OrderMode != "" {
+		query.Set("orderMode", string(m.OrderMode))
 	}
 	if m.Page > 0 {
 		query.Set("page", strconv.FormatInt(m.Page, 10))

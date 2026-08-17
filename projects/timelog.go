@@ -521,9 +521,36 @@ type TimelogListRequestPath struct {
 	ProjectID int64
 }
 
+// TimelogOrderBy identifies the attributes a timelog list can be ordered by.
+type TimelogOrderBy string
+
+// Supported timelog order-by values.
+const (
+	TimelogOrderByCompany     TimelogOrderBy = "company"
+	TimelogOrderByDate        TimelogOrderBy = "date"
+	TimelogOrderByDateUpdated TimelogOrderBy = "dateupdated"
+	TimelogOrderByProject     TimelogOrderBy = "project"
+	TimelogOrderByTask        TimelogOrderBy = "task"
+	TimelogOrderByTasklist    TimelogOrderBy = "tasklist"
+	TimelogOrderByUser        TimelogOrderBy = "user"
+	TimelogOrderByDescription TimelogOrderBy = "description"
+	TimelogOrderByBilled      TimelogOrderBy = "billed"
+	TimelogOrderByBillable    TimelogOrderBy = "billable"
+	TimelogOrderByTimeSpent   TimelogOrderBy = "timespent"
+	TimelogOrderByID          TimelogOrderBy = "id"
+)
+
 // TimelogListRequestFilters contains the filters for loading multiple
 // timelogs.
 type TimelogListRequestFilters struct {
+	// OrderBy is the field to sort the results by. Use the TimelogOrderBy
+	// constants. The endpoint defaults to date.
+	OrderBy TimelogOrderBy
+
+	// OrderMode is the direction to sort the results in. See twapi.OrderMode for
+	// the supported values. The endpoint defaults to ascending.
+	OrderMode twapi.OrderMode
+
 	// TagIDs is an optional list of tag IDs to filter the timelogs by. If provided,
 	// only timelogs associated with these tags will be returned.
 	TagIDs []int64
@@ -581,6 +608,12 @@ type TimelogListRequestFilters struct {
 
 func (t TimelogListRequestFilters) apply(req *http.Request) {
 	query := req.URL.Query()
+	if t.OrderBy != "" {
+		query.Set("orderBy", string(t.OrderBy))
+	}
+	if t.OrderMode != "" {
+		query.Set("orderMode", string(t.OrderMode))
+	}
 	if len(t.TagIDs) > 0 {
 		tagIDs := make([]string, len(t.TagIDs))
 		for i, id := range t.TagIDs {

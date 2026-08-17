@@ -782,6 +782,35 @@ func ProjectGet(
 	return twapi.Execute[ProjectGetRequest, *ProjectGetResponse](ctx, engine, req)
 }
 
+// ProjectOrderBy identifies the attributes a project list can be ordered by.
+type ProjectOrderBy string
+
+// Supported project order-by values.
+const (
+	ProjectOrderByBudgetUsed          ProjectOrderBy = "budgetused"
+	ProjectOrderByCategoryName        ProjectOrderBy = "categoryname"
+	ProjectOrderByCompanyName         ProjectOrderBy = "companyname"
+	ProjectOrderByCreatorName         ProjectOrderBy = "creatorname"
+	ProjectOrderByCustomField         ProjectOrderBy = "customfield"
+	ProjectOrderByDateCreated         ProjectOrderBy = "datecreated"
+	ProjectOrderByDueDate             ProjectOrderBy = "duedate"
+	ProjectOrderByHealth              ProjectOrderBy = "health"
+	ProjectOrderByLastActivity        ProjectOrderBy = "lastactivity"
+	ProjectOrderByLastWorkedOn        ProjectOrderBy = "lastworkedon"
+	ProjectOrderByMobileSpecial       ProjectOrderBy = "mobilespecial"
+	ProjectOrderByName                ProjectOrderBy = "name"
+	ProjectOrderByNameCaseInsensitive ProjectOrderBy = "namecaseinsensitive"
+	ProjectOrderByOwnerCompany        ProjectOrderBy = "ownercompany"
+	ProjectOrderByOwnerName           ProjectOrderBy = "ownername"
+	ProjectOrderByStarred             ProjectOrderBy = "starred"
+	ProjectOrderByStarredCompanyName  ProjectOrderBy = "starredcompanyname"
+	ProjectOrderByStarredFirst        ProjectOrderBy = "starredfirst"
+	ProjectOrderByStartDate           ProjectOrderBy = "startdate"
+	ProjectOrderByStatus              ProjectOrderBy = "status"
+	ProjectOrderByTaskCompletion      ProjectOrderBy = "taskcompletion"
+	ProjectOrderByID                  ProjectOrderBy = "id"
+)
+
 // ProjectListRequestFilters contains the filters for loading multiple projects.
 type ProjectListRequestFilters struct {
 	ProjectRequestFilters
@@ -789,6 +818,18 @@ type ProjectListRequestFilters struct {
 	// ProjectCategoryIDs is an optional list of project category IDs to filter
 	// projects by categories.
 	ProjectCategoryIDs []int64
+
+	// OrderBy is the field to sort the results by. Use the ProjectOrderBy
+	// constants. The endpoint defaults to name.
+	OrderBy ProjectOrderBy
+
+	// OrderMode is the direction to sort the results in. See twapi.OrderMode for
+	// the supported values. The endpoint defaults to ascending.
+	OrderMode twapi.OrderMode
+
+	// OrderByCustomFieldID selects the custom field to sort by. It is only used
+	// when OrderBy is ProjectOrderByCustomField.
+	OrderByCustomFieldID int64
 
 	// SearchTerm is an optional search term to filter projects by name or
 	// description.
@@ -844,6 +885,15 @@ func (p ProjectListRequestFilters) apply(req *http.Request) {
 	}
 	if p.MatchAllTags != nil {
 		query.Set("matchAllProjectTags", strconv.FormatBool(*p.MatchAllTags))
+	}
+	if p.OrderBy != "" {
+		query.Set("orderBy", string(p.OrderBy))
+	}
+	if p.OrderMode != "" {
+		query.Set("orderMode", string(p.OrderMode))
+	}
+	if p.OrderByCustomFieldID > 0 {
+		query.Set("orderByCustomFieldId", strconv.FormatInt(p.OrderByCustomFieldID, 10))
 	}
 	if p.Page > 0 {
 		query.Set("page", strconv.FormatInt(p.Page, 10))

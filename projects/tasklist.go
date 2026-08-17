@@ -400,11 +400,33 @@ type TasklistListRequestPath struct {
 	ProjectID int64
 }
 
+// TasklistOrderBy identifies the attributes a tasklist list can be ordered by.
+type TasklistOrderBy string
+
+// Supported tasklist order-by values.
+const (
+	TasklistOrderByDisplayOrder TasklistOrderBy = "displayorder"
+	TasklistOrderByName         TasklistOrderBy = "name"
+	TasklistOrderByStatus       TasklistOrderBy = "status"
+	TasklistOrderByCreatedAt    TasklistOrderBy = "createdat"
+	TasklistOrderByUpdatedAt    TasklistOrderBy = "updatedat"
+	TasklistOrderByProject      TasklistOrderBy = "project"
+	TasklistOrderByID           TasklistOrderBy = "id"
+)
+
 // TasklistListRequestFilters contains the filters for loading multiple
 // tasklists.
 type TasklistListRequestFilters struct {
 	// SearchTerm is an optional search term to filter tasklists by name.
 	SearchTerm string
+
+	// OrderBy is the field to sort the results by. Use the TasklistOrderBy
+	// constants. The endpoint defaults to displayorder.
+	OrderBy TasklistOrderBy
+
+	// OrderMode is the direction to sort the results in. See twapi.OrderMode for
+	// the supported values. The endpoint defaults to ascending.
+	OrderMode twapi.OrderMode
 
 	// Page is the page number to retrieve. Defaults to 1.
 	Page int64
@@ -434,6 +456,12 @@ func (t TasklistListRequestFilters) apply(req *http.Request) {
 	query := req.URL.Query()
 	if t.SearchTerm != "" {
 		query.Set("searchTerm", t.SearchTerm)
+	}
+	if t.OrderBy != "" {
+		query.Set("orderBy", string(t.OrderBy))
+	}
+	if t.OrderMode != "" {
+		query.Set("orderMode", string(t.OrderMode))
 	}
 	if t.Page > 0 {
 		query.Set("page", strconv.FormatInt(t.Page, 10))

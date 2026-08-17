@@ -188,6 +188,19 @@ type TimeReportListRequestPath struct {
 	Type TimeReportType
 }
 
+// TimeReportOrderBy identifies the attributes a time report can be ordered by.
+type TimeReportOrderBy string
+
+// Supported time report order-by values.
+const (
+	TimeReportOrderByName            TimeReportOrderBy = "name"
+	TimeReportOrderByLoggedTime      TimeReportOrderBy = "loggedtime"
+	TimeReportOrderByBillableTime    TimeReportOrderBy = "billabletime"
+	TimeReportOrderByNonBillableTime TimeReportOrderBy = "nonbillabletime"
+	TimeReportOrderByBilledTime      TimeReportOrderBy = "billedtime"
+	TimeReportOrderByBudget          TimeReportOrderBy = "budget"
+)
+
 // TimeReportListRequestFilters contains the filters for loading a time report.
 type TimeReportListRequestFilters struct {
 	// StartDate is the inclusive start of the report window. This is a required
@@ -197,6 +210,14 @@ type TimeReportListRequestFilters struct {
 	// EndDate is the inclusive end of the report window. This is a required
 	// field.
 	EndDate twapi.Date
+
+	// OrderBy is the field to sort the results by. Use the TimeReportOrderBy
+	// constants. The endpoint defaults to name.
+	OrderBy TimeReportOrderBy
+
+	// OrderMode is the direction to sort the results in. See twapi.OrderMode for
+	// the supported values. The endpoint defaults to ascending.
+	OrderMode twapi.OrderMode
 
 	// ProjectIDs filters the report to the given projects.
 	ProjectIDs []int64
@@ -253,6 +274,12 @@ type TimeReportListRequestFilters struct {
 
 func (f TimeReportListRequestFilters) apply(req *http.Request) {
 	query := req.URL.Query()
+	if f.OrderBy != "" {
+		query.Set("orderBy", string(f.OrderBy))
+	}
+	if f.OrderMode != "" {
+		query.Set("orderMode", string(f.OrderMode))
+	}
 	if !f.StartDate.IsZero() {
 		query.Set("startDate", f.StartDate.String())
 	}

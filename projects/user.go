@@ -534,11 +534,30 @@ type UserListRequestPath struct {
 	ProjectID int64
 }
 
+// UserOrderBy identifies the attributes a user list can be ordered by.
+type UserOrderBy string
+
+// Supported user order-by values.
+const (
+	UserOrderByName                UserOrderBy = "name"
+	UserOrderByNameCaseInsensitive UserOrderBy = "namecaseinsensitive"
+	UserOrderByCompany             UserOrderBy = "company"
+	UserOrderByID                  UserOrderBy = "id"
+)
+
 // UserListRequestFilters contains the filters for loading multiple
 // users.
 type UserListRequestFilters struct {
 	// SearchTerm is an optional search term to filter users by name or e-mail.
 	SearchTerm string
+
+	// OrderBy is the field to sort the results by. Use the UserOrderBy
+	// constants. The endpoint defaults to name.
+	OrderBy UserOrderBy
+
+	// OrderMode is the direction to sort the results in. See twapi.OrderMode for
+	// the supported values. The endpoint defaults to ascending.
+	OrderMode twapi.OrderMode
 
 	// Type is an optional filter to load only users of a specific type. Use
 	// the UserType constants.
@@ -570,6 +589,12 @@ func (u UserListRequestFilters) apply(req *http.Request) {
 	}
 	if u.Type != "" {
 		query.Set("userType", string(u.Type))
+	}
+	if u.OrderBy != "" {
+		query.Set("orderBy", string(u.OrderBy))
+	}
+	if u.OrderMode != "" {
+		query.Set("orderMode", string(u.OrderMode))
 	}
 	if u.Page > 0 {
 		query.Set("page", strconv.FormatInt(u.Page, 10))

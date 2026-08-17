@@ -180,6 +180,18 @@ type ActivityListRequestPath struct {
 	ProjectID int64
 }
 
+// ActivityOrderBy identifies the attributes an activity list can be ordered by.
+type ActivityOrderBy string
+
+// Supported activity order-by values.
+const (
+	ActivityOrderByDate          ActivityOrderBy = "date"
+	ActivityOrderByProjectID     ActivityOrderBy = "projectId"
+	ActivityOrderByUserID        ActivityOrderBy = "userId"
+	ActivityOrderByActivityTypes ActivityOrderBy = "activityTypes"
+	ActivityOrderByID            ActivityOrderBy = "id"
+)
+
 // ActivityListRequestFilters contains the filters for loading multiple
 // activities.
 type ActivityListRequestFilters struct {
@@ -191,6 +203,14 @@ type ActivityListRequestFilters struct {
 
 	// LogItemTypes is the list of log item types to filter activities.
 	LogItemTypes []LogItemType
+
+	// OrderBy is the field to sort the results by. Use the ActivityOrderBy
+	// constants. The endpoint defaults to date.
+	OrderBy ActivityOrderBy
+
+	// OrderMode is the direction to sort the results in. See twapi.OrderMode for
+	// the supported values.
+	OrderMode twapi.OrderMode
 
 	// Page is the page number to retrieve. Defaults to 1.
 	Page int64
@@ -225,6 +245,12 @@ func (a ActivityListRequestFilters) apply(req *http.Request) {
 			logItemTypes[i] = string(logType)
 		}
 		query.Set("activityTypes", strings.Join(logItemTypes, ","))
+	}
+	if a.OrderBy != "" {
+		query.Set("orderBy", string(a.OrderBy))
+	}
+	if a.OrderMode != "" {
+		query.Set("orderMode", string(a.OrderMode))
 	}
 	if a.Page > 0 {
 		query.Set("page", strconv.FormatInt(a.Page, 10))

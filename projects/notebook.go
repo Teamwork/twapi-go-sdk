@@ -440,9 +440,30 @@ func NotebookGet(
 	return twapi.Execute[NotebookGetRequest, *NotebookGetResponse](ctx, engine, req)
 }
 
+// NotebookOrderBy identifies the attributes a notebook list can be ordered by.
+type NotebookOrderBy string
+
+// Supported notebook order-by values.
+const (
+	NotebookOrderByName        NotebookOrderBy = "name"
+	NotebookOrderByProject     NotebookOrderBy = "project"
+	NotebookOrderByDateCreated NotebookOrderBy = "dateCreated"
+	NotebookOrderByDateUpdated NotebookOrderBy = "dateUpdated"
+	NotebookOrderByCategory    NotebookOrderBy = "category"
+	NotebookOrderByID          NotebookOrderBy = "id"
+)
+
 // NotebookListRequestFilters contains the filters for loading multiple
 // notebooks.
 type NotebookListRequestFilters struct {
+	// OrderBy is the field to sort the results by. Use the NotebookOrderBy
+	// constants. The endpoint defaults to dateUpdated.
+	OrderBy NotebookOrderBy
+
+	// OrderMode is the direction to sort the results in. See twapi.OrderMode for
+	// the supported values. The endpoint defaults to ascending.
+	OrderMode twapi.OrderMode
+
 	// ProjectIDs is an optional list of project IDs to filter notebooks by
 	// projects. If provided, only notebooks belonging to the specified projects
 	// will be returned.
@@ -485,6 +506,12 @@ type NotebookListRequestFilters struct {
 
 func (m NotebookListRequestFilters) apply(req *http.Request) {
 	query := req.URL.Query()
+	if m.OrderBy != "" {
+		query.Set("orderBy", string(m.OrderBy))
+	}
+	if m.OrderMode != "" {
+		query.Set("orderMode", string(m.OrderMode))
+	}
 	if len(m.ProjectIDs) > 0 {
 		projectIDs := make([]string, len(m.ProjectIDs))
 		for i, id := range m.ProjectIDs {

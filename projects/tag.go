@@ -368,11 +368,33 @@ func TagGet(
 	return twapi.Execute[TagGetRequest, *TagGetResponse](ctx, engine, req)
 }
 
+// TagOrderBy identifies the attributes a tag list can be ordered by.
+type TagOrderBy string
+
+// Supported tag order-by values.
+const (
+	TagOrderByName                TagOrderBy = "name"
+	TagOrderByCount               TagOrderBy = "count"
+	TagOrderByProject             TagOrderBy = "project"
+	TagOrderByColor               TagOrderBy = "color"
+	TagOrderByDateLastUpdated     TagOrderBy = "datelastupdated"
+	TagOrderByProjectDateLastUsed TagOrderBy = "projectdatelastused"
+	TagOrderByID                  TagOrderBy = "id"
+)
+
 // TagListRequestFilters contains the filters for loading multiple
 // tags.
 type TagListRequestFilters struct {
 	// SearchTerm is an optional search term to filter tags by name.
 	SearchTerm string
+
+	// OrderBy is the field to sort the results by. Use the TagOrderBy constants.
+	// The endpoint defaults to name.
+	OrderBy TagOrderBy
+
+	// OrderMode is the direction to sort the results in. See twapi.OrderMode for
+	// the supported values. The endpoint defaults to ascending.
+	OrderMode twapi.OrderMode
 
 	// ItemType is the type of item the tag is associated with. Use the
 	// TagItemType constants.
@@ -415,6 +437,12 @@ func (t TagListRequestFilters) apply(req *http.Request) {
 			projectIDs[i] = strconv.FormatInt(id, 10)
 		}
 		query.Set("projectIds", strings.Join(projectIDs, ","))
+	}
+	if t.OrderBy != "" {
+		query.Set("orderBy", string(t.OrderBy))
+	}
+	if t.OrderMode != "" {
+		query.Set("orderMode", string(t.OrderMode))
 	}
 	if t.Page > 0 {
 		query.Set("page", strconv.FormatInt(t.Page, 10))

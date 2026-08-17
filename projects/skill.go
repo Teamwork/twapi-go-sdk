@@ -377,6 +377,13 @@ type SkillListRequestFilters struct {
 	// users' names.
 	SearchTerm string
 
+	// OrderMode is the direction to sort the results in. See twapi.OrderMode for
+	// the supported values. The endpoint defaults to ascending.
+	//
+	// The endpoint documents no orderBy parameter, so the attribute the results
+	// are ordered by cannot be chosen.
+	OrderMode twapi.OrderMode
+
 	// Page is the page number to retrieve. Defaults to 1.
 	Page int64
 
@@ -404,6 +411,9 @@ func (s SkillListRequestFilters) apply(req *http.Request) {
 	query := req.URL.Query()
 	if s.SearchTerm != "" {
 		query.Set("searchTerm", s.SearchTerm)
+	}
+	if s.OrderMode != "" {
+		query.Set("orderMode", string(s.OrderMode))
 	}
 	if s.Page > 0 {
 		query.Set("page", strconv.FormatInt(s.Page, 10))

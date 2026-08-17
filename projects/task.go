@@ -863,6 +863,47 @@ type TaskListRequestPath struct {
 	TasklistID int64
 }
 
+// TaskOrderBy identifies the attributes a task list can be ordered by.
+type TaskOrderBy string
+
+// Supported task order-by values.
+const (
+	TaskOrderByID                   TaskOrderBy = "id"
+	TaskOrderByStartDate            TaskOrderBy = "startdate"
+	TaskOrderByCreatedAt            TaskOrderBy = "createdat"
+	TaskOrderByPriority             TaskOrderBy = "priority"
+	TaskOrderByProject              TaskOrderBy = "project"
+	TaskOrderByFlattenedTasklist    TaskOrderBy = "flattenedtasklist"
+	TaskOrderByCompany              TaskOrderBy = "company"
+	TaskOrderByManual               TaskOrderBy = "manual"
+	TaskOrderByActive               TaskOrderBy = "active"
+	TaskOrderByCompletedAt          TaskOrderBy = "completedat"
+	TaskOrderByDueStartDate         TaskOrderBy = "duestartdate"
+	TaskOrderByAllDates             TaskOrderBy = "alldates"
+	TaskOrderByTasklistName         TaskOrderBy = "tasklistname"
+	TaskOrderByTasklistDisplayOrder TaskOrderBy = "tasklistdisplayorder"
+	TaskOrderByTasklistID           TaskOrderBy = "tasklistid"
+	TaskOrderByDueDate              TaskOrderBy = "duedate"
+	TaskOrderByUpdatedAt            TaskOrderBy = "updatedat"
+	TaskOrderByTaskName             TaskOrderBy = "taskname"
+	TaskOrderByCreatedBy            TaskOrderBy = "createdby"
+	TaskOrderByCompletedBy          TaskOrderBy = "completedby"
+	TaskOrderByAssignedTo           TaskOrderBy = "assignedto"
+	TaskOrderByTaskStatus           TaskOrderBy = "taskstatus"
+	TaskOrderByTaskDueDate          TaskOrderBy = "taskduedate"
+	TaskOrderByCustomField          TaskOrderBy = "customfield"
+	TaskOrderByEstimatedTime        TaskOrderBy = "estimatedtime"
+	TaskOrderByBoardColumn          TaskOrderBy = "boardcolumn"
+	TaskOrderByTaskGroupID          TaskOrderBy = "taskgroupid"
+	TaskOrderByTaskGroupName        TaskOrderBy = "taskgroupname"
+	TaskOrderByTaskGroup            TaskOrderBy = "taskgroup"
+	TaskOrderByDisplayOrder         TaskOrderBy = "displayorder"
+	TaskOrderByProjectManual        TaskOrderBy = "projectmanual"
+	TaskOrderByStageDisplayOrder    TaskOrderBy = "stagedisplayorder"
+	TaskOrderByStage                TaskOrderBy = "stage"
+	TaskOrderByParentTask           TaskOrderBy = "parenttask"
+)
+
 // TaskListRequestFilters contains the filters for loading multiple tasks.
 type TaskListRequestFilters struct {
 	TaskRequestFilters
@@ -933,6 +974,18 @@ type TaskListRequestFilters struct {
 	// unassigned, have no due date, or are missing estimated time.
 	OnlyUnplanned *bool
 
+	// OrderBy is the field to sort the results by. Use the TaskOrderBy
+	// constants. The endpoint defaults to duedate.
+	OrderBy TaskOrderBy
+
+	// OrderMode is the direction to sort the results in. See twapi.OrderMode for
+	// the supported values. The endpoint defaults to ascending.
+	OrderMode twapi.OrderMode
+
+	// OrderByCustomFieldID selects the custom field to sort by. It is only used
+	// when OrderBy is TaskOrderByCustomField.
+	OrderByCustomFieldID int64
+
 	// Page is the page number to retrieve. Defaults to 1.
 	Page int64
 
@@ -973,6 +1026,9 @@ func (t TaskListRequestFilters) apply(req *http.Request) {
 	querySetBool(query, "matchAllTags", t.MatchAllTags)
 	querySetBool(query, "onlyUnassignedTasks", t.OnlyUnassigned)
 	querySetBool(query, "onlyUnplanned", t.OnlyUnplanned)
+	querySetString(query, "orderBy", t.OrderBy)
+	querySetString(query, "orderMode", t.OrderMode)
+	querySetInt64(query, "orderByCustomFieldId", t.OrderByCustomFieldID)
 	querySetInt64(query, "page", t.Page)
 	querySetInt64(query, "pageSize", t.PageSize)
 	t.CountMode.Apply(query)

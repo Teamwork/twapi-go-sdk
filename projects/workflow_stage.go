@@ -402,9 +402,28 @@ type WorkflowStageListRequestPath struct {
 	WorkflowID int64
 }
 
+// WorkflowStageOrderBy identifies the attributes a workflow stage list can be
+// ordered by.
+type WorkflowStageOrderBy string
+
+// Supported workflow stage order-by values.
+const (
+	WorkflowStageOrderByID           WorkflowStageOrderBy = "id"
+	WorkflowStageOrderByName         WorkflowStageOrderBy = "name"
+	WorkflowStageOrderByDisplayOrder WorkflowStageOrderBy = "displayorder"
+)
+
 // WorkflowStageListRequestFilters contains the filters for loading multiple
 // workflow stages.
 type WorkflowStageListRequestFilters struct {
+	// OrderBy is the field to sort the results by. Use the WorkflowStageOrderBy
+	// constants. The endpoint defaults to id.
+	OrderBy WorkflowStageOrderBy
+
+	// OrderMode is the direction to sort the results in. See twapi.OrderMode for
+	// the supported values. The endpoint defaults to ascending.
+	OrderMode twapi.OrderMode
+
 	// Page is the page number to retrieve. Defaults to 1.
 	Page int64
 
@@ -426,6 +445,12 @@ type WorkflowStageListRequestFilters struct {
 
 func (w WorkflowStageListRequestFilters) apply(req *http.Request) {
 	query := req.URL.Query()
+	if w.OrderBy != "" {
+		query.Set("orderBy", string(w.OrderBy))
+	}
+	if w.OrderMode != "" {
+		query.Set("orderMode", string(w.OrderMode))
+	}
 	if w.Page > 0 {
 		query.Set("page", strconv.FormatInt(w.Page, 10))
 	}

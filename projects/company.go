@@ -553,6 +553,34 @@ func CompanyGet(
 	return twapi.Execute[CompanyGetRequest, *CompanyGetResponse](ctx, engine, req)
 }
 
+// CompanyOrderBy identifies the attributes a client/company list can be ordered
+// by.
+type CompanyOrderBy string
+
+// Supported client/company order-by values.
+const (
+	CompanyOrderByName            CompanyOrderBy = "name"
+	CompanyOrderByAccounts        CompanyOrderBy = "accounts"
+	CompanyOrderByClients         CompanyOrderBy = "clients"
+	CompanyOrderByCollaborators   CompanyOrderBy = "collaborators"
+	CompanyOrderByContacts        CompanyOrderBy = "contacts"
+	CompanyOrderByProjects        CompanyOrderBy = "projects"
+	CompanyOrderByTasks           CompanyOrderBy = "tasks"
+	CompanyOrderByCountry         CompanyOrderBy = "country"
+	CompanyOrderByHealth          CompanyOrderBy = "health"
+	CompanyOrderByWebsite         CompanyOrderBy = "website"
+	CompanyOrderByEmail           CompanyOrderBy = "email"
+	CompanyOrderByPhone           CompanyOrderBy = "phone"
+	CompanyOrderByFax             CompanyOrderBy = "fax"
+	CompanyOrderByIndustry        CompanyOrderBy = "industry"
+	CompanyOrderByDateAdded       CompanyOrderBy = "dateadded"
+	CompanyOrderByOwnerCompany    CompanyOrderBy = "ownercompany"
+	CompanyOrderByOwnerName       CompanyOrderBy = "ownername"
+	CompanyOrderByTasksCompletion CompanyOrderBy = "taskscompletion"
+	CompanyOrderByCustomField     CompanyOrderBy = "customfield"
+	CompanyOrderByID              CompanyOrderBy = "id"
+)
+
 // CompanyListRequestFilters contains the filters for loading multiple
 // clients/companies.
 type CompanyListRequestFilters struct {
@@ -560,6 +588,18 @@ type CompanyListRequestFilters struct {
 
 	// SearchTerm is an optional search term to filter clients/companies by name.
 	SearchTerm string
+
+	// OrderBy is the field to sort the results by. Use the CompanyOrderBy
+	// constants. The endpoint defaults to ownercompany.
+	OrderBy CompanyOrderBy
+
+	// OrderMode is the direction to sort the results in. See twapi.OrderMode for
+	// the supported values. The endpoint defaults to ascending.
+	OrderMode twapi.OrderMode
+
+	// OrderByCustomFieldID selects the custom field to sort by. It is only used
+	// when OrderBy is CompanyOrderByCustomField.
+	OrderByCustomFieldID int64
 
 	// TagIDs is an optional list of tag IDs to filter companies by tags.
 	TagIDs []int64
@@ -603,6 +643,15 @@ func (c CompanyListRequestFilters) apply(req *http.Request) {
 	}
 	if c.MatchAllTags != nil {
 		query.Set("matchAllProjectTags", strconv.FormatBool(*c.MatchAllTags))
+	}
+	if c.OrderBy != "" {
+		query.Set("orderBy", string(c.OrderBy))
+	}
+	if c.OrderMode != "" {
+		query.Set("orderMode", string(c.OrderMode))
+	}
+	if c.OrderByCustomFieldID > 0 {
+		query.Set("orderByCustomFieldId", strconv.FormatInt(c.OrderByCustomFieldID, 10))
 	}
 	if c.Page > 0 {
 		query.Set("page", strconv.FormatInt(c.Page, 10))
