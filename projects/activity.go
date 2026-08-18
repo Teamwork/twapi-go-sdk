@@ -204,6 +204,13 @@ type ActivityListRequestFilters struct {
 	// LogItemTypes is the list of log item types to filter activities.
 	LogItemTypes []LogItemType
 
+	// ItemIDs filters activities by the identifiers of the items they refer to,
+	// such as task, milestone or message identifiers. Item identifiers are only
+	// unique within an item type, so this is normally combined with
+	// LogItemTypes to avoid matching activities of other types that happen to
+	// share an identifier.
+	ItemIDs []int64
+
 	// OrderBy is the field to sort the results by. Use the ActivityOrderBy
 	// constants. The endpoint defaults to date.
 	OrderBy ActivityOrderBy
@@ -245,6 +252,13 @@ func (a ActivityListRequestFilters) apply(req *http.Request) {
 			logItemTypes[i] = string(logType)
 		}
 		query.Set("activityTypes", strings.Join(logItemTypes, ","))
+	}
+	if len(a.ItemIDs) > 0 {
+		itemIDs := make([]string, len(a.ItemIDs))
+		for i, itemID := range a.ItemIDs {
+			itemIDs[i] = strconv.FormatInt(itemID, 10)
+		}
+		query.Set("itemIds", strings.Join(itemIDs, ","))
 	}
 	if a.OrderBy != "" {
 		query.Set("orderBy", string(a.OrderBy))

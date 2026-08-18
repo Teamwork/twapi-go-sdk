@@ -2,6 +2,7 @@ package projects_test
 
 import (
 	"context"
+	"net/url"
 	"testing"
 	"time"
 
@@ -111,4 +112,48 @@ func TestLogItemType_UnmarshalText(t *testing.T) {
 		var l *projects.LogItemType
 		_ = l.UnmarshalText([]byte("task"))
 	})
+}
+
+func TestActivityListItemIDs(t *testing.T) {
+	tests := []struct {
+		name    string
+		itemIDs []int64
+		want    string
+	}{{
+		name: "unset item ids are not sent",
+	}, {
+		name:    "single item id",
+		itemIDs: []int64{777},
+		want:    "777",
+	}, {
+		name:    "multiple item ids are comma-separated",
+		itemIDs: []int64{777, 12345},
+		want:    "777,12345",
+	}}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := projects.NewActivityListRequest()
+			req.Filters.ItemIDs = tt.itemIDs
+
+			httpReq, err := req.HTTPRequest(context.Background(), "https://test.com")
+			if err != nil {
+				t.Fatalf("unexpected error creating HTTP request: %s", err)
+			}
+			query, err := url.ParseQuery(httpReq.URL.RawQuery)
+			if err != nil {
+				t.Fatalf("failed to parse query string: %s", err)
+			}
+
+			if tt.want == "" {
+				if _, ok := query["itemIds"]; ok {
+					t.Errorf("expected no itemIds parameter, got %q", query.Get("itemIds"))
+				}
+				return
+			}
+			if got := query.Get("itemIds"); got != tt.want {
+				t.Errorf("itemIds = %q, want %q", got, tt.want)
+			}
+		})
+	}
 }
