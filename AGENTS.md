@@ -288,7 +288,7 @@ Rules:
    of the package and maps them in `apply()`, noting the mapping in the field
    docs.
 
-`projects/list_ordering_test.go` holds one table per direction — ordering is
+`projects/main_ordering_test.go` holds one table per direction — ordering is
 applied, and ordering is absent when unset — and every filter that supports
 ordering belongs in both.
 
@@ -628,9 +628,21 @@ Defined in the root `twapi` package:
 
 ### File naming
 
+Tests live in standalone `_test.go` files, and **every test file must be named
+after an existing non-test `.go` file in the same directory**: `a.go` is tested
+by `a_test.go`, and by `a_{suffix}_test.go` when one file is not enough. A
+`{suffix}_test.go` with no `{suffix}.go` beside it is wrong — name it after the
+code under test, not after the scenario.
+
+```
+message.go   → message_test.go, message_example_test.go   ✅
+             → sparse_fields_test.go                       ❌ (no sparse_fields.go)
+```
+
 - Integration tests: `projects/{resource}_test.go` (package `projects_test`)
 - Example tests: `projects/{resource}_example_test.go` (package `projects_test`)
-- Shared setup: `projects/main_test.go`
+- Shared setup: `projects/main_test.go` — the one exception, since Go's `TestMain`
+  and the shared fixtures have no source file of their own.
 
 ### Integration test structure
 
