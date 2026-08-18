@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	twapi "github.com/teamwork/twapi-go-sdk"
@@ -653,6 +652,12 @@ func ProjectClone(
 
 // ProjectRequestSideload contains the possible sideload options when loading
 // projects.
+//
+// Only ProjectRequestSideloadProjectCategories,
+// ProjectRequestSideloadCustomFields and ProjectRequestSideloadCustomFieldValues
+// are decoded into the typed Included struct of the get and list responses. The
+// remaining values are accepted by the endpoint and reach the wire, but their
+// payloads are discarded until the responses grow a slot for them.
 type ProjectRequestSideload string
 
 // List of possible sideload options for ProjectRequestSideload.
@@ -660,6 +665,27 @@ const (
 	ProjectRequestSideloadProjectCategories ProjectRequestSideload = "projectCategories"
 	ProjectRequestSideloadCustomFields      ProjectRequestSideload = "customfields"
 	ProjectRequestSideloadCustomFieldValues ProjectRequestSideload = "customfieldprojects"
+	ProjectRequestSideloadProjectOwners     ProjectRequestSideload = "projectOwners"
+	ProjectRequestSideloadProjectUpdates    ProjectRequestSideload = "projectUpdates"
+	ProjectRequestSideloadCompanies         ProjectRequestSideload = "companies"
+	ProjectRequestSideloadCompanyCountries  ProjectRequestSideload = "companies.countries"
+	ProjectRequestSideloadCompanyIndustries ProjectRequestSideload = "companies.industries"
+	ProjectRequestSideloadCompanyCurrencies ProjectRequestSideload = "companies.currencies"
+	ProjectRequestSideloadPortfolioCards    ProjectRequestSideload = "portfolioCards"
+	ProjectRequestSideloadPortfolioBoards   ProjectRequestSideload = "portfolioBoards"
+	ProjectRequestSideloadPortfolioColumns  ProjectRequestSideload = "portfolioColumns"
+	ProjectRequestSideloadTags              ProjectRequestSideload = "tags"
+	ProjectRequestSideloadProjectBudgets    ProjectRequestSideload = "projectBudgets"
+	ProjectRequestSideloadLatestActivities  ProjectRequestSideload = "activities.latest"
+	ProjectRequestSideloadUsers             ProjectRequestSideload = "users"
+	ProjectRequestSideloadCreatedBy         ProjectRequestSideload = "createdBy"
+	ProjectRequestSideloadUpdatedBy         ProjectRequestSideload = "updatedBy"
+	ProjectRequestSideloadCompletedBy       ProjectRequestSideload = "completedBy"
+	ProjectRequestSideloadDeletedBy         ProjectRequestSideload = "deletedBy"
+	ProjectRequestSideloadArchivedBy        ProjectRequestSideload = "archivedBy"
+	ProjectRequestSideloadEmailDropboxes    ProjectRequestSideload = "projectEmailDropboxes"
+	ProjectRequestSideloadWorkflows         ProjectRequestSideload = "workflows"
+	ProjectRequestSideloadWorkflowStages    ProjectRequestSideload = "workflows.stages"
 )
 
 // ProjectRequestFilters contains the filters for loading projects.
@@ -670,13 +696,7 @@ type ProjectRequestFilters struct {
 
 func (p ProjectRequestFilters) apply(req *http.Request) {
 	query := req.URL.Query()
-	if len(p.Include) > 0 {
-		includes := make([]string, len(p.Include))
-		for i, include := range p.Include {
-			includes[i] = string(include)
-		}
-		query.Set("include", strings.Join(includes, ","))
-	}
+	querySetStrings(query, "include", p.Include)
 	req.URL.RawQuery = query.Encode()
 }
 
@@ -811,13 +831,314 @@ const (
 	ProjectOrderByID                  ProjectOrderBy = "id"
 )
 
+// ProjectType identifies the kinds of project a list can be restricted to.
+//
+// It covers the values the projectType filter accepts, which is not the same set
+// a project's own type can report: a response may also carry "holder-project" or
+// "global-messages".
+type ProjectType string
+
+// Supported project type filters.
+const (
+	// ProjectTypeAll returns every type of project, templates included.
+	ProjectTypeAll ProjectType = "all"
+
+	// ProjectTypeNormal returns ordinary projects.
+	ProjectTypeNormal ProjectType = "normal"
+
+	// ProjectTypeTasklistsTemplate returns tasklist templates.
+	ProjectTypeTasklistsTemplate ProjectType = "tasklists-template"
+
+	// ProjectTypeProjectsTemplate returns project templates.
+	ProjectTypeProjectsTemplate ProjectType = "projects-template"
+
+	// ProjectTypePersonal returns the caller's personal project.
+	ProjectTypePersonal ProjectType = "personal"
+
+	// ProjectTypeTentative returns tentative projects.
+	ProjectTypeTentative ProjectType = "tentative"
+)
+
+// ProjectListStatus identifies the states a project list can be filtered by.
+//
+// These are not the values of ProjectStatus, which is what a project reports
+// about itself. This set describes the progress buckets the list endpoint
+// filters on, so "current", "late" and "upcoming" appear here and "archived"
+// does not — archived projects are selected with
+// ProjectListRequestFilters.IncludeArchivedProjects or OnlyArchivedProjects
+// instead.
+type ProjectListStatus string
+
+// Supported project list status filters.
+const (
+	ProjectListStatusActive    ProjectListStatus = "active"
+	ProjectListStatusCurrent   ProjectListStatus = "current"
+	ProjectListStatusLate      ProjectListStatus = "late"
+	ProjectListStatusUpcoming  ProjectListStatus = "upcoming"
+	ProjectListStatusCompleted ProjectListStatus = "completed"
+	ProjectListStatusDeleted   ProjectListStatus = "deleted"
+)
+
+// ProjectHealth identifies the health ratings a project list can be filtered by.
+// The API reports and filters health as a number rather than a name.
+type ProjectHealth int64
+
+// Supported project health filters.
+const (
+	// ProjectHealthNotSet matches projects whose health has never been reported.
+	ProjectHealthNotSet ProjectHealth = 0
+
+	// ProjectHealthBad matches projects reported as being in bad health.
+	ProjectHealthBad ProjectHealth = 1
+
+	// ProjectHealthOK matches projects reported as being in acceptable health.
+	ProjectHealthOK ProjectHealth = 2
+
+	// ProjectHealthGood matches projects reported as being in good health.
+	ProjectHealthGood ProjectHealth = 3
+)
+
+// ProjectFeature identifies the features a project list can be filtered by. A
+// project matches when the feature is enabled for it.
+type ProjectFeature string
+
+// Supported project feature filters.
+const (
+	ProjectFeatureList       ProjectFeature = "list"
+	ProjectFeatureBoard      ProjectFeature = "board"
+	ProjectFeatureGantt      ProjectFeature = "gantt"
+	ProjectFeatureTable      ProjectFeature = "table"
+	ProjectFeatureDashboard  ProjectFeature = "dashboard"
+	ProjectFeatureMilestones ProjectFeature = "milestones"
+	ProjectFeatureMessages   ProjectFeature = "messages"
+	ProjectFeatureFiles      ProjectFeature = "files"
+	ProjectFeatureTime       ProjectFeature = "time"
+	ProjectFeatureNotebooks  ProjectFeature = "notebooks"
+	ProjectFeatureRisks      ProjectFeature = "risks"
+	ProjectFeatureLinks      ProjectFeature = "links"
+	ProjectFeatureBilling    ProjectFeature = "billing"
+	ProjectFeatureComments   ProjectFeature = "comments"
+	ProjectFeaturePeople     ProjectFeature = "people"
+	ProjectFeatureSettings   ProjectFeature = "settings"
+)
+
+// ProjectTimeMode identifies which time figures the profitability calculation is
+// based on. It is only read when
+// ProjectListRequestFilters.IncludeProjectProfitability is set.
+type ProjectTimeMode string
+
+// Supported project profitability time modes.
+const (
+	// ProjectTimeModeTimelogs bases profitability on the time actually logged.
+	ProjectTimeModeTimelogs ProjectTimeMode = "timelogs"
+
+	// ProjectTimeModeEstimated bases profitability on estimated time.
+	ProjectTimeModeEstimated ProjectTimeMode = "estimated"
+)
+
 // ProjectListRequestFilters contains the filters for loading multiple projects.
+//
+// The endpoint also documents parameters that turn the response into a
+// downloadable report (reportType, reportFormat, reportTimezone,
+// isReportDownload and the selectedColumns it exports). They are deliberately
+// absent: ProjectListResponse decodes JSON, so a request that asked for a CSV or
+// PDF body could not be handled. The undocumented `filter` object is absent for
+// the same reason of not being modellable.
+//
+// https://apidocs.teamwork.com/docs/teamwork/v3/projects/get-projects-api-v3-projects-json
 type ProjectListRequestFilters struct {
 	ProjectRequestFilters
+
+	// SearchTerm is an optional search term to filter projects by name or
+	// description.
+	SearchTerm string
+
+	// SearchByLetter restricts a single-character SearchTerm to projects whose
+	// name begins with that character. It is ignored when SearchTerm is longer
+	// than one character.
+	SearchByLetter *bool
+
+	// SearchCompanies extends SearchTerm to the name of the company owning the
+	// project.
+	SearchCompanies *bool
+
+	// ProjectIDs is an optional list of project IDs to restrict the results to.
+	// Providing it normally bypasses the other filters; set AlwaysIncludeFiltering
+	// to keep them applied.
+	ProjectIDs []int64
+
+	// ExcludeProjectIDs is an optional list of project IDs to leave out of the
+	// results.
+	ExcludeProjectIDs []int64
+
+	// AlwaysIncludeFiltering keeps the remaining filters in force when ProjectIDs
+	// is provided.
+	AlwaysIncludeFiltering *bool
+
+	// ProjectType restricts the results to one kind of project. Use the
+	// ProjectType constants.
+	ProjectType ProjectType
+
+	// ProjectStatuses is an optional list of progress states to filter projects
+	// by. Use the ProjectListStatus constants.
+	ProjectStatuses []ProjectListStatus
+
+	// IncludeCompletedStatus includes completed projects when ProjectStatuses
+	// selects ProjectListStatusCurrent or ProjectListStatusLate, which otherwise
+	// exclude them.
+	IncludeCompletedStatus *bool
+
+	// ProjectHealths is an optional list of health ratings to filter projects by.
+	// Use the ProjectHealth constants.
+	ProjectHealths []ProjectHealth
 
 	// ProjectCategoryIDs is an optional list of project category IDs to filter
 	// projects by categories.
 	ProjectCategoryIDs []int64
+
+	// IncludeSubCategories extends ProjectCategoryIDs to the categories nested
+	// under the ones given.
+	IncludeSubCategories *bool
+
+	// ProjectCompanyIDs is an optional list of company IDs to filter projects by
+	// the company that owns them.
+	ProjectCompanyIDs []int64
+
+	// ProjectOwnerIDs is an optional list of user IDs to filter projects by their
+	// owner.
+	ProjectOwnerIDs []int64
+
+	// UserID filters projects by a user belonging to them.
+	UserID int64
+
+	// UsersWithExplicitMembershipIDs restricts the results to projects that all
+	// of the given users are explicit members of.
+	UsersWithExplicitMembershipIDs []int64
+
+	// TeamIDs is an optional list of team IDs to filter projects by, matching the
+	// projects containing users of those teams.
+	TeamIDs []int64
+
+	// FeaturesEnabled is an optional list of features to filter projects by,
+	// matching only the projects where every listed feature is enabled. Use the
+	// ProjectFeature constants.
+	FeaturesEnabled []ProjectFeature
+
+	// TagIDs is an optional list of tag IDs to filter projects by tags.
+	TagIDs []int64
+
+	// MatchAllTags is an optional flag to indicate if all tags must match. If
+	// set to true, only projects matching all specified tags will be returned.
+	MatchAllTags *bool
+
+	// ExcludeTagIDs is an optional list of tag IDs whose projects are left out of
+	// the results.
+	ExcludeTagIDs []int64
+
+	// MatchAllExcludedTags requires a project to carry every tag of
+	// ExcludeTagIDs before it is left out, rather than any one of them.
+	MatchAllExcludedTags *bool
+
+	// UpdatedAfter is an optional filter to retrieve projects updated after a
+	// specific date and time. It is sent in RFC3339 format.
+	UpdatedAfter *time.Time
+
+	// NotCompletedBefore is an optional filter to retrieve projects that were
+	// still open on the given date.
+	NotCompletedBefore *twapi.Date
+
+	// MinLastActivityDate is an optional filter to retrieve projects whose last
+	// activity is on or after the given date.
+	MinLastActivityDate *twapi.Date
+
+	// MaxLastActivityDate is an optional filter to retrieve projects whose last
+	// activity is on or before the given date.
+	MaxLastActivityDate *twapi.Date
+
+	// MinBudgetCapacityUsedPercent is an optional filter to retrieve projects
+	// that have used at least the given percentage of their budget.
+	MinBudgetCapacityUsedPercent *int64
+
+	// MaxBudgetCapacityUsedPercent is an optional filter to retrieve projects
+	// that have used at most the given percentage of their budget. Zero is a
+	// meaningful value, selecting the projects that have used none of it.
+	MaxBudgetCapacityUsedPercent *int64
+
+	// OnlyStarredProjects restricts the results to the projects the calling user
+	// has starred.
+	OnlyStarredProjects *bool
+
+	// OnlyProjectsWithExplicitMembership restricts the results to the projects
+	// the calling user is an explicit member of. Defaults to false.
+	OnlyProjectsWithExplicitMembership *bool
+
+	// OnlyProjectsWithAdminAccess restricts the results to the projects the
+	// calling user administers. Defaults to false.
+	OnlyProjectsWithAdminAccess *bool
+
+	// OnlyProjectsThatCanLogTime restricts the results to the projects the
+	// calling user may log time against. Defaults to false.
+	OnlyProjectsThatCanLogTime *bool
+
+	// OnlyProjectsThatCanAddTasks restricts the results to the projects the
+	// calling user may add tasks to. Defaults to false.
+	OnlyProjectsThatCanAddTasks *bool
+
+	// HideObservedProjects leaves out the projects where the calling user is only
+	// an observer. Defaults to false.
+	HideObservedProjects *bool
+
+	// IncludeArchivedProjects returns archived projects alongside the active
+	// ones. Defaults to false.
+	IncludeArchivedProjects *bool
+
+	// OnlyArchivedProjects restricts the results to archived projects. Defaults
+	// to false.
+	OnlyArchivedProjects *bool
+
+	// IncludeTentativeProjects returns tentative projects alongside the normal
+	// ones.
+	IncludeTentativeProjects *bool
+
+	// IncludeCustomFields adds the projects' custom field values to the response.
+	// Defaults to false.
+	IncludeCustomFields *bool
+
+	// IncludeCustomFieldIDs narrows IncludeCustomFields to the given custom
+	// fields.
+	IncludeCustomFieldIDs []int64
+
+	// UseFormulaFields evaluates formula custom fields instead of returning them
+	// unresolved.
+	UseFormulaFields *bool
+
+	// IncludeCounts adds the projects' related counts to the response.
+	IncludeCounts *bool
+
+	// IncludeStats adds per-project counts for tasks, columns, billing events and
+	// milestones to the response.
+	IncludeStats *bool
+
+	// IncludeProjectDates adds the earliest start and latest end date of each
+	// project to the response.
+	IncludeProjectDates *bool
+
+	// IncludeProjectUserInfo adds the data that depends on the calling user, such
+	// as whether the project is starred. Defaults to false.
+	IncludeProjectUserInfo *bool
+
+	// IncludeProjectProfitability adds each project's profitability to the
+	// response. TimeMode selects which time figures it is based on.
+	IncludeProjectProfitability *bool
+
+	// TimeMode selects the time figures the profitability calculation uses. Use
+	// the ProjectTimeMode constants. It is only read when
+	// IncludeProjectProfitability is set.
+	TimeMode ProjectTimeMode
+
+	// IncludeTabSystemStatus adds the status of each project's tabs to the
+	// response.
+	IncludeTabSystemStatus *bool
 
 	// OrderBy is the field to sort the results by. Use the ProjectOrderBy
 	// constants. The endpoint defaults to name.
@@ -831,17 +1152,6 @@ type ProjectListRequestFilters struct {
 	// when OrderBy is ProjectOrderByCustomField.
 	OrderByCustomFieldID int64
 
-	// SearchTerm is an optional search term to filter projects by name or
-	// description.
-	SearchTerm string
-
-	// TagIDs is an optional list of tag IDs to filter projects by tags.
-	TagIDs []int64
-
-	// MatchAllTags is an optional flag to indicate if all tags must match. If
-	// set to true, only projects matching all specified tags will be returned.
-	MatchAllTags *bool
-
 	// Page is the page number to retrieve. Defaults to 1.
 	Page int64
 
@@ -850,7 +1160,9 @@ type ProjectListRequestFilters struct {
 
 	// CountMode selects whether the API computes the exact number of projects
 	// matching the filters, reported in Meta.Page.Count. Defaults to
-	// twapi.ListCountModeDefault, which leaves the decision to the API.
+	// twapi.ListCountModeDefault, which leaves the decision to the API. An
+	// unscoped exact count over every project in the installation is the
+	// expensive one to ask for.
 	CountMode twapi.ListCountMode
 
 	// Fields restricts the attributes returned for the project and each of its
@@ -866,41 +1178,73 @@ func (p ProjectListRequestFilters) apply(req *http.Request) {
 	p.ProjectRequestFilters.apply(req)
 
 	query := req.URL.Query()
-	if len(p.ProjectCategoryIDs) > 0 {
-		categoryIDs := make([]string, len(p.ProjectCategoryIDs))
-		for i, id := range p.ProjectCategoryIDs {
-			categoryIDs[i] = strconv.FormatInt(id, 10)
-		}
-		query.Set("projectCategoryIds", strings.Join(categoryIDs, ","))
-	}
-	if p.SearchTerm != "" {
-		query.Set("searchTerm", p.SearchTerm)
-	}
-	if len(p.TagIDs) > 0 {
-		tagIDs := make([]string, len(p.TagIDs))
-		for i, id := range p.TagIDs {
-			tagIDs[i] = strconv.FormatInt(id, 10)
-		}
-		query.Set("projectTagIds", strings.Join(tagIDs, ","))
-	}
-	if p.MatchAllTags != nil {
-		query.Set("matchAllProjectTags", strconv.FormatBool(*p.MatchAllTags))
-	}
-	if p.OrderBy != "" {
-		query.Set("orderBy", string(p.OrderBy))
-	}
-	if p.OrderMode != "" {
-		query.Set("orderMode", string(p.OrderMode))
-	}
-	if p.OrderByCustomFieldID > 0 {
-		query.Set("orderByCustomFieldId", strconv.FormatInt(p.OrderByCustomFieldID, 10))
-	}
-	if p.Page > 0 {
-		query.Set("page", strconv.FormatInt(p.Page, 10))
-	}
-	if p.PageSize > 0 {
-		query.Set("pageSize", strconv.FormatInt(p.PageSize, 10))
-	}
+
+	querySetString(query, "searchTerm", p.SearchTerm)
+	querySetBool(query, "searchByLetter", p.SearchByLetter)
+	querySetBool(query, "searchCompanies", p.SearchCompanies)
+
+	querySetInt64s(query, "projectIds", p.ProjectIDs)
+	querySetInt64s(query, "excludeProjectIds", p.ExcludeProjectIDs)
+	querySetBool(query, "alwaysIncludeFiltering", p.AlwaysIncludeFiltering)
+
+	querySetString(query, "projectType", p.ProjectType)
+	querySetStrings(query, "projectStatuses", p.ProjectStatuses)
+	querySetBool(query, "includeCompletedStatus", p.IncludeCompletedStatus)
+	querySetInt64s(query, "projectHealths", p.ProjectHealths)
+
+	querySetInt64s(query, "projectCategoryIds", p.ProjectCategoryIDs)
+	querySetBool(query, "includeSubCategories", p.IncludeSubCategories)
+	querySetInt64s(query, "projectCompanyIds", p.ProjectCompanyIDs)
+	querySetInt64s(query, "projectOwnerIds", p.ProjectOwnerIDs)
+
+	querySetInt64(query, "userId", p.UserID)
+	querySetInt64s(query, "usersWithExplicitMembershipIds", p.UsersWithExplicitMembershipIDs)
+	querySetInt64s(query, "teamIds", p.TeamIDs)
+	querySetStrings(query, "featuresEnabled", p.FeaturesEnabled)
+
+	querySetInt64s(query, "projectTagIds", p.TagIDs)
+	querySetBool(query, "matchAllProjectTags", p.MatchAllTags)
+	querySetInt64s(query, "excludeTagIds", p.ExcludeTagIDs)
+	querySetBool(query, "matchAllExcludedTags", p.MatchAllExcludedTags)
+
+	querySetTimestamp(query, "updatedAfter", p.UpdatedAfter)
+	querySetDate(query, "notCompletedBefore", p.NotCompletedBefore)
+	querySetDate(query, "minLastActivityDate", p.MinLastActivityDate)
+	querySetDate(query, "maxLastActivityDate", p.MaxLastActivityDate)
+
+	querySetInt64Ptr(query, "minBudgetCapacityUsedPercent", p.MinBudgetCapacityUsedPercent)
+	querySetInt64Ptr(query, "maxBudgetCapacityUsedPercent", p.MaxBudgetCapacityUsedPercent)
+
+	querySetBool(query, "onlyStarredProjects", p.OnlyStarredProjects)
+	querySetBool(query, "onlyProjectsWithExplicitMembership", p.OnlyProjectsWithExplicitMembership)
+	querySetBool(query, "onlyProjectsWithAdminAccess", p.OnlyProjectsWithAdminAccess)
+	querySetBool(query, "onlyProjectsThatCanLogTime", p.OnlyProjectsThatCanLogTime)
+	querySetBool(query, "onlyProjectsThatCanAddTasks", p.OnlyProjectsThatCanAddTasks)
+	querySetBool(query, "hideObservedProjects", p.HideObservedProjects)
+
+	querySetBool(query, "includeArchivedProjects", p.IncludeArchivedProjects)
+	querySetBool(query, "onlyArchivedProjects", p.OnlyArchivedProjects)
+	querySetBool(query, "includeTentativeProjects", p.IncludeTentativeProjects)
+
+	querySetBool(query, "includeCustomFields", p.IncludeCustomFields)
+	querySetInt64s(query, "includeCustomFieldIds", p.IncludeCustomFieldIDs)
+	querySetBool(query, "useFormulaFields", p.UseFormulaFields)
+
+	querySetBool(query, "includeCounts", p.IncludeCounts)
+	querySetBool(query, "includeStats", p.IncludeStats)
+	querySetBool(query, "includeProjectDates", p.IncludeProjectDates)
+	querySetBool(query, "includeProjectUserInfo", p.IncludeProjectUserInfo)
+	querySetBool(query, "includeProjectProfitability", p.IncludeProjectProfitability)
+	querySetString(query, "timeMode", p.TimeMode)
+	querySetBool(query, "includeTabSystemStatus", p.IncludeTabSystemStatus)
+
+	querySetString(query, "orderBy", p.OrderBy)
+	querySetString(query, "orderMode", p.OrderMode)
+	querySetInt64(query, "orderByCustomFieldId", p.OrderByCustomFieldID)
+
+	querySetInt64(query, "page", p.Page)
+	querySetInt64(query, "pageSize", p.PageSize)
+
 	p.Fields.apply(query)
 	p.CountMode.Apply(query)
 	req.URL.RawQuery = query.Encode()

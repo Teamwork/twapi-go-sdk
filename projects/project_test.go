@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	twapi "github.com/teamwork/twapi-go-sdk"
 	"github.com/teamwork/twapi-go-sdk/projects"
 )
 
@@ -295,6 +296,95 @@ func TestProjectList(t *testing.T) {
 						projects.ProjectRequestSideloadProjectCategories,
 					},
 				},
+			},
+		},
+	}, {
+		// Every filter reaching the wire is pinned by
+		// TestProjectListFiltersApplied, which cannot tell a parameter the
+		// endpoint accepts from one it rejects. This case sends the selective
+		// filters together so the API gets to answer.
+		name: "selective filters",
+		input: projects.ProjectListRequest{
+			Filters: projects.ProjectListRequestFilters{
+				SearchTerm:      "a",
+				SearchByLetter:  ptr(true),
+				SearchCompanies: ptr(true),
+
+				ProjectType: projects.ProjectTypeNormal,
+				ProjectStatuses: []projects.ProjectListStatus{
+					projects.ProjectListStatusActive,
+					projects.ProjectListStatusCurrent,
+					projects.ProjectListStatusLate,
+				},
+				IncludeCompletedStatus: ptr(true),
+				ProjectHealths: []projects.ProjectHealth{
+					projects.ProjectHealthNotSet,
+					projects.ProjectHealthBad,
+					projects.ProjectHealthOK,
+					projects.ProjectHealthGood,
+				},
+
+				ProjectCompanyIDs:    []int64{testResources.CompanyID},
+				IncludeSubCategories: ptr(true),
+
+				FeaturesEnabled: []projects.ProjectFeature{
+					projects.ProjectFeatureList,
+					projects.ProjectFeatureTime,
+				},
+
+				MatchAllTags:         ptr(false),
+				MatchAllExcludedTags: ptr(false),
+
+				MinBudgetCapacityUsedPercent: ptr(int64(0)),
+				MaxBudgetCapacityUsedPercent: ptr(int64(100)),
+
+				OnlyStarredProjects:                ptr(false),
+				OnlyProjectsWithExplicitMembership: ptr(false),
+				OnlyProjectsWithAdminAccess:        ptr(false),
+				OnlyProjectsThatCanLogTime:         ptr(false),
+				OnlyProjectsThatCanAddTasks:        ptr(false),
+				HideObservedProjects:               ptr(false),
+
+				IncludeArchivedProjects:  ptr(true),
+				OnlyArchivedProjects:     ptr(false),
+				IncludeTentativeProjects: ptr(true),
+
+				UseFormulaFields: ptr(true),
+
+				CountMode: twapi.ListCountModeExact,
+			},
+		},
+	}, {
+		// The response-shaping flags are sent on their own: several of them add
+		// blocks the entity struct does not model, and a 200 here is what says
+		// the endpoint tolerates being asked for them.
+		name: "response shaping",
+		input: projects.ProjectListRequest{
+			Filters: projects.ProjectListRequestFilters{
+				ProjectRequestFilters: projects.ProjectRequestFilters{
+					Include: []projects.ProjectRequestSideload{
+						projects.ProjectRequestSideloadCustomFields,
+						projects.ProjectRequestSideloadCustomFieldValues,
+					},
+				},
+
+				ProjectIDs:             []int64{testResources.ProjectID},
+				AlwaysIncludeFiltering: ptr(true),
+
+				IncludeCustomFields:         ptr(true),
+				IncludeCounts:               ptr(true),
+				IncludeStats:                ptr(true),
+				IncludeProjectDates:         ptr(true),
+				IncludeProjectUserInfo:      ptr(true),
+				IncludeProjectProfitability: ptr(true),
+				TimeMode:                    projects.ProjectTimeModeTimelogs,
+				IncludeTabSystemStatus:      ptr(true),
+
+				OrderBy:   projects.ProjectOrderByLastActivity,
+				OrderMode: twapi.OrderModeDescending,
+
+				Page:     1,
+				PageSize: 10,
 			},
 		},
 	}}

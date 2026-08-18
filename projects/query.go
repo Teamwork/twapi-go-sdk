@@ -28,12 +28,23 @@ func querySetString[T ~string](query url.Values, key string, value T) {
 // querySetInt64 sets key to value, skipping non-positive values. Every non-pointer
 // int64 filter in the SDK identifies real entities or pagination bounds, where
 // zero and negative values mean "unset" rather than a value to send. A filter
-// that must be able to send zero needs a *int64 and its own helper.
+// that must be able to send zero takes a *int64 and querySetInt64Ptr instead.
 func querySetInt64(query url.Values, key string, value int64) {
 	if value <= 0 {
 		return
 	}
 	query.Set(key, strconv.FormatInt(value, 10))
+}
+
+// querySetInt64Ptr sets key to value, skipping only nil. Unlike querySetInt64 it
+// sends an explicit zero, for the filters where zero is a value the endpoint acts
+// on rather than a synonym for "unset" — a maximum of 0% budget capacity used
+// selects the projects that have consumed none of their budget.
+func querySetInt64Ptr(query url.Values, key string, value *int64) {
+	if value == nil {
+		return
+	}
+	query.Set(key, strconv.FormatInt(*value, 10))
 }
 
 // querySetTimestamp sets key to the RFC3339 representation of value. Nil and zero
@@ -64,14 +75,31 @@ func querySetBool(query url.Values, key string, value *bool) {
 }
 
 // querySetInt64s sets key to the comma-separated list of values. An empty list is
-// skipped.
-func querySetInt64s(query url.Values, key string, values []int64) {
+// skipped. It is generic over ~int64 so the typed numeric enums used by filters
+// (project healths) can be passed without converting each element.
+func querySetInt64s[T ~int64](query url.Values, key string, values []T) {
 	if len(values) == 0 {
 		return
 	}
 	formatted := make([]string, len(values))
 	for i, value := range values {
-		formatted[i] = strconv.FormatInt(value, 10)
+		formatted[i] = strconv.FormatInt(int64(value), 10)
+	}
+	query.Set(key, strings.Join(formatted, ","))
+}
+
+// querySetStrings sets key to the comma-separated list of values. An empty list
+// is skipped. It is generic over ~string so the typed enum slices used by filters
+// (sideloads, status values, feature keys) can be passed without converting each
+// element. Empty elements are kept: the API rejects an unknown value, which is a
+// better outcome than silently narrowing a selection the caller built wrong.
+func querySetStrings[T ~string](query url.Values, key string, values []T) {
+	if len(values) == 0 {
+		return
+	}
+	formatted := make([]string, len(values))
+	for i, value := range values {
+		formatted[i] = string(value)
 	}
 	query.Set(key, strings.Join(formatted, ","))
 }
