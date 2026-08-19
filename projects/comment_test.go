@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	twapi "github.com/teamwork/twapi-go-sdk"
 	"github.com/teamwork/twapi-go-sdk/projects"
 )
 
@@ -208,6 +209,48 @@ func TestCommentList(t *testing.T) {
 
 			if _, err := projects.CommentList(ctx, engine, tt.input); err != nil {
 				t.Errorf("unexpected error: %s", err)
+			}
+		})
+	}
+}
+
+// TestCommentContentTypeEncoding pins the key each comment route reads the
+// content type from. v1 spells it camelCase on create and hyphenated on update,
+// and both routes answer 200 either way: an unrecognised key just falls back to
+// the TEXT default, storing the markup escaped instead of rendered.
+func TestCommentContentTypeEncoding(t *testing.T) {
+	tests := []struct {
+		name      string
+		requester twapi.HTTPRequester
+		key       string
+	}{{
+		name: "create reads contentType",
+		requester: func() projects.CommentCreateRequest {
+			req := projects.NewCommentCreateRequestInTask(777, "<p>example</p>")
+			req.ContentType = new("HTML")
+			return req
+		}(),
+		key: "contentType",
+	}, {
+		name: "update reads content-type",
+		requester: func() projects.CommentUpdateRequest {
+			req := projects.NewCommentUpdateRequest(12345)
+			req.Body = "<p>example</p>"
+			req.ContentType = new("HTML")
+			return req
+		}(),
+		key: "content-type",
+	}}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			body := encodeRequestBody(t, tt.requester)
+			comment, ok := body["comment"].(map[string]any)
+			if !ok {
+				t.Fatalf("expected a comment envelope, got %v", body)
+			}
+			if got, ok := comment[tt.key]; !ok || got != "HTML" {
+				t.Errorf("expected %q to be \"HTML\", got %v (%v)", tt.key, got, comment)
 			}
 		})
 	}
