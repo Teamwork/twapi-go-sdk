@@ -36,17 +36,6 @@ func querySetInt64(query url.Values, key string, value int64) {
 	query.Set(key, strconv.FormatInt(value, 10))
 }
 
-// querySetInt64Ptr sets key to value, skipping only nil. Unlike querySetInt64 it
-// sends an explicit zero, for the filters where zero is a value the endpoint acts
-// on rather than a synonym for "unset" — a maximum of 0% budget capacity used
-// selects the projects that have consumed none of their budget.
-func querySetInt64Ptr(query url.Values, key string, value *int64) {
-	if value == nil {
-		return
-	}
-	query.Set(key, strconv.FormatInt(*value, 10))
-}
-
 // querySetTimestamp sets key to the RFC3339 representation of value. Nil and zero
 // timestamps are skipped.
 func querySetTimestamp(query url.Values, key string, value *time.Time) {
