@@ -43,8 +43,6 @@ func listQuery(t *testing.T, req twapi.HTTPRequester) url.Values {
 func TestProjectListFiltersApplied(t *testing.T) {
 	updatedAfter := time.Date(2026, 2, 3, 4, 5, 6, 0, time.UTC)
 	notCompletedBefore := twapi.Date(time.Date(2026, 3, 4, 0, 0, 0, 0, time.UTC))
-	minLastActivity := twapi.Date(time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC))
-	maxLastActivity := twapi.Date(time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC))
 
 	req := projects.ProjectListRequest{
 		Filters: projects.ProjectListRequestFilters{
@@ -56,7 +54,6 @@ func TestProjectListFiltersApplied(t *testing.T) {
 			},
 
 			SearchTerm:      "acme",
-			SearchByLetter:  ptr(true),
 			SearchCompanies: ptr(true),
 
 			ProjectIDs:             []int64{777, 888},
@@ -79,32 +76,20 @@ func TestProjectListFiltersApplied(t *testing.T) {
 			ProjectCompanyIDs:    []int64{23456},
 			ProjectOwnerIDs:      []int64{34567},
 
-			UserID:                         45678,
-			UsersWithExplicitMembershipIDs: []int64{56789, 67890},
-			TeamIDs:                        []int64{78901},
-			FeaturesEnabled: []projects.ProjectFeature{
-				projects.ProjectFeatureBoard,
-				projects.ProjectFeatureTime,
-			},
+			UserID:  45678,
+			TeamIDs: []int64{78901},
 
 			TagIDs:               []int64{111, 222},
 			MatchAllTags:         ptr(true),
 			ExcludeTagIDs:        []int64{333},
 			MatchAllExcludedTags: ptr(false),
 
-			UpdatedAfter:        &updatedAfter,
-			NotCompletedBefore:  &notCompletedBefore,
-			MinLastActivityDate: &minLastActivity,
-			MaxLastActivityDate: &maxLastActivity,
-
-			MinBudgetCapacityUsedPercent: ptr(int64(25)),
-			MaxBudgetCapacityUsedPercent: ptr(int64(75)),
+			UpdatedAfter:       &updatedAfter,
+			NotCompletedBefore: &notCompletedBefore,
 
 			OnlyStarredProjects:                ptr(true),
 			OnlyProjectsWithExplicitMembership: ptr(true),
 			OnlyProjectsWithAdminAccess:        ptr(true),
-			OnlyProjectsThatCanLogTime:         ptr(true),
-			OnlyProjectsThatCanAddTasks:        ptr(true),
 			HideObservedProjects:               ptr(true),
 
 			IncludeArchivedProjects:  ptr(true),
@@ -230,25 +215,5 @@ func TestProjectListFiltersUnset(t *testing.T) {
 	query := listQuery(t, projects.ProjectListRequest{})
 	if len(query) != 0 {
 		t.Errorf("expected no query parameters but got %v", query)
-	}
-}
-
-// TestProjectListBudgetCapacityZero checks the budget bounds can send an
-// explicit zero. A maximum of 0% selects the projects that have used none of
-// their budget, so it must not be treated as "unset" the way the pagination and
-// identifier filters are.
-func TestProjectListBudgetCapacityZero(t *testing.T) {
-	req := projects.ProjectListRequest{
-		Filters: projects.ProjectListRequestFilters{
-			MinBudgetCapacityUsedPercent: ptr(int64(0)),
-			MaxBudgetCapacityUsedPercent: ptr(int64(0)),
-		},
-	}
-
-	query := listQuery(t, req)
-	for _, key := range []string{"minBudgetCapacityUsedPercent", "maxBudgetCapacityUsedPercent"} {
-		if got, ok := query[key]; !ok || got[0] != "0" {
-			t.Errorf("expected %s=0 to reach the wire but got %v", key, got)
-		}
 	}
 }

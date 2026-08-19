@@ -1006,18 +1006,9 @@ type ProjectListRequestFilters struct {
 	// UserID filters projects by a user belonging to them.
 	UserID int64
 
-	// UsersWithExplicitMembershipIDs restricts the results to projects that all
-	// of the given users are explicit members of.
-	UsersWithExplicitMembershipIDs []int64
-
 	// TeamIDs is an optional list of team IDs to filter projects by, matching the
 	// projects containing users of those teams.
 	TeamIDs []int64
-
-	// FeaturesEnabled is an optional list of features to filter projects by,
-	// matching only the projects where every listed feature is enabled. Use the
-	// ProjectFeature constants.
-	FeaturesEnabled []ProjectFeature
 
 	// TagIDs is an optional list of tag IDs to filter projects by tags.
 	TagIDs []int64
@@ -1042,23 +1033,6 @@ type ProjectListRequestFilters struct {
 	// still open on the given date.
 	NotCompletedBefore *twapi.Date
 
-	// MinLastActivityDate is an optional filter to retrieve projects whose last
-	// activity is on or after the given date.
-	MinLastActivityDate *twapi.Date
-
-	// MaxLastActivityDate is an optional filter to retrieve projects whose last
-	// activity is on or before the given date.
-	MaxLastActivityDate *twapi.Date
-
-	// MinBudgetCapacityUsedPercent is an optional filter to retrieve projects
-	// that have used at least the given percentage of their budget.
-	MinBudgetCapacityUsedPercent *int64
-
-	// MaxBudgetCapacityUsedPercent is an optional filter to retrieve projects
-	// that have used at most the given percentage of their budget. Zero is a
-	// meaningful value, selecting the projects that have used none of it.
-	MaxBudgetCapacityUsedPercent *int64
-
 	// OnlyStarredProjects restricts the results to the projects the calling user
 	// has starred.
 	OnlyStarredProjects *bool
@@ -1070,14 +1044,6 @@ type ProjectListRequestFilters struct {
 	// OnlyProjectsWithAdminAccess restricts the results to the projects the
 	// calling user administers. Defaults to false.
 	OnlyProjectsWithAdminAccess *bool
-
-	// OnlyProjectsThatCanLogTime restricts the results to the projects the
-	// calling user may log time against. Defaults to false.
-	OnlyProjectsThatCanLogTime *bool
-
-	// OnlyProjectsThatCanAddTasks restricts the results to the projects the
-	// calling user may add tasks to. Defaults to false.
-	OnlyProjectsThatCanAddTasks *bool
 
 	// HideObservedProjects leaves out the projects where the calling user is only
 	// an observer. Defaults to false.
@@ -1175,7 +1141,6 @@ func (p ProjectListRequestFilters) apply(req *http.Request) {
 	query := req.URL.Query()
 
 	querySetString(query, "searchTerm", p.SearchTerm)
-	querySetBool(query, "searchByLetter", p.SearchByLetter)
 	querySetBool(query, "searchCompanies", p.SearchCompanies)
 
 	querySetInt64s(query, "projectIds", p.ProjectIDs)
@@ -1193,9 +1158,7 @@ func (p ProjectListRequestFilters) apply(req *http.Request) {
 	querySetInt64s(query, "projectOwnerIds", p.ProjectOwnerIDs)
 
 	querySetInt64(query, "userId", p.UserID)
-	querySetInt64s(query, "usersWithExplicitMembershipIds", p.UsersWithExplicitMembershipIDs)
 	querySetInt64s(query, "teamIds", p.TeamIDs)
-	querySetStrings(query, "featuresEnabled", p.FeaturesEnabled)
 
 	querySetInt64s(query, "projectTagIds", p.TagIDs)
 	querySetBool(query, "matchAllProjectTags", p.MatchAllTags)
@@ -1204,17 +1167,10 @@ func (p ProjectListRequestFilters) apply(req *http.Request) {
 
 	querySetTimestamp(query, "updatedAfter", p.UpdatedAfter)
 	querySetDate(query, "notCompletedBefore", p.NotCompletedBefore)
-	querySetDate(query, "minLastActivityDate", p.MinLastActivityDate)
-	querySetDate(query, "maxLastActivityDate", p.MaxLastActivityDate)
-
-	querySetInt64Ptr(query, "minBudgetCapacityUsedPercent", p.MinBudgetCapacityUsedPercent)
-	querySetInt64Ptr(query, "maxBudgetCapacityUsedPercent", p.MaxBudgetCapacityUsedPercent)
 
 	querySetBool(query, "onlyStarredProjects", p.OnlyStarredProjects)
 	querySetBool(query, "onlyProjectsWithExplicitMembership", p.OnlyProjectsWithExplicitMembership)
 	querySetBool(query, "onlyProjectsWithAdminAccess", p.OnlyProjectsWithAdminAccess)
-	querySetBool(query, "onlyProjectsThatCanLogTime", p.OnlyProjectsThatCanLogTime)
-	querySetBool(query, "onlyProjectsThatCanAddTasks", p.OnlyProjectsThatCanAddTasks)
 	querySetBool(query, "hideObservedProjects", p.HideObservedProjects)
 
 	querySetBool(query, "includeArchivedProjects", p.IncludeArchivedProjects)
