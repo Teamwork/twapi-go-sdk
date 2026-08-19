@@ -307,7 +307,6 @@ func TestProjectList(t *testing.T) {
 		input: projects.ProjectListRequest{
 			Filters: projects.ProjectListRequestFilters{
 				SearchTerm:      "a",
-				SearchByLetter:  ptr(true),
 				SearchCompanies: ptr(true),
 
 				ProjectType: projects.ProjectTypeNormal,
@@ -327,22 +326,12 @@ func TestProjectList(t *testing.T) {
 				ProjectCompanyIDs:    []int64{testResources.CompanyID},
 				IncludeSubCategories: ptr(true),
 
-				FeaturesEnabled: []projects.ProjectFeature{
-					projects.ProjectFeatureList,
-					projects.ProjectFeatureTime,
-				},
-
 				MatchAllTags:         ptr(false),
 				MatchAllExcludedTags: ptr(false),
-
-				MinBudgetCapacityUsedPercent: ptr(int64(0)),
-				MaxBudgetCapacityUsedPercent: ptr(int64(100)),
 
 				OnlyStarredProjects:                ptr(false),
 				OnlyProjectsWithExplicitMembership: ptr(false),
 				OnlyProjectsWithAdminAccess:        ptr(false),
-				OnlyProjectsThatCanLogTime:         ptr(false),
-				OnlyProjectsThatCanAddTasks:        ptr(false),
 				HideObservedProjects:               ptr(false),
 
 				IncludeArchivedProjects:  ptr(true),
