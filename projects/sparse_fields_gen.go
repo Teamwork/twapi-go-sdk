@@ -31,6 +31,46 @@ const (
 	ActivityFieldItem             ActivityField = "item"
 )
 
+// AllocationField identifies a JSON-tagged attribute of Allocation usable for v3 sparse fieldsets.
+type AllocationField string
+
+// List of possible Allocation fields.
+const (
+	AllocationFieldID                      AllocationField = "id"
+	AllocationFieldInstallation            AllocationField = "installation"
+	AllocationFieldInstallationID          AllocationField = "installationId"
+	AllocationFieldProject                 AllocationField = "project"
+	AllocationFieldProjectID               AllocationField = "projectId"
+	AllocationFieldAssignedUser            AllocationField = "assignedUser"
+	AllocationFieldAssignedUserID          AllocationField = "assignedUserID"
+	AllocationFieldTitle                   AllocationField = "title"
+	AllocationFieldDescription             AllocationField = "description"
+	AllocationFieldStartDate               AllocationField = "startedAt"
+	AllocationFieldEndDate                 AllocationField = "endedAt"
+	AllocationFieldDuration                AllocationField = "duration"
+	AllocationFieldAvailableDuration       AllocationField = "availableDuration"
+	AllocationFieldAllocatedDuration       AllocationField = "allocatedDuration"
+	AllocationFieldHoursPerDay             AllocationField = "hoursPerDay"
+	AllocationFieldSecondsPerDay           AllocationField = "secondsPerDay"
+	AllocationFieldColor                   AllocationField = "color"
+	AllocationFieldStatus                  AllocationField = "status"
+	AllocationFieldDistributeType          AllocationField = "distributeType"
+	AllocationFieldIsBillable              AllocationField = "isBillable"
+	AllocationFieldOverAllocated           AllocationField = "overAllocated"
+	AllocationFieldRecurringRule           AllocationField = "recurringRule"
+	AllocationFieldLinkedTaskIDs           AllocationField = "linkedTaskIDs"
+	AllocationFieldLinkedTaskLoggedTime    AllocationField = "linkedTaskLoggedTime"
+	AllocationFieldLinkedTaskEstimatedTime AllocationField = "linkedTaskEstimatedTime"
+	AllocationFieldFinancialDetails        AllocationField = "financialDetails"
+	AllocationFieldCanViewFinancialDetails AllocationField = "canViewFinancialDetails"
+	AllocationFieldCreatedAt               AllocationField = "createdAt"
+	AllocationFieldCreatedBy               AllocationField = "createdBy"
+	AllocationFieldUpdatedAt               AllocationField = "updatedAt"
+	AllocationFieldUpdatedBy               AllocationField = "updatedBy"
+	AllocationFieldDeletedAt               AllocationField = "deletedAt"
+	AllocationFieldDeletedBy               AllocationField = "deletedBy"
+)
+
 // CalendarEventField identifies a JSON-tagged attribute of CalendarEvent usable for v3 sparse fieldsets.
 type CalendarEventField string
 
@@ -603,6 +643,30 @@ type ActivityListFields struct {
 // apply writes every populated slot to query as a fields[entity]=… parameter.
 func (f ActivityListFields) apply(query url.Values) {
 	twapi.ApplySparseFields(query, "activities", f.Activities)
+}
+
+// AllocationGetFields selects sparse-fields slots for AllocationGetResponse. Leave a slot empty to receive the
+// API default for that entity; populate it to restrict the attributes returned.
+type AllocationGetFields struct {
+	// Allocation controls fields[allocations]=… on the response.
+	Allocation []AllocationField
+}
+
+// apply writes every populated slot to query as a fields[entity]=… parameter.
+func (f AllocationGetFields) apply(query url.Values) {
+	twapi.ApplySparseFields(query, "allocations", f.Allocation)
+}
+
+// AllocationListFields selects sparse-fields slots for AllocationListResponse. Leave a slot empty to receive the
+// API default for that entity; populate it to restrict the attributes returned.
+type AllocationListFields struct {
+	// Allocations controls fields[allocations]=… on the response.
+	Allocations []AllocationField
+}
+
+// apply writes every populated slot to query as a fields[entity]=… parameter.
+func (f AllocationListFields) apply(query url.Values) {
+	twapi.ApplySparseFields(query, "allocations", f.Allocations)
 }
 
 // CalendarEventListFields selects sparse-fields slots for CalendarEventListResponse. Leave a slot empty to receive the

@@ -39,6 +39,68 @@ func TestActivityListFieldsZeroValue(t *testing.T) {
 	}
 }
 
+// TestAllocationGetFieldsApply verifies that populated AllocationGetFields slots emit the
+// expected fields[entity]=… query parameters.
+func TestAllocationGetFieldsApply(t *testing.T) {
+	fields := AllocationGetFields{
+		Allocation: []AllocationField{AllocationFieldID},
+	}
+	query := url.Values{}
+	fields.apply(query)
+	checks := map[string]string{
+		"fields[allocations]": "id",
+	}
+	for key, want := range checks {
+		if got := query.Get(key); got != want {
+			t.Errorf("%s = %q, want %q", key, got, want)
+		}
+	}
+}
+
+// TestAllocationGetFieldsZeroValue verifies that an unset AllocationGetFields emits no
+// fields[*]=… query parameters.
+func TestAllocationGetFieldsZeroValue(t *testing.T) {
+	var fields AllocationGetFields
+	query := url.Values{}
+	fields.apply(query)
+	for key := range query {
+		if strings.HasPrefix(key, "fields[") {
+			t.Errorf("unexpected sparse-fields parameter %q on zero-value container", key)
+		}
+	}
+}
+
+// TestAllocationListFieldsApply verifies that populated AllocationListFields slots emit the
+// expected fields[entity]=… query parameters.
+func TestAllocationListFieldsApply(t *testing.T) {
+	fields := AllocationListFields{
+		Allocations: []AllocationField{AllocationFieldID},
+	}
+	query := url.Values{}
+	fields.apply(query)
+	checks := map[string]string{
+		"fields[allocations]": "id",
+	}
+	for key, want := range checks {
+		if got := query.Get(key); got != want {
+			t.Errorf("%s = %q, want %q", key, got, want)
+		}
+	}
+}
+
+// TestAllocationListFieldsZeroValue verifies that an unset AllocationListFields emits no
+// fields[*]=… query parameters.
+func TestAllocationListFieldsZeroValue(t *testing.T) {
+	var fields AllocationListFields
+	query := url.Values{}
+	fields.apply(query)
+	for key := range query {
+		if strings.HasPrefix(key, "fields[") {
+			t.Errorf("unexpected sparse-fields parameter %q on zero-value container", key)
+		}
+	}
+}
+
 // TestCalendarEventListFieldsApply verifies that populated CalendarEventListFields slots emit the
 // expected fields[entity]=… query parameters.
 func TestCalendarEventListFieldsApply(t *testing.T) {
