@@ -122,7 +122,6 @@ func TestProjectListFiltersApplied(t *testing.T) {
 		"include": "projectCategories,workflows.stages",
 
 		"searchTerm":      "acme",
-		"searchByLetter":  "true",
 		"searchCompanies": "true",
 
 		"projectIds":        "777,888",
@@ -137,28 +136,19 @@ func TestProjectListFiltersApplied(t *testing.T) {
 		"projectCompanyIds":    "23456",
 		"projectOwnerIds":      "34567",
 
-		"userId":                         "45678",
-		"usersWithExplicitMembershipIds": "56789,67890",
+		"usersWithExplicitMembershipIds": "45678",
 		"teamIds":                        "78901",
-		"featuresEnabled":                "board,time",
 
 		"projectTagIds":        "111,222",
 		"matchAllProjectTags":  "true",
 		"excludeTagIds":        "333",
 		"matchAllExcludedTags": "false",
 
-		"updatedAfter":        "2026-02-03T04:05:06Z",
-		"notCompletedBefore":  "2026-03-04",
-		"minLastActivityDate": "2026-01-01",
-		"maxLastActivityDate": "2026-12-31",
-
-		"minBudgetCapacityUsedPercent": "25",
-		"maxBudgetCapacityUsedPercent": "75",
+		"updatedAfter":       "2026-02-03T04:05:06Z",
+		"notCompletedBefore": "2026-03-04",
 
 		"onlyStarredProjects":         "true",
 		"onlyProjectsWithAdminAccess": "true",
-		"onlyProjectsThatCanLogTime":  "true",
-		"onlyProjectsThatCanAddTasks": "true",
 		"hideObservedProjects":        "true",
 
 		"includeArchivedProjects":  "true",
@@ -169,8 +159,8 @@ func TestProjectListFiltersApplied(t *testing.T) {
 		"includeCustomFieldIds": "444,555",
 		"useFormulaFields":      "true",
 
-		"includeOverallStats":         "true",
-		"includeProjectStats":         "true",
+		"includeCounts":               "true",
+		"includeStats":                "true",
 		"includeProjectDates":         "true",
 		"includeProjectUserInfo":      "true",
 		"includeProjectProfitability": "true",
