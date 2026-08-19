@@ -953,11 +953,6 @@ type ProjectListRequestFilters struct {
 	// description.
 	SearchTerm string
 
-	// SearchByLetter restricts a single-character SearchTerm to projects whose
-	// name begins with that character. It is ignored when SearchTerm is longer
-	// than one character.
-	SearchByLetter *bool
-
 	// SearchCompanies extends SearchTerm to the name of the company owning the
 	// project.
 	SearchCompanies *bool
