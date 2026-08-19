@@ -56,16 +56,14 @@ func TestProjectListFiltersApplied(t *testing.T) {
 			SearchTerm:      "acme",
 			SearchCompanies: ptr(true),
 
-			ProjectIDs:             []int64{777, 888},
-			ExcludeProjectIDs:      []int64{999},
-			AlwaysIncludeFiltering: ptr(true),
+			ProjectIDs:        []int64{777, 888},
+			ExcludeProjectIDs: []int64{999},
 
 			ProjectType: projects.ProjectTypeNormal,
 			ProjectStatuses: []projects.ProjectListStatus{
 				projects.ProjectListStatusCurrent,
 				projects.ProjectListStatusLate,
 			},
-			IncludeCompletedStatus: ptr(true),
 			ProjectHealths: []projects.ProjectHealth{
 				projects.ProjectHealthNotSet,
 				projects.ProjectHealthGood,
@@ -76,7 +74,7 @@ func TestProjectListFiltersApplied(t *testing.T) {
 			ProjectCompanyIDs:    []int64{23456},
 			ProjectOwnerIDs:      []int64{34567},
 
-			UserID:  45678,
+			UserIDs: []int64{45678},
 			TeamIDs: []int64{78901},
 
 			TagIDs:               []int64{111, 222},
@@ -87,10 +85,9 @@ func TestProjectListFiltersApplied(t *testing.T) {
 			UpdatedAfter:       &updatedAfter,
 			NotCompletedBefore: &notCompletedBefore,
 
-			OnlyStarredProjects:                ptr(true),
-			OnlyProjectsWithExplicitMembership: ptr(true),
-			OnlyProjectsWithAdminAccess:        ptr(true),
-			HideObservedProjects:               ptr(true),
+			OnlyStarredProjects:         ptr(true),
+			OnlyProjectsWithAdminAccess: ptr(true),
+			HideObservedProjects:        ptr(true),
 
 			IncludeArchivedProjects:  ptr(true),
 			OnlyArchivedProjects:     ptr(false),
@@ -100,13 +97,12 @@ func TestProjectListFiltersApplied(t *testing.T) {
 			IncludeCustomFieldIDs: []int64{444, 555},
 			UseFormulaFields:      ptr(true),
 
-			IncludeCounts:               ptr(true),
-			IncludeStats:                ptr(true),
+			IncludeProjectStats:         ptr(true),
+			IncludeOverallStats:         ptr(true),
 			IncludeProjectDates:         ptr(true),
 			IncludeProjectUserInfo:      ptr(true),
 			IncludeProjectProfitability: ptr(true),
 			TimeMode:                    projects.ProjectTimeModeEstimated,
-			IncludeTabSystemStatus:      ptr(true),
 
 			OrderBy:              projects.ProjectOrderByCustomField,
 			OrderMode:            twapi.OrderModeDescending,
@@ -129,14 +125,12 @@ func TestProjectListFiltersApplied(t *testing.T) {
 		"searchByLetter":  "true",
 		"searchCompanies": "true",
 
-		"projectIds":             "777,888",
-		"excludeProjectIds":      "999",
-		"alwaysIncludeFiltering": "true",
+		"projectIds":        "777,888",
+		"excludeProjectIds": "999",
 
-		"projectType":            "normal",
-		"projectStatuses":        "current,late",
-		"includeCompletedStatus": "true",
-		"projectHealths":         "0,3",
+		"projectType":     "normal",
+		"projectStatuses": "current,late",
+		"projectHealths":  "0,3",
 
 		"projectCategoryIds":   "12345",
 		"includeSubCategories": "true",
@@ -161,12 +155,11 @@ func TestProjectListFiltersApplied(t *testing.T) {
 		"minBudgetCapacityUsedPercent": "25",
 		"maxBudgetCapacityUsedPercent": "75",
 
-		"onlyStarredProjects":                "true",
-		"onlyProjectsWithExplicitMembership": "true",
-		"onlyProjectsWithAdminAccess":        "true",
-		"onlyProjectsThatCanLogTime":         "true",
-		"onlyProjectsThatCanAddTasks":        "true",
-		"hideObservedProjects":               "true",
+		"onlyStarredProjects":         "true",
+		"onlyProjectsWithAdminAccess": "true",
+		"onlyProjectsThatCanLogTime":  "true",
+		"onlyProjectsThatCanAddTasks": "true",
+		"hideObservedProjects":        "true",
 
 		"includeArchivedProjects":  "true",
 		"onlyArchivedProjects":     "false",
@@ -176,13 +169,12 @@ func TestProjectListFiltersApplied(t *testing.T) {
 		"includeCustomFieldIds": "444,555",
 		"useFormulaFields":      "true",
 
-		"includeCounts":               "true",
-		"includeStats":                "true",
+		"includeOverallStats":         "true",
+		"includeProjectStats":         "true",
 		"includeProjectDates":         "true",
 		"includeProjectUserInfo":      "true",
 		"includeProjectProfitability": "true",
 		"timeMode":                    "estimated",
-		"includeTabSystemStatus":      "true",
 
 		"orderBy":              "customfield",
 		"orderMode":            "desc",

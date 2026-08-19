@@ -958,17 +958,12 @@ type ProjectListRequestFilters struct {
 	SearchCompanies *bool
 
 	// ProjectIDs is an optional list of project IDs to restrict the results to.
-	// Providing it normally bypasses the other filters; set AlwaysIncludeFiltering
-	// to keep them applied.
+	// Providing it normally bypasses the other filters
 	ProjectIDs []int64
 
 	// ExcludeProjectIDs is an optional list of project IDs to leave out of the
 	// results.
 	ExcludeProjectIDs []int64
-
-	// AlwaysIncludeFiltering keeps the remaining filters in force when ProjectIDs
-	// is provided.
-	AlwaysIncludeFiltering *bool
 
 	// ProjectType restricts the results to one kind of project. Use the
 	// ProjectType constants.
@@ -977,11 +972,6 @@ type ProjectListRequestFilters struct {
 	// ProjectStatuses is an optional list of progress states to filter projects
 	// by. Use the ProjectListStatus constants.
 	ProjectStatuses []ProjectListStatus
-
-	// IncludeCompletedStatus includes completed projects when ProjectStatuses
-	// selects ProjectListStatusCurrent or ProjectListStatusLate, which otherwise
-	// exclude them.
-	IncludeCompletedStatus *bool
 
 	// ProjectHealths is an optional list of health ratings to filter projects by.
 	// Use the ProjectHealth constants.
@@ -1003,8 +993,8 @@ type ProjectListRequestFilters struct {
 	// owner.
 	ProjectOwnerIDs []int64
 
-	// UserID filters projects by a user belonging to them.
-	UserID int64
+	// UserIDs is an optional list of user IDs to filter projects by.
+	UserIDs []int64
 
 	// TeamIDs is an optional list of team IDs to filter projects by, matching the
 	// projects containing users of those teams.
@@ -1036,10 +1026,6 @@ type ProjectListRequestFilters struct {
 	// OnlyStarredProjects restricts the results to the projects the calling user
 	// has starred.
 	OnlyStarredProjects *bool
-
-	// OnlyProjectsWithExplicitMembership restricts the results to the projects
-	// the calling user is an explicit member of. Defaults to false.
-	OnlyProjectsWithExplicitMembership *bool
 
 	// OnlyProjectsWithAdminAccess restricts the results to the projects the
 	// calling user administers. Defaults to false.
@@ -1073,12 +1059,12 @@ type ProjectListRequestFilters struct {
 	// unresolved.
 	UseFormulaFields *bool
 
-	// IncludeCounts adds the projects' related counts to the response.
-	IncludeCounts *bool
+	// IncludeOverallStats adds the projects' related counts to the response.
+	IncludeOverallStats *bool
 
-	// IncludeStats adds per-project counts for tasks, columns, billing events and
+	// IncludeProjectStats adds per-project counts for tasks, columns, billing events and
 	// milestones to the response.
-	IncludeStats *bool
+	IncludeProjectStats *bool
 
 	// IncludeProjectDates adds the earliest start and latest end date of each
 	// project to the response.
@@ -1096,10 +1082,6 @@ type ProjectListRequestFilters struct {
 	// the ProjectTimeMode constants. It is only read when
 	// IncludeProjectProfitability is set.
 	TimeMode ProjectTimeMode
-
-	// IncludeTabSystemStatus adds the status of each project's tabs to the
-	// response.
-	IncludeTabSystemStatus *bool
 
 	// OrderBy is the field to sort the results by. Use the ProjectOrderBy
 	// constants. The endpoint defaults to name.
@@ -1145,11 +1127,9 @@ func (p ProjectListRequestFilters) apply(req *http.Request) {
 
 	querySetInt64s(query, "projectIds", p.ProjectIDs)
 	querySetInt64s(query, "excludeProjectIds", p.ExcludeProjectIDs)
-	querySetBool(query, "alwaysIncludeFiltering", p.AlwaysIncludeFiltering)
 
 	querySetString(query, "projectType", p.ProjectType)
 	querySetStrings(query, "projectStatuses", p.ProjectStatuses)
-	querySetBool(query, "includeCompletedStatus", p.IncludeCompletedStatus)
 	querySetInt64s(query, "projectHealths", p.ProjectHealths)
 
 	querySetInt64s(query, "projectCategoryIds", p.ProjectCategoryIDs)
@@ -1157,7 +1137,7 @@ func (p ProjectListRequestFilters) apply(req *http.Request) {
 	querySetInt64s(query, "projectCompanyIds", p.ProjectCompanyIDs)
 	querySetInt64s(query, "projectOwnerIds", p.ProjectOwnerIDs)
 
-	querySetInt64(query, "userId", p.UserID)
+	querySetInt64s(query, "usersWithExplicitMembershipIds", p.UserIDs)
 	querySetInt64s(query, "teamIds", p.TeamIDs)
 
 	querySetInt64s(query, "projectTagIds", p.TagIDs)
@@ -1169,7 +1149,6 @@ func (p ProjectListRequestFilters) apply(req *http.Request) {
 	querySetDate(query, "notCompletedBefore", p.NotCompletedBefore)
 
 	querySetBool(query, "onlyStarredProjects", p.OnlyStarredProjects)
-	querySetBool(query, "onlyProjectsWithExplicitMembership", p.OnlyProjectsWithExplicitMembership)
 	querySetBool(query, "onlyProjectsWithAdminAccess", p.OnlyProjectsWithAdminAccess)
 	querySetBool(query, "hideObservedProjects", p.HideObservedProjects)
 
@@ -1181,13 +1160,12 @@ func (p ProjectListRequestFilters) apply(req *http.Request) {
 	querySetInt64s(query, "includeCustomFieldIds", p.IncludeCustomFieldIDs)
 	querySetBool(query, "useFormulaFields", p.UseFormulaFields)
 
-	querySetBool(query, "includeCounts", p.IncludeCounts)
-	querySetBool(query, "includeStats", p.IncludeStats)
+	querySetBool(query, "includeCounts", p.IncludeOverallStats)
+	querySetBool(query, "includeStats", p.IncludeProjectStats)
 	querySetBool(query, "includeProjectDates", p.IncludeProjectDates)
 	querySetBool(query, "includeProjectUserInfo", p.IncludeProjectUserInfo)
 	querySetBool(query, "includeProjectProfitability", p.IncludeProjectProfitability)
 	querySetString(query, "timeMode", p.TimeMode)
-	querySetBool(query, "includeTabSystemStatus", p.IncludeTabSystemStatus)
 
 	querySetString(query, "orderBy", p.OrderBy)
 	querySetString(query, "orderMode", p.OrderMode)

@@ -315,7 +315,6 @@ func TestProjectList(t *testing.T) {
 					projects.ProjectListStatusCurrent,
 					projects.ProjectListStatusLate,
 				},
-				IncludeCompletedStatus: ptr(true),
 				ProjectHealths: []projects.ProjectHealth{
 					projects.ProjectHealthNotSet,
 					projects.ProjectHealthBad,
@@ -329,10 +328,9 @@ func TestProjectList(t *testing.T) {
 				MatchAllTags:         ptr(false),
 				MatchAllExcludedTags: ptr(false),
 
-				OnlyStarredProjects:                ptr(false),
-				OnlyProjectsWithExplicitMembership: ptr(false),
-				OnlyProjectsWithAdminAccess:        ptr(false),
-				HideObservedProjects:               ptr(false),
+				OnlyStarredProjects:         ptr(false),
+				OnlyProjectsWithAdminAccess: ptr(false),
+				HideObservedProjects:        ptr(false),
 
 				IncludeArchivedProjects:  ptr(true),
 				OnlyArchivedProjects:     ptr(false),
@@ -357,17 +355,15 @@ func TestProjectList(t *testing.T) {
 					},
 				},
 
-				ProjectIDs:             []int64{testResources.ProjectID},
-				AlwaysIncludeFiltering: ptr(true),
+				ProjectIDs: []int64{testResources.ProjectID},
 
 				IncludeCustomFields:         ptr(true),
-				IncludeCounts:               ptr(true),
-				IncludeStats:                ptr(true),
+				IncludeProjectStats:         ptr(true),
+				IncludeOverallStats:         ptr(true),
 				IncludeProjectDates:         ptr(true),
 				IncludeProjectUserInfo:      ptr(true),
 				IncludeProjectProfitability: ptr(true),
 				TimeMode:                    projects.ProjectTimeModeTimelogs,
-				IncludeTabSystemStatus:      ptr(true),
 
 				OrderBy:   projects.ProjectOrderByLastActivity,
 				OrderMode: twapi.OrderModeDescending,
