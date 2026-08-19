@@ -379,7 +379,11 @@ type CommentUpdateRequest struct {
 
 	// ContentType is the content type of the comment body. It can be "TEXT" or
 	// "HTML". If not provided, it defaults to "TEXT".
-	ContentType *string `json:"contentType,omitempty"`
+	//
+	// The update route spells this key with a hyphen while the create route
+	// spells it camelCase. Sending the camelCase key here is silently ignored,
+	// and the body is stored as TEXT with its markup escaped.
+	ContentType *string `json:"content-type,omitempty"`
 
 	// NotifyCurrentUser indicates whether the user creating the comment should be
 	// notified about the new comment. If not provided, it defaults to false.
