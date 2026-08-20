@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math/rand"
+	"strings"
 	"testing"
 	"time"
 
@@ -129,6 +131,10 @@ func TestAllocationUpdate(t *testing.T) {
 	}
 }
 
+// TestAllocationDelete covers the hard delete, which leaves nothing behind. The
+// soft delete is covered by TestAllocationRestore, which needs a recoverable
+// row; doing it here as well would strand one on the site every run, since a
+// soft-deleted allocation is still there afterwards.
 func TestAllocationDelete(t *testing.T) {
 	if engine == nil {
 		t.Skip("Skipping test because the engine is not initialized")
@@ -143,7 +149,9 @@ func TestAllocationDelete(t *testing.T) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	t.Cleanup(cancel)
 
-	if _, err := projects.AllocationDelete(ctx, engine, projects.NewAllocationDeleteRequest(allocationID)); err != nil {
+	request := projects.NewAllocationDeleteRequest(allocationID)
+	request.HardDelete = true
+	if _, err := projects.AllocationDelete(ctx, engine, request); err != nil {
 		t.Errorf("unexpected error: %s", err)
 	}
 }
@@ -414,5 +422,67 @@ func TestAllocationGetResponseDecodesSideloads(t *testing.T) {
 	}
 	if got := financial.CostRates[0].Source; got == nil || *got != projects.CostRateSourceUserCostRate {
 		t.Errorf("expected the cost rate source to decode as a typed value, got %v", got)
+	}
+}
+
+// TestAllocationDeleteRequestBody pins the body of a delete, which is where
+// this endpoint is unusual: hardDelete travels in a request body rather than a
+// query parameter, and it decides whether the allocation can be restored
+// afterwards. Nothing else exercises it offline — the example server ignores
+// the body, and the live tests skip without an engine.
+func TestAllocationDeleteRequestBody(t *testing.T) {
+	tests := []struct {
+		name string
+		hard bool
+		want string
+	}{
+		{name: "soft delete", hard: false, want: `{"hardDelete":false}`},
+		{name: "hard delete", hard: true, want: `{"hardDelete":true}`},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			request := projects.NewAllocationDeleteRequest(12345)
+			request.HardDelete = tt.hard
+
+			httpRequest, err := request.HTTPRequest(t.Context(), "https://test.teamwork.com")
+			if err != nil {
+				t.Fatalf("unexpected error building the request: %s", err)
+			}
+			if want := "/projects/api/v3/allocations/12345.json"; httpRequest.URL.Path != want {
+				t.Errorf("expected path %q, got %q", want, httpRequest.URL.Path)
+			}
+
+			body, err := io.ReadAll(httpRequest.Body)
+			if err != nil {
+				t.Fatalf("failed to read the request body: %s", err)
+			}
+			if got := strings.TrimSpace(string(body)); got != tt.want {
+				t.Errorf("expected body %s, got %s", tt.want, got)
+			}
+		})
+	}
+}
+
+// TestAllocationRequestsRequireAnID pins the client-side guard on every request
+// that addresses one allocation. Without it a zero identifier is formatted into
+// the path and comes back as a 404 from the server, which reads as "no such
+// allocation" rather than "you did not pass one".
+func TestAllocationRequestsRequireAnID(t *testing.T) {
+	requests := map[string]twapi.HTTPRequester{
+		"get":     projects.NewAllocationGetRequest(0),
+		"update":  projects.NewAllocationUpdateRequest(0),
+		"delete":  projects.NewAllocationDeleteRequest(0),
+		"restore": projects.NewAllocationRestoreRequest(0),
+		"link":    projects.NewAllocationTaskLinkRequest(0, 999),
+		"unlink":  projects.NewAllocationTaskUnlinkRequest(0, 999),
+	}
+
+	for name, request := range requests {
+		t.Run(name, func(t *testing.T) {
+			if _, err := request.HTTPRequest(t.Context(), "https://test.teamwork.com"); err == nil {
+				t.Error("expected a missing allocation ID to be rejected before the request is sent")
+			}
+		})
 	}
 }

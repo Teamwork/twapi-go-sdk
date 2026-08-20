@@ -200,15 +200,21 @@ type Allocation struct {
 	// reads.
 	Duration int64 `json:"duration"`
 
-	// AvailableDuration is the allocation's span in minutes reduced by the days
-	// the user has no working hours for. It concerns working days, not linked
-	// tasks, so despite the name it is not a measure of how much of the
-	// allocation is accounted for.
+	// AvailableDuration is AllocatedDuration further reduced by the all-day
+	// unavailable events covering the range — time off and the like. In minutes,
+	// and floored at zero.
+	//
+	// Unavailable time is the only thing separating it from AllocatedDuration;
+	// both already have non-working days taken out.
 	AvailableDuration *int64 `json:"availableDuration,omitempty"`
 
-	// AllocatedDuration is the allocation's calendar days multiplied by the
-	// per-day rate, in minutes. Like AvailableDuration it concerns working days
-	// rather than linked tasks.
+	// AllocatedDuration is the per-day rate applied across the days of the
+	// range, with the days the user has no working hours for removed. In
+	// minutes, and floored at zero.
+	//
+	// Despite the name, neither this nor AvailableDuration says anything about
+	// the tasks linked to the allocation, so neither is a measure of how much of
+	// the commitment is accounted for.
 	AllocatedDuration *int64 `json:"allocatedDuration,omitempty"`
 
 	// HoursPerDay is the time placed on each working day in the range, expressed
@@ -538,12 +544,12 @@ type AllocationDeleteRequestPath struct {
 // what carries HardDelete.
 type AllocationDeleteRequest struct {
 	// Path contains the path parameters for the request.
-	Path AllocationDeleteRequestPath `json:"-"`
+	Path AllocationDeleteRequestPath
 
 	// HardDelete removes the allocation permanently. Left false the delete is a
 	// soft delete: the allocation is still returned by a list request asking for
 	// deleted rows, and AllocationRestore can bring it back.
-	HardDelete bool `json:"hardDelete"`
+	HardDelete bool
 }
 
 // NewAllocationDeleteRequest creates a new AllocationDeleteRequest with the
@@ -563,8 +569,16 @@ func (a AllocationDeleteRequest) HTTPRequest(ctx context.Context, server string)
 	}
 	uri := server + "/projects/api/v3/allocations/" + strconv.FormatInt(a.Path.ID, 10) + ".json"
 
+	// An explicit payload, as create and update use, rather than encoding the
+	// request itself: the body is then defined by this struct alone, so a field
+	// added to AllocationDeleteRequest later cannot silently change the wire
+	// shape of a delete.
+	payload := struct {
+		HardDelete bool `json:"hardDelete"`
+	}{HardDelete: a.HardDelete}
+
 	var body bytes.Buffer
-	if err := json.NewEncoder(&body).Encode(a); err != nil {
+	if err := json.NewEncoder(&body).Encode(payload); err != nil {
 		return nil, fmt.Errorf("failed to encode delete allocation request: %w", err)
 	}
 
@@ -842,6 +856,9 @@ func NewAllocationGetRequest(allocationID int64) AllocationGetRequest {
 
 // HTTPRequest creates an HTTP request for the AllocationGetRequest.
 func (a AllocationGetRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
+	if a.Path.ID == 0 {
+		return nil, fmt.Errorf("an allocation ID is required to retrieve an allocation")
+	}
 	uri := server + "/projects/api/v3/allocations/" + strconv.FormatInt(a.Path.ID, 10) + ".json"
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, uri, nil)

@@ -81,6 +81,10 @@ const (
 )
 
 // CostRateSource represents the source of a cost rate.
+//
+// The values are camelCase where EffectiveRateSource's are all lowercase. That
+// mismatch is the API's, not a typo here — each type spells its values the way
+// the endpoints return them.
 type CostRateSource string
 
 const (
