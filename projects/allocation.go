@@ -234,8 +234,10 @@ type Allocation struct {
 	// every value the API sends.
 	Color string `json:"color"`
 
-	// Status is the lifecycle state of the allocation. A deleted allocation is
-	// only returned when the list request asks for deleted rows.
+	// Status is the lifecycle state of the allocation. A list request reports
+	// one state or the other and never both: only a request with
+	// Filters.ShowDeleted set returns deleted allocations, and that request
+	// returns no active ones.
 	Status AllocationStatus `json:"status"`
 
 	// IsBillable reports whether the allocated time can be charged to a client.
@@ -547,8 +549,9 @@ type AllocationDeleteRequest struct {
 	Path AllocationDeleteRequestPath
 
 	// HardDelete removes the allocation permanently. Left false the delete is a
-	// soft delete: the allocation is still returned by a list request asking for
-	// deleted rows, and AllocationRestore can bring it back.
+	// soft delete: AllocationGet answers 404 for the allocation from then on,
+	// but a list request with Filters.ShowDeleted set still returns it, and
+	// AllocationRestore can bring it back.
 	HardDelete bool
 }
 
@@ -623,7 +626,8 @@ type AllocationRestoreRequestPath struct {
 }
 
 // AllocationRestoreRequest represents the request for restoring a soft-deleted
-// allocation.
+// allocation. AllocationGet answers 404 for a deleted allocation, so the
+// identifier comes from an AllocationList request with Filters.ShowDeleted set.
 type AllocationRestoreRequest struct {
 	// Path contains the path parameters for the request.
 	Path AllocationRestoreRequestPath
@@ -1015,12 +1019,19 @@ type AllocationListRequestFilters struct {
 	// UpdatedAfter returns only allocations updated after this moment.
 	UpdatedAfter *time.Time
 
-	// DeletedAfter returns only allocations deleted after this moment. Pair it
-	// with ShowDeleted, which is what makes deleted rows visible at all.
+	// DeletedAfter returns only allocations deleted after this moment. It is
+	// only useful alongside ShowDeleted: on its own it matches nothing, because
+	// an allocation that has not been deleted has no deletion timestamp to
+	// compare against, so the result is an empty list rather than every
+	// allocation.
 	DeletedAfter *time.Time
 
-	// ShowDeleted includes soft-deleted allocations in the results. Without it
-	// a deleted allocation cannot be found, which is what a restore needs.
+	// ShowDeleted returns the deleted allocations in place of the active ones.
+	// It replaces the result set rather than widening it, so a list request
+	// with this set says nothing about what is currently scheduled, and a list
+	// request without it never surfaces a deleted allocation. This is how a
+	// soft-deleted allocation is found again, since AllocationGet answers 404
+	// for one.
 	ShowDeleted *bool
 
 	// TemplateWorkingHours skips working-hours processing and treats every day
