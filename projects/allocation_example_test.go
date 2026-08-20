@@ -27,7 +27,7 @@ func ExampleAllocationCreate() {
 	start := twapi.Date(time.Date(2026, time.September, 1, 0, 0, 0, 0, time.UTC))
 	end := twapi.Date(time.Date(2026, time.September, 30, 0, 0, 0, 0, time.UTC))
 
-	allocationRequest := projects.NewAllocationCreateRequest(777, 456, "Design phase", start, end, 4, "#3c8f7c")
+	allocationRequest := projects.NewAllocationCreateRequest(777, 456, "Design phase", start, end, 4*60*60, "#3c8f7c")
 	allocationRequest.Allocation.Description = new("Four hours a day for the design phase.")
 	allocationRequest.Allocation.IsBillable = new(true)
 
@@ -53,7 +53,7 @@ func ExampleAllocationUpdate() {
 	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
 
 	allocationRequest := projects.NewAllocationUpdateRequest(12345)
-	allocationRequest.Allocation.HoursPerDay = new(6.0)
+	allocationRequest.Allocation.SecondsPerDay = new(int64(6 * 60 * 60))
 
 	_, err = projects.AllocationUpdate(ctx, engine, allocationRequest)
 	if err != nil {

@@ -376,7 +376,7 @@ func createAllocation(t testEngine, projectID, userID int64) (int64, func(), err
 		fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
 		twapi.Date(time.Now()),
 		twapi.Date(time.Now().Add(48*time.Hour)),
-		4,
+		4*60*60,
 		"#3c8f7c",
 	))
 	if err != nil {

@@ -42,20 +42,6 @@ const (
 	AllocationStatusDeleted AllocationStatus = "deleted"
 )
 
-// AllocationDistributeType selects how an allocation's time is spread across
-// the working days of its date range.
-type AllocationDistributeType string
-
-// Supported allocation distribute types.
-const (
-	// AllocationDistributeTypeDistributed spreads the time evenly across the
-	// working days in the range.
-	AllocationDistributeTypeDistributed AllocationDistributeType = "distributed"
-
-	// AllocationDistributeTypeCustom uses per-day amounts set by hand.
-	AllocationDistributeTypeCustom AllocationDistributeType = "custom"
-)
-
 // AllocationSideload identifies a related entity that can be sideloaded into an
 // allocation response under the "included" key.
 type AllocationSideload string
@@ -116,7 +102,7 @@ type AllocationBillableRateDetails struct {
 	ForecastedRevenue float64 `json:"forecastedRevenue"`
 
 	// Source names where the rate was derived from.
-	Source *string `json:"source"`
+	Source *EffectiveRateSource `json:"source"`
 
 	// EffectiveDate is the date the rate took effect.
 	EffectiveDate twapi.Date `json:"effectiveDate"`
@@ -149,7 +135,7 @@ type AllocationCostRateDetails struct {
 	Currency twapi.Relationship `json:"currency"`
 
 	// Source names where the rate was derived from.
-	Source *string `json:"source,omitempty"`
+	Source *CostRateSource `json:"source,omitempty"`
 }
 
 // AllocationFinancialDetails carries the money an allocation is forecast to be
@@ -175,39 +161,27 @@ type AllocationFinancialDetails struct {
 // tasks: an allocation carries its own committed time, and is not composed of
 // the estimates of the tasks linked to it.
 //
-// The governing quantity is HoursPerDay. The time an allocation comes to is the
-// working days in its range multiplied by that daily rate, so widening the range
-// adds time rather than spreading the same total more thinly.
+// What is held constant is the per-day rate, so the time an allocation comes to
+// is the working days in its range multiplied by that rate: widening the range
+// adds time rather than spreading the same total more thinly. Read the rate from
+// SecondsPerDay rather than HoursPerDay — the two describe the same quantity,
+// but the hours figure is a float and rounds.
 //
 // More information can be found at:
-// https://support.teamwork.com/projects/resource-scheduling/scheduler-overview
+// https://support.teamwork.com/projects/schedule/schedule-introduction
 //
 // sparsefields:gen
 type Allocation struct {
 	// ID is the unique identifier of the allocation.
 	ID int64 `json:"id"`
 
-	// Installation is the installation the allocation belongs to.
-	Installation twapi.Relationship `json:"installation"`
-
-	// InstallationID is the identifier of the installation the allocation
-	// belongs to.
-	InstallationID int64 `json:"installationId"`
-
 	// Project is the project the time is committed to.
 	Project twapi.Relationship `json:"project"`
 
-	// ProjectID is the identifier of the project the time is committed to.
-	ProjectID int64 `json:"projectId"`
-
 	// AssignedUser is the user whose time is committed. It may be a real person
-	// or a placeholder user.
+	// or a placeholder user, and nothing else in the response distinguishes the
+	// two.
 	AssignedUser twapi.Relationship `json:"assignedUser"`
-
-	// AssignedUserID is the identifier of the user whose time is committed. It
-	// may be a real person or a placeholder user; nothing else in the response
-	// distinguishes the two.
-	AssignedUserID int64 `json:"assignedUserID"`
 
 	// Title is the name of the allocation.
 	Title string `json:"title"`
@@ -221,9 +195,9 @@ type Allocation struct {
 	// EndDate is the last day of the allocation's range.
 	EndDate twapi.Date `json:"endedAt"`
 
-	// Duration is the committed time in minutes. It is stored alongside
-	// HoursPerDay and kept in step with it, but HoursPerDay is what the
-	// arithmetic reads.
+	// Duration is the committed time in minutes. It is stored alongside the
+	// per-day rate and kept in step with it, but the rate is what the arithmetic
+	// reads.
 	Duration int64 `json:"duration"`
 
 	// AvailableDuration is the allocation's span in minutes reduced by the days
@@ -237,12 +211,15 @@ type Allocation struct {
 	// rather than linked tasks.
 	AllocatedDuration *int64 `json:"allocatedDuration,omitempty"`
 
-	// HoursPerDay is the time placed on each working day in the range. This is
-	// the governing quantity: the total follows from it and the length of the
-	// range, not the other way round.
+	// HoursPerDay is the time placed on each working day in the range, expressed
+	// in hours. Prefer SecondsPerDay: this is the same quantity as a float, so
+	// it rounds, and a rate that is not a whole number of hours does not survive
+	// it exactly.
 	HoursPerDay float64 `json:"hoursPerDay"`
 
-	// SecondsPerDay is HoursPerDay expressed in seconds.
+	// SecondsPerDay is the time placed on each working day in the range,
+	// expressed in seconds. This is the per-day rate to read: it is exact, where
+	// HoursPerDay is a rounded float over the same value.
 	SecondsPerDay int64 `json:"secondsPerDay"`
 
 	// Color is the allocation's colour as six hexadecimal digits. The API
@@ -254,9 +231,6 @@ type Allocation struct {
 	// Status is the lifecycle state of the allocation. A deleted allocation is
 	// only returned when the list request asks for deleted rows.
 	Status AllocationStatus `json:"status"`
-
-	// DistributeType selects even spread versus per-day amounts set by hand.
-	DistributeType AllocationDistributeType `json:"distributeType"`
 
 	// IsBillable reports whether the allocated time can be charged to a client.
 	IsBillable bool `json:"isBillable"`
@@ -274,19 +248,14 @@ type Allocation struct {
 	// association is many-to-many, and the allocation acts as an envelope: the
 	// allocation's time is not composed of the tasks' estimates, and removing
 	// the allocation drops the link rather than the task.
-	LinkedTaskIDs []twapi.Relationship `json:"linkedTaskIDs"`
-
-	// LinkedTaskLoggedTime is the time logged against the linked tasks, in
-	// minutes, scoped to this allocation's project.
-	//
-	// This counts each linked task whole, and a task can sit behind more than
-	// one allocation, so this figure must not be summed across allocations — it
-	// is a per-allocation view, not an additive one.
-	LinkedTaskLoggedTime *int64 `json:"linkedTaskLoggedTime"`
+	LinkedTasks []twapi.Relationship `json:"linkedTaskIDs"`
 
 	// LinkedTaskEstimatedTime is the sum of the linked tasks' estimates, in
-	// minutes. It counts each linked task whole and must not be summed across
-	// allocations, for the same reason as LinkedTaskLoggedTime.
+	// minutes.
+	//
+	// This counts each linked task whole, and a task can sit behind more than
+	// one allocation, so the figure must not be summed across allocations — it
+	// is a per-allocation view, not an additive one.
 	LinkedTaskEstimatedTime *int64 `json:"linkedTaskEstimatedTime"`
 
 	// FinancialDetails carries the forecasted revenue and cost of the allocated
@@ -344,17 +313,20 @@ type AllocationUpsert struct {
 	// Required on create.
 	EndDate *twapi.Date `json:"endedAt,omitempty"`
 
-	// HoursPerDay is the time placed on each working day of the range. It must
-	// be between one minute and twenty-four hours. This is the governing
-	// quantity, so widening the range adds time rather than spreading the same
-	// total.
-	HoursPerDay *float64 `json:"hoursPerDay,omitempty"`
-
-	// SecondsPerDay is an alternative spelling of HoursPerDay. Set one or the
-	// other, not both.
+	// SecondsPerDay is the time to place on each working day of the range,
+	// expressed in seconds. This is the preferred way to set the per-day rate:
+	// it is exact, where HoursPerDay is a float over the same value and rounds.
+	// It must come to between one minute and twenty-four hours. The rate is what
+	// is held constant, so widening the range adds time rather than spreading
+	// the same total.
 	SecondsPerDay *int64 `json:"secondsPerDay,omitempty"`
 
-	// Duration is the total committed time in minutes. Prefer HoursPerDay: when
+	// HoursPerDay sets the same per-day rate as SecondsPerDay, in hours. Set one
+	// or the other, not both; prefer SecondsPerDay unless the rate is a whole
+	// number of hours.
+	HoursPerDay *float64 `json:"hoursPerDay,omitempty"`
+
+	// Duration is the total committed time in minutes. Prefer SecondsPerDay: when
 	// only Duration is sent the API derives a daily rate from it and clamps that
 	// rate into the permitted range, which can change the total that is stored.
 	Duration *int64 `json:"duration,omitempty"`
@@ -362,9 +334,6 @@ type AllocationUpsert struct {
 	// Color is the allocation's colour as six hexadecimal digits, with or
 	// without a leading "#". Required on create.
 	Color *string `json:"color,omitempty"`
-
-	// DistributeType selects even spread versus per-day amounts set by hand.
-	DistributeType *AllocationDistributeType `json:"distributeType,omitempty"`
 
 	// IsBillable marks the allocated time as chargeable to a client.
 	IsBillable *bool `json:"isBillable,omitempty"`
@@ -386,8 +355,6 @@ type AllocationUpsert struct {
 
 // AllocationCreateRequest represents the request body for creating a new
 // allocation.
-//
-// https://developer.teamwork.com/projects/api-v3/ref/resource-scheduling/post-projects-api-v3-allocationsjson
 type AllocationCreateRequest struct {
 	// Allocation carries the attributes of the allocation to create.
 	Allocation AllocationUpsert
@@ -401,7 +368,7 @@ func NewAllocationCreateRequest(
 	title string,
 	startDate twapi.Date,
 	endDate twapi.Date,
-	hoursPerDay float64,
+	secondsPerDay int64,
 	color string,
 ) AllocationCreateRequest {
 	return AllocationCreateRequest{
@@ -411,7 +378,7 @@ func NewAllocationCreateRequest(
 			Title:          &title,
 			StartDate:      &startDate,
 			EndDate:        &endDate,
-			HoursPerDay:    &hoursPerDay,
+			SecondsPerDay:  &secondsPerDay,
 			Color:          &color,
 		},
 	}
@@ -441,8 +408,6 @@ func (a AllocationCreateRequest) HTTPRequest(ctx context.Context, server string)
 
 // AllocationCreateResponse represents the response body for creating a new
 // allocation.
-//
-// https://developer.teamwork.com/projects/api-v3/ref/resource-scheduling/post-projects-api-v3-allocationsjson
 type AllocationCreateResponse struct {
 	// Allocation is the created allocation.
 	Allocation Allocation `json:"allocation"`
@@ -484,8 +449,6 @@ type AllocationUpdateRequestPath struct {
 // AllocationUpdateRequest represents the request body for updating an
 // allocation. Besides the identifier every field is optional, and an omitted
 // field is left as it is.
-//
-// https://developer.teamwork.com/projects/api-v3/ref/resource-scheduling/patch-projects-api-v3-allocations-idjson
 type AllocationUpdateRequest struct {
 	// Path contains the path parameters for the request.
 	Path AllocationUpdateRequestPath
@@ -531,8 +494,6 @@ func (a AllocationUpdateRequest) HTTPRequest(ctx context.Context, server string)
 
 // AllocationUpdateResponse represents the response body for updating an
 // allocation.
-//
-// https://developer.teamwork.com/projects/api-v3/ref/resource-scheduling/patch-projects-api-v3-allocations-idjson
 type AllocationUpdateResponse struct {
 	// Allocation is the updated allocation.
 	Allocation Allocation `json:"allocation"`
@@ -571,8 +532,6 @@ type AllocationDeleteRequestPath struct {
 // AllocationDeleteRequest represents the request body for deleting an
 // allocation. The endpoint takes a body, which is unusual for a delete: it is
 // what carries HardDelete.
-//
-// https://developer.teamwork.com/projects/api-v3/ref/resource-scheduling/delete-projects-api-v3-allocations-idjson
 type AllocationDeleteRequest struct {
 	// Path contains the path parameters for the request.
 	Path AllocationDeleteRequestPath `json:"-"`
@@ -616,8 +575,6 @@ func (a AllocationDeleteRequest) HTTPRequest(ctx context.Context, server string)
 
 // AllocationDeleteResponse represents the response body for deleting an
 // allocation.
-//
-// https://developer.teamwork.com/projects/api-v3/ref/resource-scheduling/delete-projects-api-v3-allocations-idjson
 type AllocationDeleteResponse struct{}
 
 // HandleHTTPResponse handles the HTTP response for the
@@ -649,8 +606,6 @@ type AllocationRestoreRequestPath struct {
 
 // AllocationRestoreRequest represents the request for restoring a soft-deleted
 // allocation.
-//
-// https://developer.teamwork.com/projects/api-v3/ref/resource-scheduling/put-projects-api-v3-allocations-id-restorejson
 type AllocationRestoreRequest struct {
 	// Path contains the path parameters for the request.
 	Path AllocationRestoreRequestPath
@@ -683,8 +638,6 @@ func (a AllocationRestoreRequest) HTTPRequest(ctx context.Context, server string
 
 // AllocationRestoreResponse represents the response body for restoring an
 // allocation.
-//
-// https://developer.teamwork.com/projects/api-v3/ref/resource-scheduling/put-projects-api-v3-allocations-id-restorejson
 type AllocationRestoreResponse struct {
 	// Allocation is the restored allocation.
 	Allocation Allocation `json:"allocation"`
@@ -727,10 +680,6 @@ type AllocationTaskLinkRequestPath struct {
 // allocation. The link is incremental — it leaves the allocation's other links
 // alone, unlike AllocationUpsert.LinkedTaskIDs, which replaces the whole set.
 // The task and the allocation must belong to the same project.
-//
-// https://developer.teamwork.com/projects/api-v3/ref/resource-scheduling/post-projects-api-v3-allocations-allocationid-link-taskidjson
-//
-//nolint:lll
 type AllocationTaskLinkRequest struct {
 	// Path contains the path parameters for the request.
 	Path AllocationTaskLinkRequestPath
@@ -764,10 +713,6 @@ func (a AllocationTaskLinkRequest) HTTPRequest(ctx context.Context, server strin
 
 // AllocationTaskLinkResponse represents the response body for linking a task to
 // an allocation.
-//
-// https://developer.teamwork.com/projects/api-v3/ref/resource-scheduling/post-projects-api-v3-allocations-allocationid-link-taskidjson
-//
-//nolint:lll
 type AllocationTaskLinkResponse struct{}
 
 // HandleHTTPResponse handles the HTTP response for the
@@ -803,10 +748,6 @@ type AllocationTaskUnlinkRequestPath struct {
 // AllocationTaskUnlinkRequest represents the request for unlinking one task
 // from an allocation. It removes the association only: both the task and the
 // allocation are left standing.
-//
-// https://developer.teamwork.com/projects/api-v3/ref/resource-scheduling/post-projects-api-v3-allocations-allocationid-unlink-taskidjson
-//
-//nolint:lll
 type AllocationTaskUnlinkRequest struct {
 	// Path contains the path parameters for the request.
 	Path AllocationTaskUnlinkRequestPath
@@ -840,10 +781,6 @@ func (a AllocationTaskUnlinkRequest) HTTPRequest(ctx context.Context, server str
 
 // AllocationTaskUnlinkResponse represents the response body for unlinking a
 // task from an allocation.
-//
-// https://developer.teamwork.com/projects/api-v3/ref/resource-scheduling/post-projects-api-v3-allocations-allocationid-unlink-taskidjson
-//
-//nolint:lll
 type AllocationTaskUnlinkResponse struct{}
 
 // HandleHTTPResponse handles the HTTP response for the
@@ -874,8 +811,6 @@ type AllocationGetRequestPath struct {
 }
 
 // AllocationGetRequest represents the request for loading a single allocation.
-//
-// https://developer.teamwork.com/projects/api-v3/ref/resource-scheduling/get-projects-api-v3-allocations-idjson
 type AllocationGetRequest struct {
 	// Path contains the path parameters for the request.
 	Path AllocationGetRequestPath
@@ -921,8 +856,6 @@ func (a AllocationGetRequest) HTTPRequest(ctx context.Context, server string) (*
 }
 
 // AllocationGetResponse contains all the information related to an allocation.
-//
-// https://developer.teamwork.com/projects/api-v3/ref/resource-scheduling/get-projects-api-v3-allocations-idjson
 //
 // sparsefields:get
 type AllocationGetResponse struct {
@@ -1108,8 +1041,6 @@ func (a AllocationListRequestFilters) apply(req *http.Request) {
 
 // AllocationListRequest represents the request for loading multiple
 // allocations.
-//
-// https://developer.teamwork.com/projects/api-v3/ref/resource-scheduling/get-projects-api-v3-allocationsjson
 type AllocationListRequest struct {
 	// Filters contains the filters for loading multiple allocations.
 	Filters AllocationListRequestFilters
@@ -1141,8 +1072,6 @@ func (a AllocationListRequest) HTTPRequest(ctx context.Context, server string) (
 
 // AllocationListResponse contains information by multiple allocations matching
 // the request filters.
-//
-// https://developer.teamwork.com/projects/api-v3/ref/resource-scheduling/get-projects-api-v3-allocationsjson
 //
 // sparsefields:list
 type AllocationListResponse struct {
