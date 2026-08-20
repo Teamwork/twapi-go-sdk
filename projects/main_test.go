@@ -369,6 +369,31 @@ func createMilestone(t testEngine, projectID int64, assignees projects.LegacyUse
 	}, nil
 }
 
+func createAllocation(t testEngine, projectID, userID int64) (int64, func(), error) {
+	allocation, err := projects.AllocationCreate(t.Context(), engine, projects.NewAllocationCreateRequest(
+		projectID,
+		userID,
+		fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
+		twapi.Date(time.Now()),
+		twapi.Date(time.Now().Add(48*time.Hour)),
+		4*60*60,
+		"#3c8f7c",
+	))
+	if err != nil {
+		return 0, nil, fmt.Errorf("failed to create allocation for test: %w", err)
+	}
+	id := allocation.Allocation.ID
+	return id, func() {
+		ctx := context.Background() // t.Context is always canceled in cleanup
+		// hard delete, so repeated runs do not accumulate soft-deleted rows
+		request := projects.NewAllocationDeleteRequest(id)
+		request.HardDelete = true
+		if _, err := projects.AllocationDelete(ctx, engine, request); err != nil {
+			t.Errorf("failed to delete allocation after test: %s", err)
+		}
+	}, nil
+}
+
 func createCompany(t testEngine) (int64, func(), error) {
 	companyResponse, err := projects.CompanyCreate(t.Context(), engine, projects.CompanyCreateRequest{
 		Name: fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),

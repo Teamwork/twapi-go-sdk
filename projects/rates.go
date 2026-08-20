@@ -70,6 +70,31 @@ const (
 	// EffectiveRateSourceUserProjectRate represents a rate derived from a user's
 	// project-specific rate.
 	EffectiveRateSourceUserProjectRate EffectiveRateSource = "userprojectrate"
+
+	// EffectiveRateSourceRoleRate represents a rate derived from the job role of
+	// a placeholder user.
+	EffectiveRateSourceRoleRate EffectiveRateSource = "rolerate"
+
+	// EffectiveRateSourceClientRate represents a rate derived from the client's
+	// rate.
+	EffectiveRateSourceClientRate EffectiveRateSource = "clientrate"
+)
+
+// CostRateSource represents the source of a cost rate.
+//
+// The values are camelCase where EffectiveRateSource's are all lowercase. That
+// mismatch is the API's, not a typo here — each type spells its values the way
+// the endpoints return them.
+type CostRateSource string
+
+const (
+	// CostRateSourceUserCostRate represents a cost rate derived from the user's
+	// own cost rate.
+	CostRateSourceUserCostRate CostRateSource = "userCostRate"
+
+	// CostRateSourceRoleCostRate represents a cost rate derived from the job role
+	// of a placeholder user.
+	CostRateSourceRoleCostRate CostRateSource = "roleCostRate"
 )
 
 // BillableRate contains the rate and currency information for billable amounts.
