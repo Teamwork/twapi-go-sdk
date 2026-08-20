@@ -44,11 +44,21 @@ func TestActivityListFieldsZeroValue(t *testing.T) {
 func TestAllocationGetFieldsApply(t *testing.T) {
 	fields := AllocationGetFields{
 		Allocation: []AllocationField{AllocationFieldID},
+		Projects:   []ProjectField{ProjectFieldID},
+		Companies:  []CompanyField{CompanyFieldID},
+		Users:      []UserField{UserFieldID},
+		JobRoles:   []JobRoleField{JobRoleFieldID},
+		Tasks:      []TaskField{TaskFieldID},
 	}
 	query := url.Values{}
 	fields.apply(query)
 	checks := map[string]string{
 		"fields[allocations]": "id",
+		"fields[projects]":    "id",
+		"fields[companies]":   "id",
+		"fields[users]":       "id",
+		"fields[jobroles]":    "id",
+		"fields[tasks]":       "id",
 	}
 	for key, want := range checks {
 		if got := query.Get(key); got != want {
@@ -75,11 +85,21 @@ func TestAllocationGetFieldsZeroValue(t *testing.T) {
 func TestAllocationListFieldsApply(t *testing.T) {
 	fields := AllocationListFields{
 		Allocations: []AllocationField{AllocationFieldID},
+		Projects:    []ProjectField{ProjectFieldID},
+		Companies:   []CompanyField{CompanyFieldID},
+		Users:       []UserField{UserFieldID},
+		JobRoles:    []JobRoleField{JobRoleFieldID},
+		Tasks:       []TaskField{TaskFieldID},
 	}
 	query := url.Values{}
 	fields.apply(query)
 	checks := map[string]string{
 		"fields[allocations]": "id",
+		"fields[projects]":    "id",
+		"fields[companies]":   "id",
+		"fields[users]":       "id",
+		"fields[jobroles]":    "id",
+		"fields[tasks]":       "id",
 	}
 	for key, want := range checks {
 		if got := query.Get(key); got != want {

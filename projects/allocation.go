@@ -52,7 +52,7 @@ const (
 	AllocationSideloadProjectsCompanies AllocationSideload = "projects.companies"
 	AllocationSideloadAssignee          AllocationSideload = "assignee"
 	AllocationSideloadAssigneeTasks     AllocationSideload = "assignee.tasks"
-	AllocationSideloadAssigneeJobRoles  AllocationSideload = "assignee.jobroles"
+	AllocationSideloadAssigneeJobRoles  AllocationSideload = "assignee.jobRoles"
 
 	// AllocationSideloadFinancialDetails populates each allocation's
 	// FinancialDetails. It is gated by both an account entitlement and a
@@ -244,7 +244,7 @@ type Allocation struct {
 	// expanded on read and are not persisted.
 	RecurringRule *string `json:"recurringRule"`
 
-	// LinkedTaskIDs are the tasks associated with the allocation. The
+	// LinkedTasks are the tasks associated with the allocation. The
 	// association is many-to-many, and the allocation acts as an envelope: the
 	// allocation's time is not composed of the tasks' estimates, and removing
 	// the allocation drops the link rather than the task.
@@ -350,7 +350,11 @@ type AllocationUpsert struct {
 	// replaces the whole set: send every task that should remain linked, or use
 	// AllocationTaskLink and AllocationTaskUnlink to change the set one task at
 	// a time.
-	LinkedTaskIDs []int64 `json:"linkedTaskIds,omitempty"`
+	//
+	// The key is spelled linkedTaskIDs to match the response and the rest of the
+	// API's clients. The endpoint documents the request key as linkedTaskIds and
+	// accepts either, since it binds case-insensitively.
+	LinkedTaskIDs []int64 `json:"linkedTaskIDs,omitempty"`
 }
 
 // AllocationCreateRequest represents the request body for creating a new
@@ -860,6 +864,40 @@ func (a AllocationGetRequest) HTTPRequest(ctx context.Context, server string) (*
 // sparsefields:get
 type AllocationGetResponse struct {
 	Allocation Allocation `json:"allocation"`
+
+	// Included contains the related objects requested through Include.
+	//
+	// The rate objects the financialDetails sideload also populates —
+	// effectiveUserRate and costRate — are deliberately absent: the figures they
+	// carry are already summarised inline on the allocation's FinancialDetails,
+	// and modelling them would mean two new entities for the detail that is left.
+	Included struct {
+		// Projects contains the projects the allocations are committed to, keyed
+		// by the string representation of the project ID.
+		Projects map[string]Project `json:"projects,omitempty"`
+
+		// Companies contains the companies owning those projects, keyed by the
+		// string representation of the company ID.
+		Companies map[string]Company `json:"companies,omitempty"`
+
+		// Users contains the assigned users, keyed by the string representation of
+		// the user ID. A user here may be a placeholder rather than a real person.
+		Users map[string]User `json:"users,omitempty"`
+
+		// JobRoles contains the job roles of the assigned users, keyed by the
+		// string representation of the job role ID.
+		//
+		// The response spells this key jobRoles while the endpoint reads the
+		// sparse fieldset from fields[jobroles], so the entity name is overridden
+		// rather than inherited from the tag.
+		//
+		// sparsefields:key=jobroles
+		JobRoles map[string]JobRole `json:"jobRoles,omitempty"`
+
+		// Tasks contains the assigned users' tasks, keyed by the string
+		// representation of the task ID.
+		Tasks map[string]Task `json:"tasks,omitempty"`
+	} `json:"included"`
 }
 
 // HandleHTTPResponse handles the HTTP response for the AllocationGetResponse.
@@ -1079,6 +1117,40 @@ type AllocationListResponse struct {
 
 	Meta        twapi.ListMeta `json:"meta"`
 	Allocations []Allocation   `json:"allocations"`
+
+	// Included contains the related objects requested through Include.
+	//
+	// The rate objects the financialDetails sideload also populates —
+	// effectiveUserRate and costRate — are deliberately absent: the figures they
+	// carry are already summarised inline on the allocation's FinancialDetails,
+	// and modelling them would mean two new entities for the detail that is left.
+	Included struct {
+		// Projects contains the projects the allocations are committed to, keyed
+		// by the string representation of the project ID.
+		Projects map[string]Project `json:"projects,omitempty"`
+
+		// Companies contains the companies owning those projects, keyed by the
+		// string representation of the company ID.
+		Companies map[string]Company `json:"companies,omitempty"`
+
+		// Users contains the assigned users, keyed by the string representation of
+		// the user ID. A user here may be a placeholder rather than a real person.
+		Users map[string]User `json:"users,omitempty"`
+
+		// JobRoles contains the job roles of the assigned users, keyed by the
+		// string representation of the job role ID.
+		//
+		// The response spells this key jobRoles while the endpoint reads the
+		// sparse fieldset from fields[jobroles], so the entity name is overridden
+		// rather than inherited from the tag.
+		//
+		// sparsefields:key=jobroles
+		JobRoles map[string]JobRole `json:"jobRoles,omitempty"`
+
+		// Tasks contains the assigned users' tasks, keyed by the string
+		// representation of the task ID.
+		Tasks map[string]Task `json:"tasks,omitempty"`
+	} `json:"included"`
 }
 
 // HandleHTTPResponse handles the HTTP response for the AllocationListResponse.

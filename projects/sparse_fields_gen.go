@@ -644,11 +644,26 @@ func (f ActivityListFields) apply(query url.Values) {
 type AllocationGetFields struct {
 	// Allocation controls fields[allocations]=… on the response.
 	Allocation []AllocationField
+	// Projects controls fields[projects]=… on the response.
+	Projects []ProjectField
+	// Companies controls fields[companies]=… on the response.
+	Companies []CompanyField
+	// Users controls fields[users]=… on the response.
+	Users []UserField
+	// JobRoles controls fields[jobroles]=… on the response.
+	JobRoles []JobRoleField
+	// Tasks controls fields[tasks]=… on the response.
+	Tasks []TaskField
 }
 
 // apply writes every populated slot to query as a fields[entity]=… parameter.
 func (f AllocationGetFields) apply(query url.Values) {
 	twapi.ApplySparseFields(query, "allocations", f.Allocation)
+	twapi.ApplySparseFields(query, "projects", f.Projects)
+	twapi.ApplySparseFields(query, "companies", f.Companies)
+	twapi.ApplySparseFields(query, "users", f.Users)
+	twapi.ApplySparseFields(query, "jobroles", f.JobRoles)
+	twapi.ApplySparseFields(query, "tasks", f.Tasks)
 }
 
 // AllocationListFields selects sparse-fields slots for AllocationListResponse. Leave a slot empty to receive the
@@ -656,11 +671,26 @@ func (f AllocationGetFields) apply(query url.Values) {
 type AllocationListFields struct {
 	// Allocations controls fields[allocations]=… on the response.
 	Allocations []AllocationField
+	// Projects controls fields[projects]=… on the response.
+	Projects []ProjectField
+	// Companies controls fields[companies]=… on the response.
+	Companies []CompanyField
+	// Users controls fields[users]=… on the response.
+	Users []UserField
+	// JobRoles controls fields[jobroles]=… on the response.
+	JobRoles []JobRoleField
+	// Tasks controls fields[tasks]=… on the response.
+	Tasks []TaskField
 }
 
 // apply writes every populated slot to query as a fields[entity]=… parameter.
 func (f AllocationListFields) apply(query url.Values) {
 	twapi.ApplySparseFields(query, "allocations", f.Allocations)
+	twapi.ApplySparseFields(query, "projects", f.Projects)
+	twapi.ApplySparseFields(query, "companies", f.Companies)
+	twapi.ApplySparseFields(query, "users", f.Users)
+	twapi.ApplySparseFields(query, "jobroles", f.JobRoles)
+	twapi.ApplySparseFields(query, "tasks", f.Tasks)
 }
 
 // CalendarEventListFields selects sparse-fields slots for CalendarEventListResponse. Leave a slot empty to receive the

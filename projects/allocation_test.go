@@ -2,6 +2,7 @@ package projects_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"testing"
@@ -321,5 +322,97 @@ func TestAllocationList(t *testing.T) {
 				t.Error("expected at least one allocation but got 0")
 			}
 		})
+	}
+}
+
+// TestAllocationGetResponseDecodesSideloads pins that the sideloads a caller
+// asked for actually survive decoding. The response type carried no Included
+// struct at first, so `include=projects,assignee` was honoured by the API and
+// then silently discarded here — the request looked right and the related
+// objects simply never arrived.
+//
+// It also covers the jobRoles key, which the response spells in camelCase while
+// the endpoint reads its sparse fieldset from fields[jobroles].
+func TestAllocationGetResponseDecodesSideloads(t *testing.T) {
+	body := `{
+		"allocation": {
+			"id": 12345,
+			"title": "Design phase",
+			"project": {"id": 777, "type": "projects"},
+			"assignedUser": {"id": 456, "type": "users"},
+			"startedAt": "2026-08-27",
+			"endedAt": "2026-08-28",
+			"secondsPerDay": 28800,
+			"canViewFinancialDetails": true,
+			"financialDetails": {
+				"forecastedRevenue": 960,
+				"forecastedCost": 640,
+				"billableRates": [{
+					"userEffectiveRate": {"id": 888, "type": "userEffectiveRate"},
+					"billableRate": 60,
+					"allocatedMinutes": 960,
+					"forecastedRevenue": 960,
+					"source": "userprojectrate",
+					"effectiveDate": "2023-08-17",
+					"currency": {"id": 3, "type": "currencies"}
+				}],
+				"costRates": [{
+					"userCostRate": {"id": 999, "type": "costRates"},
+					"costRate": 40,
+					"allocatedMinutes": 960,
+					"forecastedCost": 640,
+					"currency": {"id": 3, "type": "currencies"},
+					"source": "userCostRate"
+				}]
+			}
+		},
+		"included": {
+			"companies": {"111": {"id": 111, "name": "Example Company"}},
+			"projects": {"777": {"id": 777, "name": "Example Project", "companyId": 111}},
+			"users": {"456": {"id": 456, "firstName": "John", "lastName": "Doe"}},
+			"jobRoles": {"222": {"id": 222, "name": "Creative Director"}},
+			"tasks": {"333": {"id": 333, "name": "Example Task"}}
+		}
+	}`
+
+	var response projects.AllocationGetResponse
+	if err := json.Unmarshal([]byte(body), &response); err != nil {
+		t.Fatalf("failed to decode response: %s", err)
+	}
+
+	if got := response.Included.Projects["777"].Name; got != "Example Project" {
+		t.Errorf("expected the project sideload to decode, got %q", got)
+	}
+	if got := response.Included.Companies["111"].Name; got != "Example Company" {
+		t.Errorf("expected the company sideload to decode, got %q", got)
+	}
+	if got := response.Included.Users["456"].FirstName; got != "John" {
+		t.Errorf("expected the user sideload to decode, got %q", got)
+	}
+	if got := response.Included.JobRoles["222"].Name; got != "Creative Director" {
+		t.Errorf("expected the jobRoles sideload to decode, got %q", got)
+	}
+	if got := response.Included.Tasks["333"].Name; got != "Example Task" {
+		t.Errorf("expected the task sideload to decode, got %q", got)
+	}
+
+	// the inline financial figures are what make the rate sideloads unnecessary,
+	// so they have to survive the same round trip
+	financial := response.Allocation.FinancialDetails
+	if financial.ForecastedRevenue == nil || *financial.ForecastedRevenue != 960 {
+		t.Errorf("expected forecasted revenue to decode, got %v", financial.ForecastedRevenue)
+	}
+	if len(financial.BillableRates) != 1 {
+		t.Fatalf("expected one billable rate period, got %d", len(financial.BillableRates))
+	}
+	if got := financial.BillableRates[0].Source; got == nil ||
+		*got != projects.EffectiveRateSourceUserProjectRate {
+		t.Errorf("expected the billable rate source to decode as a typed value, got %v", got)
+	}
+	if len(financial.CostRates) != 1 {
+		t.Fatalf("expected one cost rate period, got %d", len(financial.CostRates))
+	}
+	if got := financial.CostRates[0].Source; got == nil || *got != projects.CostRateSourceUserCostRate {
+		t.Errorf("expected the cost rate source to decode as a typed value, got %v", got)
 	}
 }
