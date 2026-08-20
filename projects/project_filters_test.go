@@ -10,10 +10,6 @@ import (
 	"github.com/teamwork/twapi-go-sdk/projects"
 )
 
-func ptr[T any](value T) *T {
-	return &value
-}
-
 // listQuery builds the HTTP request for req and returns its parsed query string.
 func listQuery(t *testing.T, req twapi.HTTPRequester) url.Values {
 	t.Helper()
@@ -54,7 +50,7 @@ func TestProjectListFiltersApplied(t *testing.T) {
 			},
 
 			SearchTerm:      "acme",
-			SearchCompanies: ptr(true),
+			SearchCompanies: new(true),
 
 			ProjectIDs:        []int64{777, 888},
 			ExcludeProjectIDs: []int64{999},
@@ -70,7 +66,7 @@ func TestProjectListFiltersApplied(t *testing.T) {
 			},
 
 			ProjectCategoryIDs:   []int64{12345},
-			IncludeSubCategories: ptr(true),
+			IncludeSubCategories: new(true),
 			ProjectCompanyIDs:    []int64{23456},
 			ProjectOwnerIDs:      []int64{34567},
 
@@ -78,30 +74,30 @@ func TestProjectListFiltersApplied(t *testing.T) {
 			TeamIDs: []int64{78901},
 
 			TagIDs:               []int64{111, 222},
-			MatchAllTags:         ptr(true),
+			MatchAllTags:         new(true),
 			ExcludeTagIDs:        []int64{333},
-			MatchAllExcludedTags: ptr(false),
+			MatchAllExcludedTags: new(false),
 
 			UpdatedAfter:       &updatedAfter,
 			NotCompletedBefore: &notCompletedBefore,
 
-			OnlyStarredProjects:         ptr(true),
-			OnlyProjectsWithAdminAccess: ptr(true),
-			HideObservedProjects:        ptr(true),
+			OnlyStarredProjects:         new(true),
+			OnlyProjectsWithAdminAccess: new(true),
+			HideObservedProjects:        new(true),
 
-			IncludeArchivedProjects:  ptr(true),
-			OnlyArchivedProjects:     ptr(false),
-			IncludeTentativeProjects: ptr(true),
+			IncludeArchivedProjects:  new(true),
+			OnlyArchivedProjects:     new(false),
+			IncludeTentativeProjects: new(true),
 
-			IncludeCustomFields:   ptr(true),
+			IncludeCustomFields:   new(true),
 			IncludeCustomFieldIDs: []int64{444, 555},
-			UseFormulaFields:      ptr(true),
+			UseFormulaFields:      new(true),
 
-			IncludeProjectStats:         ptr(true),
-			IncludeOverallStats:         ptr(true),
-			IncludeProjectDates:         ptr(true),
-			IncludeProjectUserInfo:      ptr(true),
-			IncludeProjectProfitability: ptr(true),
+			IncludeProjectStats:         new(true),
+			IncludeOverallStats:         new(true),
+			IncludeProjectDates:         new(true),
+			IncludeProjectUserInfo:      new(true),
+			IncludeProjectProfitability: new(true),
 			TimeMode:                    projects.ProjectTimeModeEstimated,
 
 			OrderBy:              projects.ProjectOrderByCustomField,
