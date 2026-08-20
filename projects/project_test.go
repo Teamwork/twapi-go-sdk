@@ -307,7 +307,7 @@ func TestProjectList(t *testing.T) {
 		input: projects.ProjectListRequest{
 			Filters: projects.ProjectListRequestFilters{
 				SearchTerm:      "a",
-				SearchCompanies: ptr(true),
+				SearchCompanies: new(true),
 
 				ProjectType: projects.ProjectTypeNormal,
 				ProjectStatuses: []projects.ProjectListStatus{
@@ -323,20 +323,20 @@ func TestProjectList(t *testing.T) {
 				},
 
 				ProjectCompanyIDs:    []int64{testResources.CompanyID},
-				IncludeSubCategories: ptr(true),
+				IncludeSubCategories: new(true),
 
-				MatchAllTags:         ptr(false),
-				MatchAllExcludedTags: ptr(false),
+				MatchAllTags:         new(false),
+				MatchAllExcludedTags: new(false),
 
-				OnlyStarredProjects:         ptr(false),
-				OnlyProjectsWithAdminAccess: ptr(false),
-				HideObservedProjects:        ptr(false),
+				OnlyStarredProjects:         new(false),
+				OnlyProjectsWithAdminAccess: new(false),
+				HideObservedProjects:        new(false),
 
-				IncludeArchivedProjects:  ptr(true),
-				OnlyArchivedProjects:     ptr(false),
-				IncludeTentativeProjects: ptr(true),
+				IncludeArchivedProjects:  new(true),
+				OnlyArchivedProjects:     new(false),
+				IncludeTentativeProjects: new(true),
 
-				UseFormulaFields: ptr(true),
+				UseFormulaFields: new(true),
 
 				CountMode: twapi.ListCountModeExact,
 			},
@@ -357,12 +357,12 @@ func TestProjectList(t *testing.T) {
 
 				ProjectIDs: []int64{testResources.ProjectID},
 
-				IncludeCustomFields:         ptr(true),
-				IncludeProjectStats:         ptr(true),
-				IncludeOverallStats:         ptr(true),
-				IncludeProjectDates:         ptr(true),
-				IncludeProjectUserInfo:      ptr(true),
-				IncludeProjectProfitability: ptr(true),
+				IncludeCustomFields:         new(true),
+				IncludeProjectStats:         new(true),
+				IncludeOverallStats:         new(true),
+				IncludeProjectDates:         new(true),
+				IncludeProjectUserInfo:      new(true),
+				IncludeProjectProfitability: new(true),
 				TimeMode:                    projects.ProjectTimeModeTimelogs,
 
 				OrderBy:   projects.ProjectOrderByLastActivity,

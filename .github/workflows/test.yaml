@@ -26,7 +26,13 @@ jobs:
       - name: Lint
         uses: golangci/golangci-lint-action@v9
         with:
-          version: v2.10
+          # Build from source with the toolchain resolved from go.mod, so the
+          # Go version golangci-lint is built with can never lag the module's
+          # go directive. A prebuilt binary is built with whatever Go its
+          # release used, and golangci-lint refuses to run when that is older
+          # than the go directive. `goinstall` requires a full patch version.
+          install-mode: goinstall
+          version: v2.13.1
 
   generate:
     runs-on: ubuntu-latest

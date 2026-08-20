@@ -84,3 +84,64 @@ func TestOptionalDateTimeMarshalJSON(t *testing.T) {
 		})
 	}
 }
+
+// TestDateTimeAsMapKey pins the text round trip for the types used as JSON map
+// keys. encoding/json routes a map key through encoding.TextUnmarshaler with
+// the quotes already stripped, so a Date or Time reaching UnmarshalText as a
+// bare 2006-01-02 or 15:04:05 must be parsed directly — handing it back to the
+// JSON decoder reads the leading digits as a number and then fails on the
+// first hyphen or colon. The workload endpoint keys its per-user dates this
+// way, so the whole response fails to decode when this regresses.
+func TestDateTimeAsMapKey(t *testing.T) {
+	t.Run("date", func(t *testing.T) {
+		var decoded map[twapi.Date]int64
+		if err := json.Unmarshal([]byte(`{"2026-01-02":5}`), &decoded); err != nil {
+			t.Fatalf("unexpected error decoding date map key: %s", err)
+		}
+		want := twapi.Date(time.Date(2026, time.January, 2, 0, 0, 0, 0, time.UTC))
+		if got, ok := decoded[want]; !ok || got != 5 {
+			t.Errorf("expected key 2026-01-02 to hold 5 but got %v", decoded)
+		}
+
+		encoded, err := json.Marshal(decoded)
+		if err != nil {
+			t.Fatalf("unexpected error encoding date map key: %s", err)
+		}
+		if string(encoded) != `{"2026-01-02":5}` {
+			t.Errorf(`expected {"2026-01-02":5} but got %s`, encoded)
+		}
+	})
+
+	t.Run("time", func(t *testing.T) {
+		var decoded map[twapi.Time]int64
+		if err := json.Unmarshal([]byte(`{"15:04:05":5}`), &decoded); err != nil {
+			t.Fatalf("unexpected error decoding time map key: %s", err)
+		}
+		want := twapi.Time(time.Date(0, time.January, 1, 15, 4, 5, 0, time.UTC))
+		if got, ok := decoded[want]; !ok || got != 5 {
+			t.Errorf("expected key 15:04:05 to hold 5 but got %v", decoded)
+		}
+
+		encoded, err := json.Marshal(decoded)
+		if err != nil {
+			t.Fatalf("unexpected error encoding time map key: %s", err)
+		}
+		if string(encoded) != `{"15:04:05":5}` {
+			t.Errorf(`expected {"15:04:05":5} but got %s`, encoded)
+		}
+	})
+
+	// A date-time value still decodes through UnmarshalJSON, including the
+	// timestamp form the API returns for some date-only fields.
+	t.Run("date value keeps accepting a timestamp", func(t *testing.T) {
+		var decoded struct {
+			At twapi.Date `json:"at"`
+		}
+		if err := json.Unmarshal([]byte(`{"at":"2026-01-02T03:04:05Z"}`), &decoded); err != nil {
+			t.Fatalf("unexpected error decoding date value: %s", err)
+		}
+		if got := decoded.At.String(); got != "2026-01-02" {
+			t.Errorf("expected 2026-01-02 but got %s", got)
+		}
+	})
+}
