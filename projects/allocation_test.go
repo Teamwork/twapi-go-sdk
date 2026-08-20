@@ -486,3 +486,44 @@ func TestAllocationRequestsRequireAnID(t *testing.T) {
 		})
 	}
 }
+
+// TestAllocationIncludesAreOneCommaSeparatedParam pins how the sideload list is
+// encoded. The endpoint reads only the first `include` parameter it receives and
+// silently drops repeated ones, so a request adding them one at a time comes
+// back with the first sideload and nothing else — successfully, which is what
+// makes it easy to miss. Asserting the raw query rather than the parsed values
+// is deliberate: url.Values renders both encodings as a slice, so a parsed
+// comparison passes either way.
+func TestAllocationIncludesAreOneCommaSeparatedParam(t *testing.T) {
+	sideloads := []projects.AllocationSideload{
+		projects.AllocationSideloadProjects,
+		projects.AllocationSideloadAssignee,
+		projects.AllocationSideloadAssigneeJobRoles,
+	}
+
+	listRequest := projects.NewAllocationListRequest()
+	listRequest.Filters.Include = sideloads
+
+	getRequest := projects.NewAllocationGetRequest(12345)
+	getRequest.Include = sideloads
+
+	for name, request := range map[string]twapi.HTTPRequester{
+		"list": listRequest,
+		"get":  getRequest,
+	} {
+		t.Run(name, func(t *testing.T) {
+			httpRequest, err := request.HTTPRequest(t.Context(), "https://test.teamwork.com")
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+
+			raw := httpRequest.URL.RawQuery
+			if got := strings.Count(raw, "include="); got != 1 {
+				t.Errorf("expected exactly one include parameter, got %d in %q", got, raw)
+			}
+			if want := "include=projects%2Cassignee%2Cassignee.jobRoles"; !strings.Contains(raw, want) {
+				t.Errorf("expected %s in the query, got %q", want, raw)
+			}
+		})
+	}
+}

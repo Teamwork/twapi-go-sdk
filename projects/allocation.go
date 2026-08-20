@@ -867,9 +867,7 @@ func (a AllocationGetRequest) HTTPRequest(ctx context.Context, server string) (*
 	}
 
 	query := req.URL.Query()
-	for _, include := range a.Include {
-		query.Add("include", string(include))
-	}
+	querySetStrings(query, "include", a.Include)
 	a.Fields.apply(query)
 	req.URL.RawQuery = query.Encode()
 
@@ -1082,9 +1080,7 @@ func (a AllocationListRequestFilters) apply(req *http.Request) {
 	querySetTimestamp(query, "deletedAfter", a.DeletedAfter)
 	querySetBool(query, "showDeleted", a.ShowDeleted)
 	querySetBool(query, "templateWorkingHours", a.TemplateWorkingHours)
-	for _, include := range a.Include {
-		query.Add("include", string(include))
-	}
+	querySetStrings(query, "include", a.Include)
 	querySetString(query, "orderBy", a.OrderBy)
 	querySetString(query, "orderMode", a.OrderMode)
 	querySetInt64(query, "page", a.Page)
