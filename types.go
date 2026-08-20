@@ -92,15 +92,7 @@ func (d *Date) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &str); err != nil {
 		return err
 	}
-	if strings.Contains(str, "T") {
-		str, _, _ = strings.Cut(str, "T")
-	}
-	parsedTime, err := time.Parse("2006-01-02", str)
-	if err != nil {
-		return err
-	}
-	*d = Date(parsedTime)
-	return nil
+	return d.UnmarshalText([]byte(str))
 }
 
 // MarshalText encodes the Date as a string in the format "2006-01-02".
@@ -119,8 +111,21 @@ func (d Date) MarshalText() ([]byte, error) {
 
 // UnmarshalText decodes a text string into a Date type. This is required when
 // using Date type as a map key.
+//
+// The parsing lives here rather than in UnmarshalJSON because the text form is
+// unquoted: feeding it to UnmarshalJSON would ask the JSON decoder to parse
+// 2006-01-02 as a bare token, which fails on the first hyphen.
 func (d *Date) UnmarshalText(text []byte) error {
-	return d.UnmarshalJSON(text)
+	str := string(text)
+	if strings.Contains(str, "T") {
+		str, _, _ = strings.Cut(str, "T")
+	}
+	parsedTime, err := time.Parse("2006-01-02", str)
+	if err != nil {
+		return err
+	}
+	*d = Date(parsedTime)
+	return nil
 }
 
 // IsZero reports whether the Date is zero.
@@ -142,18 +147,13 @@ func (t Time) MarshalJSON() ([]byte, error) {
 	return []byte(`"` + time.Time(t).Format("15:04:05") + `"`), nil
 }
 
-// UnmarshalJSON decodes a JSON string into a Date type.
+// UnmarshalJSON decodes a JSON string into a Time type.
 func (t *Time) UnmarshalJSON(data []byte) error {
 	var str string
 	if err := json.Unmarshal(data, &str); err != nil {
 		return err
 	}
-	parsedTime, err := time.Parse("15:04:05", str)
-	if err != nil {
-		return err
-	}
-	*t = Time(parsedTime)
-	return nil
+	return t.UnmarshalText([]byte(str))
 }
 
 // MarshalText encodes the Time as a string in the format "15:04:05".
@@ -172,8 +172,17 @@ func (t Time) MarshalText() ([]byte, error) {
 
 // UnmarshalText decodes a text string into a Time type. This is required when
 // using Time type as a map key.
+//
+// The parsing lives here rather than in UnmarshalJSON because the text form is
+// unquoted: feeding it to UnmarshalJSON would ask the JSON decoder to parse
+// 15:04:05 as a bare token, which fails on the first colon.
 func (t *Time) UnmarshalText(text []byte) error {
-	return t.UnmarshalJSON(text)
+	parsedTime, err := time.Parse("15:04:05", string(text))
+	if err != nil {
+		return err
+	}
+	*t = Time(parsedTime)
+	return nil
 }
 
 // String returns the string representation of the Time in the format
