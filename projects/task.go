@@ -103,8 +103,16 @@ type Task struct {
 
 	// Predecessors is the list of tasks that must be completed before this task
 	// can be started or completed. This is only populated when providing the
-	// IncludeRelatedTasks filter in the request.
+	// IncludeRelatedTasks filter in the request, and completed predecessors are
+	// left out unless IncludeCompletedPredecessors is also set.
 	Predecessors []twapi.Relationship `json:"predecessors"`
+
+	// SubTaskIDs is the list of IDs of this task's subtasks. This is only
+	// populated when providing the IncludeRelatedTasks filter in the request,
+	// and that filter reports active subtasks only — completed subtasks are left
+	// out unless IncludeCompletedPredecessors is also set, which despite its name
+	// widens the whole related-task response rather than the predecessors alone.
+	SubTaskIDs []int64 `json:"subTaskIds"`
 
 	// WorkflowStages is the list of workflow stages associated with this task.
 	WorkflowStages []TaskWorkflowStage `json:"workflowStages"`
