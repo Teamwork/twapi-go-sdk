@@ -446,6 +446,7 @@ const (
 	TaskFieldAssignees              TaskField = "assignees"
 	TaskFieldTags                   TaskField = "tags"
 	TaskFieldPredecessors           TaskField = "predecessors"
+	TaskFieldSubTaskIDs             TaskField = "subTaskIds"
 	TaskFieldWorkflowStages         TaskField = "workflowStages"
 	TaskFieldCreatedBy              TaskField = "createdBy"
 	TaskFieldCreatedAt              TaskField = "createdAt"

@@ -683,3 +683,20 @@ func TestTaskListResponseCount(t *testing.T) {
 		})
 	}
 }
+
+func TestTaskSubTaskIDsAreDecoded(t *testing.T) {
+	// The attribute rides on includeRelatedTasks and is absent from the response
+	// otherwise, so the model has to carry it for a get to report subtasks at all.
+	const payload = `{"task":{"id":777,"name":"parent","subTaskIds":[1,2,3]}}`
+
+	var resp projects.TaskGetResponse
+	if err := json.Unmarshal([]byte(payload), &resp); err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+	if got := len(resp.Task.SubTaskIDs); got != 3 {
+		t.Fatalf("expected 3 subtask IDs but got %d", got)
+	}
+	if resp.Task.SubTaskIDs[0] != 1 || resp.Task.SubTaskIDs[2] != 3 {
+		t.Errorf("unexpected subtask IDs: %v", resp.Task.SubTaskIDs)
+	}
+}
