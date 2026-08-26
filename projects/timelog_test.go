@@ -243,3 +243,93 @@ func TestTimelogList(t *testing.T) {
 		})
 	}
 }
+
+// TestTimelogListFiltersApplied pins the whole query string the timelog list
+// builds when every filter is populated, against the parameter names the
+// endpoint documents:
+//
+// https://apidocs.teamwork.com/docs/teamwork/v3/time-tracking/get-projects-api-v3-time-json
+//
+// Comparing the complete map rather than a subset is deliberate: an unrecognised
+// query key is silently ignored by the API, so a misspelled parameter looks
+// exactly like a working one from the caller's side.
+func TestTimelogListFiltersApplied(t *testing.T) {
+	startDate := time.Date(2026, 3, 4, 0, 0, 0, 0, time.UTC)
+	endDate := time.Date(2026, 5, 6, 0, 0, 0, 0, time.UTC)
+
+	req := projects.TimelogListRequest{
+		Filters: projects.TimelogListRequestFilters{
+			OrderBy:   projects.TimelogOrderByDate,
+			OrderMode: twapi.OrderModeDescending,
+
+			TagIDs:       []int64{777, 888},
+			MatchAllTags: new(true),
+
+			StartDate: &startDate,
+			EndDate:   &endDate,
+
+			AssignedToUserIDs:    []int64{11, 22},
+			AssignedToCompanyIDs: []int64{33},
+			AssignedToTeamIDs:    []int64{44},
+			DeskTicketIDs:        []int64{55},
+
+			BillableType: projects.TimelogBillableTypeBillable,
+			InvoicedType: projects.TimelogInvoicedTypeNonInvoiced,
+
+			Page:      2,
+			PageSize:  25,
+			CountMode: twapi.ListCountModeExact,
+
+			Fields: projects.TimelogListFields{
+				Timelogs: []projects.TimelogField{projects.TimelogFieldDescription},
+			},
+		},
+	}
+
+	want := map[string]string{
+		"orderBy":   "date",
+		"orderMode": "desc",
+
+		"tagIds":       "777,888",
+		"matchAllTags": "true",
+
+		"startDate": "2026-03-04T00:00:00Z",
+		"endDate":   "2026-05-06T00:00:00Z",
+
+		"assignedToUserIds":    "11,22",
+		"assignedToCompanyIds": "33",
+		"assignedToTeamIds":    "44",
+		"deskTicketIds":        "55",
+
+		"billableType": "billable",
+		"invoicedType": "noninvoiced",
+
+		"page":       "2",
+		"pageSize":   "25",
+		"skipCounts": "false",
+
+		"fields[timelogs]": "description",
+	}
+
+	query := listQuery(t, req)
+
+	for key, expected := range want {
+		if got := query.Get(key); got != expected {
+			t.Errorf("expected %s=%q but got %q", key, expected, got)
+		}
+	}
+	for key := range query {
+		if _, ok := want[key]; !ok {
+			t.Errorf("unexpected query parameter %s=%q", key, query.Get(key))
+		}
+	}
+}
+
+// TestTimelogListFiltersUnset checks the zero-value filters send nothing, so the
+// endpoint applies its own defaults rather than being pinned to "all".
+func TestTimelogListFiltersUnset(t *testing.T) {
+	query := listQuery(t, projects.TimelogListRequest{})
+	if len(query) != 0 {
+		t.Errorf("expected no query parameters but got %v", query)
+	}
+}

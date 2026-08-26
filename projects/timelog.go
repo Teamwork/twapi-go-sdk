@@ -551,6 +551,28 @@ const (
 	TimelogOrderByID          TimelogOrderBy = "id"
 )
 
+// TimelogBillableType identifies whether a timelog list is restricted to
+// billable or non-billable entries.
+type TimelogBillableType string
+
+// Supported timelog billable-type values.
+const (
+	TimelogBillableTypeAll         TimelogBillableType = "all"
+	TimelogBillableTypeBillable    TimelogBillableType = "billable"
+	TimelogBillableTypeNonBillable TimelogBillableType = "nonbillable"
+)
+
+// TimelogInvoicedType identifies whether a timelog list is restricted to
+// entries that have been added to an invoice.
+type TimelogInvoicedType string
+
+// Supported timelog invoiced-type values.
+const (
+	TimelogInvoicedTypeAll         TimelogInvoicedType = "all"
+	TimelogInvoicedTypeInvoiced    TimelogInvoicedType = "invoiced"
+	TimelogInvoicedTypeNonInvoiced TimelogInvoicedType = "noninvoiced"
+)
+
 // TimelogListRequestFilters contains the filters for loading multiple
 // timelogs.
 type TimelogListRequestFilters struct {
@@ -597,6 +619,15 @@ type TimelogListRequestFilters struct {
 	// timelogs by. If provided, only timelogs associated with these desk
 	// tickets will be returned.
 	DeskTicketIDs []int64
+
+	// BillableType restricts the results to billable or non-billable timelogs.
+	// Use the TimelogBillableType constants. The endpoint defaults to all.
+	BillableType TimelogBillableType
+
+	// InvoicedType restricts the results to timelogs that have or have not been
+	// added to an invoice. Use the TimelogInvoicedType constants. The endpoint
+	// defaults to all.
+	InvoicedType TimelogInvoicedType
 
 	// Page is the page number to retrieve. Defaults to 1.
 	Page int64
@@ -668,6 +699,12 @@ func (t TimelogListRequestFilters) apply(req *http.Request) {
 			deskTicketIDs[i] = strconv.FormatInt(id, 10)
 		}
 		query.Set("deskTicketIds", strings.Join(deskTicketIDs, ","))
+	}
+	if t.BillableType != "" {
+		query.Set("billableType", string(t.BillableType))
+	}
+	if t.InvoicedType != "" {
+		query.Set("invoicedType", string(t.InvoicedType))
 	}
 	if t.Page > 0 {
 		query.Set("page", strconv.FormatInt(t.Page, 10))
