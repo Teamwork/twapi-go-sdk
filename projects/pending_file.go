@@ -13,6 +13,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	twapi "github.com/teamwork/twapi-go-sdk"
 )
@@ -158,6 +159,101 @@ func NewPendingFileUploadRequest(uploadURL string, contents io.Reader, size int6
 // the reference to attach came from PendingFilePresignedURL.
 type PendingFileUploadResponse struct{}
 
+// PendingFileUploadPlan describes the request that delivers the contents to a
+// pre-signed URL.
+//
+// PendingFileUpload builds its own request from one. It is exported for callers
+// that never hold the bytes and have to tell something else how to send them —
+// handing the URL to a browser, or to a client uploading straight from disk.
+// Those callers cannot work the rules out from the URL alone, and a wrong guess
+// is rejected by the storage service rather than by the API.
+type PendingFileUploadPlan struct {
+	// Method is the method the upload must use. Always http.MethodPut.
+	Method string
+
+	// URL is where the contents must be sent.
+	URL string
+
+	// Headers are the headers the request must carry, and the only ones it may
+	// add: the signature covers the headers it lists, so one of them missing, or
+	// an unsigned x-amz-* one added, and the upload fails.
+	//
+	// Content-Length is not among them. Go derives it from the request rather
+	// than from a header, and its value is the size already reserved with
+	// PendingFilePresignedURL, so a caller sending the request by hand has it
+	// already.
+	Headers http.Header
+
+	// ExpiresAt is when the URL stops being accepted, or the zero time when it
+	// does not say. Only the reference outlives it; a caller that misses the
+	// deadline has to reserve again.
+	ExpiresAt time.Time
+}
+
+// NewPendingFileUploadPlan works out how the contents have to be sent to
+// uploadURL, which is the URL from PendingFilePresignedURLResponse.
+//
+// fileName is the name the file is stored under and decides the media type. It
+// may be empty, in which case the extension carried by the reference in
+// uploadURL is used instead. contentType overrides both.
+func NewPendingFileUploadPlan(uploadURL, fileName, contentType string) (PendingFileUploadPlan, error) {
+	if uploadURL == "" {
+		return PendingFileUploadPlan{}, fmt.Errorf("pending file upload requires a pre-signed URL")
+	}
+
+	parsedURL, err := url.Parse(uploadURL)
+	if err != nil {
+		return PendingFileUploadPlan{}, fmt.Errorf("failed to parse the pre-signed URL: %w", err)
+	}
+	query := parsedURL.Query()
+
+	if contentType == "" {
+		if fileName == "" {
+			// The reference in the URL keeps the original extension.
+			fileName = parsedURL.Path
+		}
+		contentType = contentTypeForFileName(fileName)
+	}
+
+	headers := make(http.Header, 2)
+	headers.Set("Content-Type", contentType)
+
+	// The signature covers the headers it lists: one missing, or an unsigned
+	// x-amz-* one added, and the upload fails. Whether the ACL is signed depends
+	// on the installation's bucket, so read it from the URL instead of guessing.
+	signedHeaders := strings.Split(query.Get("X-Amz-SignedHeaders"), ";")
+	if slices.Contains(signedHeaders, "x-amz-acl") {
+		headers.Set("X-Amz-Acl", "public-read")
+	}
+
+	return PendingFileUploadPlan{
+		Method:    http.MethodPut,
+		URL:       uploadURL,
+		Headers:   headers,
+		ExpiresAt: presignedExpiry(query),
+	}, nil
+}
+
+// presignedExpiry reads when a pre-signed URL stops being accepted from the
+// parameters the signature itself carries, returning the zero time when they
+// are absent or unreadable.
+//
+// The deadline is the storage service's to enforce, so this is only ever
+// reported, never checked: a caller that cannot read it is better off saying
+// nothing than guessing at ten minutes.
+func presignedExpiry(query url.Values) time.Time {
+	// The signing time, in the compact form SigV4 uses.
+	signedAt, err := time.Parse("20060102T150405Z", query.Get("X-Amz-Date"))
+	if err != nil {
+		return time.Time{}
+	}
+	seconds, err := strconv.Atoi(query.Get("X-Amz-Expires"))
+	if err != nil || seconds <= 0 {
+		return time.Time{}
+	}
+	return signedAt.Add(time.Duration(seconds) * time.Second)
+}
+
 // PendingFileUpload sends the contents of a file to the pre-signed URL returned
 // by PendingFilePresignedURL. Second of the two steps PendingFileCreate
 // performs, exposed for callers that stream the contents or got the URL
@@ -176,32 +272,20 @@ func PendingFileUpload(
 		return nil, fmt.Errorf("pending file upload requires a size greater than zero")
 	}
 
-	uploadURL, err := url.Parse(req.URL)
+	// The file name is not known here, so the media type falls back to the
+	// extension the reference in the URL carries.
+	plan, err := NewPendingFileUploadPlan(req.URL, "", req.ContentType)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse the pre-signed URL: %w", err)
+		return nil, err
 	}
 
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPut, req.URL, req.Contents)
+	httpReq, err := http.NewRequestWithContext(ctx, plan.Method, plan.URL, req.Contents)
 	if err != nil {
 		return nil, err
 	}
 	// An unmeasured reader would be sent chunked, which the storage service rejects.
 	httpReq.ContentLength = req.Size
-
-	contentType := req.ContentType
-	if contentType == "" {
-		// The reference in the URL keeps the original extension.
-		contentType = contentTypeForFileName(uploadURL.Path)
-	}
-	httpReq.Header.Set("Content-Type", contentType)
-
-	// The signature covers the headers it lists: one missing, or an unsigned
-	// x-amz-* one added, and the upload fails. Whether the ACL is signed depends on
-	// the installation's bucket, so read it from the URL instead of guessing.
-	signedHeaders := strings.Split(uploadURL.Query().Get("X-Amz-SignedHeaders"), ";")
-	if slices.Contains(signedHeaders, "x-amz-acl") {
-		httpReq.Header.Set("X-Amz-Acl", "public-read")
-	}
+	httpReq.Header = plan.Headers.Clone()
 
 	resp, err := engine.Do(httpReq)
 	if err != nil {
