@@ -121,6 +121,23 @@ func TestTimelogUpdate(t *testing.T) {
 			UserID:      &testResources.UserID,
 			TagIDs:      []int64{testResources.TagID},
 		},
+	}, {
+		name: "detached from its task",
+		input: projects.TimelogUpdateRequest{
+			Path: projects.TimelogUpdateRequestPath{
+				ID: timelogID,
+			},
+			ProjectID: &testResources.ProjectID,
+			TaskID:    twapi.NullInt64(),
+		},
+	}, {
+		name: "moved back to a task",
+		input: projects.TimelogUpdateRequest{
+			Path: projects.TimelogUpdateRequestPath{
+				ID: timelogID,
+			},
+			TaskID: twapi.NewNullableInt64(testResources.TaskID),
+		},
 	}}
 
 	for _, tt := range tests {

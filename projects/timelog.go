@@ -269,6 +269,17 @@ type TimelogUpdateRequest struct {
 	// Path contains the path parameters for the request.
 	Path TimelogUpdateRequestPath `json:"-"`
 
+	// ProjectID moves the timelog to another project. The API derives the
+	// project from the task whenever the timelog ends up with one, so this only
+	// takes effect on a timelog logged against a project, or alongside a TaskID
+	// set to null.
+	ProjectID *int64 `json:"projectId,omitempty"`
+
+	// TaskID moves the timelog to another task, and to that task's project.
+	// Setting it to null detaches the timelog from its task, leaving it logged
+	// against the project.
+	TaskID twapi.NullableInt64 `json:"taskId,omitzero"`
+
 	// Description is an optional description of the timelog.
 	Description *string `json:"description,omitempty"`
 

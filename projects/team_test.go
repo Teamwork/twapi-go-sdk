@@ -87,6 +87,12 @@ func TestTeamUpdate(t *testing.T) {
 	}
 	t.Cleanup(teamCleanup)
 
+	parentTeamID, parentTeamCleanup, err := createTeam(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(parentTeamCleanup)
+
 	tests := []struct {
 		name  string
 		input projects.TeamUpdateRequest
@@ -113,6 +119,22 @@ func TestTeamUpdate(t *testing.T) {
 			Description: new("This is a test team."),
 			ProjectID:   &testResources.ProjectID,
 			UserIDs:     []int64{testResources.UserID},
+		},
+	}, {
+		name: "under a parent team",
+		input: projects.TeamUpdateRequest{
+			Path: projects.TeamUpdateRequestPath{
+				ID: teamID,
+			},
+			ParentTeamID: &parentTeamID,
+		},
+	}, {
+		name: "back to the top level",
+		input: projects.TeamUpdateRequest{
+			Path: projects.TeamUpdateRequestPath{
+				ID: teamID,
+			},
+			ParentTeamID: new(int64(0)),
 		},
 	}}
 
