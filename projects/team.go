@@ -220,6 +220,11 @@ type TeamUpdateRequest struct {
 	// Description is an optional description of the team.
 	Description *string `json:"description,omitempty"`
 
+	// ParentTeamID is the unique identifier of the parent team, which is what
+	// places the team in a hierarchy. Zero moves the team to the top level, and
+	// the request fails when it is the team's own ID.
+	ParentTeamID *int64 `json:"parentTeamId,omitempty"`
+
 	// CompanyID is the unique identifier of the company the team belongs to.
 	CompanyID *int64 `json:"companyId,omitempty"`
 
