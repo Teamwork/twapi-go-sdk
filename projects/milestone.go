@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -470,6 +471,30 @@ const (
 	MilestoneOrderByID          MilestoneOrderBy = "id"
 )
 
+// MilestoneStatus identifies the states a milestone list can be filtered by.
+// The set is wider than the values a milestone reports in Milestone.Status,
+// because it also names progress buckets derived from the deadline.
+//
+// The endpoint also accepts "all", "new" and "reopened", which are absent here
+// because none of them narrows the results. "all" is the worst of the three: it
+// lifts the whole status filter, so listing it beside another value cancels that
+// value too. Leave Statuses empty to place no restriction.
+//
+// MilestoneStatusDeleted additionally needs the showDeleted parameter, which
+// MilestoneListRequestFilters.ShowDeleted turns on for you.
+type MilestoneStatus string
+
+// Supported milestone status filters.
+const (
+	MilestoneStatusCompleted  MilestoneStatus = "completed"
+	MilestoneStatusIncomplete MilestoneStatus = "incomplete"
+	MilestoneStatusPending    MilestoneStatus = "pending"
+	MilestoneStatusLate       MilestoneStatus = "late"
+	MilestoneStatusToday      MilestoneStatus = "today"
+	MilestoneStatusUpcoming   MilestoneStatus = "upcoming"
+	MilestoneStatusDeleted    MilestoneStatus = "deleted"
+)
+
 // MilestoneListRequestFilters contains the filters for loading multiple
 // milestones.
 type MilestoneListRequestFilters struct {
@@ -483,6 +508,33 @@ type MilestoneListRequestFilters struct {
 	// OrderMode is the direction to sort the results in. See twapi.OrderMode for
 	// the supported values. The endpoint defaults to ascending.
 	OrderMode twapi.OrderMode
+
+	// Statuses is an optional list of states to filter milestones by. Use the
+	// MilestoneStatus constants. The endpoint returns milestones in every state
+	// by default, completed ones included, so this is how a list is narrowed to
+	// only completed or only incomplete milestones.
+	Statuses []MilestoneStatus
+
+	// IncludeCompleted also matches completed milestones when Statuses selects
+	// late or upcoming ones. The remaining statuses decide on their own whether
+	// a completed milestone matches, and are unaffected. Defaults to false.
+	IncludeCompleted *bool
+
+	// ShowDeleted includes deleted milestones in the results, alongside the
+	// rest. The endpoint defaults to false. Leaving this unset while Statuses
+	// selects MilestoneStatusDeleted turns it on, since the endpoint drops
+	// deleted milestones before Statuses is considered and the pair would
+	// otherwise match nothing. Set it to false explicitly to keep that
+	// behaviour.
+	ShowDeleted *bool
+
+	// DueAfter is an optional filter to retrieve milestones due on or after a
+	// specific date.
+	DueAfter *twapi.Date
+
+	// DueBefore is an optional filter to retrieve milestones due on or before a
+	// specific date.
+	DueBefore *twapi.Date
 
 	// TagIDs is an optional list of tag IDs to filter milestones by tags.
 	TagIDs []int64
@@ -525,6 +577,11 @@ func (m MilestoneListRequestFilters) apply(req *http.Request) {
 	if m.MatchAllTags != nil {
 		query.Set("matchAllTags", strconv.FormatBool(*m.MatchAllTags))
 	}
+	querySetStrings(query, "status", m.Statuses)
+	querySetBool(query, "includeCompleted", m.IncludeCompleted)
+	querySetBool(query, "showDeleted", m.showDeleted())
+	querySetDate(query, "dueAfter", m.DueAfter)
+	querySetDate(query, "dueBefore", m.DueBefore)
 	if m.OrderBy != "" {
 		query.Set("orderBy", string(m.OrderBy))
 	}
@@ -540,6 +597,17 @@ func (m MilestoneListRequestFilters) apply(req *http.Request) {
 	m.Fields.apply(query)
 	m.CountMode.Apply(query)
 	req.URL.RawQuery = query.Encode()
+}
+
+// showDeleted resolves the showDeleted parameter. Asking for
+// MilestoneStatusDeleted implies wanting deleted milestones in the results, so
+// the flag is turned on for a caller who left it unset. An explicit value is
+// always sent as given, including a false that selects nothing.
+func (m MilestoneListRequestFilters) showDeleted() *bool {
+	if m.ShowDeleted == nil && slices.Contains(m.Statuses, MilestoneStatusDeleted) {
+		return new(true)
+	}
+	return m.ShowDeleted
 }
 
 // MilestoneListRequest represents the request body for loading multiple milestones.
