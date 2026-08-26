@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -187,6 +188,153 @@ func TestPendingFileCreateRejectsMissingFields(t *testing.T) {
 			)
 
 			if _, err := projects.PendingFileCreate(t.Context(), testEngine, tt.request); err == nil {
+				t.Error("expected an error, got none")
+			}
+		})
+	}
+}
+
+// TestNewPendingFileUploadPlan pins the rules a caller sending the contents
+// itself has to follow. They cannot be worked out from the URL by inspection,
+// and the storage service is the only thing that notices one broken, so the
+// plan is the only place they are written down.
+func TestNewPendingFileUploadPlan(t *testing.T) {
+	// signedURL builds a pre-signed URL carrying the signature parameters the
+	// plan reads, in the form the storage service produces them.
+	signedURL := func(path, signedHeaders string, extra url.Values) string {
+		query := url.Values{
+			"X-Amz-Algorithm":     []string{"AWS4-HMAC-SHA256"},
+			"X-Amz-SignedHeaders": []string{signedHeaders},
+			"X-Amz-Signature":     []string{"c0ffee"},
+		}
+		for key, values := range extra {
+			query[key] = values
+		}
+		return (&url.URL{
+			Scheme:   "https",
+			Host:     "storage.example.com",
+			Path:     path,
+			RawQuery: query.Encode(),
+		}).String()
+	}
+
+	tests := []struct {
+		name            string
+		uploadURL       string
+		fileName        string
+		contentType     string
+		wantACL         string
+		wantContentType string
+		wantExpiresAt   time.Time
+	}{{
+		// Signed into the URL unless the installation's bucket sets its own ACL.
+		name:            "canned ACL signed",
+		uploadURL:       signedURL("/tf_12345.txt", "content-length;host;x-amz-acl", nil),
+		fileName:        "notes.txt",
+		wantACL:         "public-read",
+		wantContentType: "text/plain",
+	}, {
+		name:            "canned ACL not signed",
+		uploadURL:       signedURL("/tf_12345.txt", "content-length;host", nil),
+		fileName:        "notes.txt",
+		wantACL:         "",
+		wantContentType: "text/plain",
+	}, {
+		name:            "explicit content type wins",
+		uploadURL:       signedURL("/tf_12345.txt", "host", nil),
+		fileName:        "notes.txt",
+		contentType:     "text/markdown",
+		wantContentType: "text/markdown",
+	}, {
+		// The caller knows the name; the reference only carries the extension.
+		name:            "file name decides the type",
+		uploadURL:       signedURL("/tf_12345.twtest", "host", nil),
+		fileName:        "notes.txt",
+		wantContentType: "text/plain",
+	}, {
+		name:            "falls back to the reference extension",
+		uploadURL:       signedURL("/tf_12345.txt", "host", nil),
+		fileName:        "",
+		wantContentType: "text/plain",
+	}, {
+		name:            "unknown extension is binary",
+		uploadURL:       signedURL("/tf_12345.twtest", "host", nil),
+		fileName:        "archive.twtest",
+		wantContentType: "application/octet-stream",
+	}, {
+		name: "expiry read from the signature",
+		uploadURL: signedURL("/tf_12345.txt", "host", url.Values{
+			"X-Amz-Date":    []string{"20260826T120000Z"},
+			"X-Amz-Expires": []string{"600"},
+		}),
+		fileName:        "notes.txt",
+		wantContentType: "text/plain",
+		wantExpiresAt:   time.Date(2026, 8, 26, 12, 10, 0, 0, time.UTC),
+	}, {
+		// Reported, never enforced: a deadline that cannot be read is better
+		// left unsaid than guessed at.
+		name: "unreadable expiry is not guessed",
+		uploadURL: signedURL("/tf_12345.txt", "host", url.Values{
+			"X-Amz-Date":    []string{"not-a-date"},
+			"X-Amz-Expires": []string{"600"},
+		}),
+		fileName:        "notes.txt",
+		wantContentType: "text/plain",
+	}, {
+		name:            "absent expiry is not guessed",
+		uploadURL:       signedURL("/tf_12345.txt", "host", nil),
+		fileName:        "notes.txt",
+		wantContentType: "text/plain",
+	}}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plan, err := projects.NewPendingFileUploadPlan(tt.uploadURL, tt.fileName, tt.contentType)
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+
+			if plan.Method != http.MethodPut {
+				t.Errorf("expected a PUT, got %s", plan.Method)
+			}
+			if plan.URL != tt.uploadURL {
+				t.Errorf("expected the pre-signed URL unchanged, got %q", plan.URL)
+			}
+			// The type is the host table's below the top level, so compare the
+			// media type and leave any charset parameter alone.
+			if got, _, _ := strings.Cut(plan.Headers.Get("Content-Type"), ";"); got != tt.wantContentType {
+				t.Errorf("expected the content type %q, got %q", tt.wantContentType, got)
+			}
+			if got := plan.Headers.Get("X-Amz-Acl"); got != tt.wantACL {
+				t.Errorf("expected the canned ACL %q, got %q", tt.wantACL, got)
+			}
+			// Go derives it from the request, so offering one would be a header
+			// the caller must not repeat.
+			if got := plan.Headers.Get("Content-Length"); got != "" {
+				t.Errorf("expected no content length among the headers, got %q", got)
+			}
+			if !plan.ExpiresAt.Equal(tt.wantExpiresAt) {
+				t.Errorf("expected an expiry of %s, got %s", tt.wantExpiresAt, plan.ExpiresAt)
+			}
+		})
+	}
+}
+
+func TestNewPendingFileUploadPlanRejectsBadURL(t *testing.T) {
+	tests := []struct {
+		name      string
+		uploadURL string
+	}{{
+		name:      "no URL",
+		uploadURL: "",
+	}, {
+		name:      "unparseable URL",
+		uploadURL: "https://storage.example.com/\x7f",
+	}}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := projects.NewPendingFileUploadPlan(tt.uploadURL, "plan.md", ""); err == nil {
 				t.Error("expected an error, got none")
 			}
 		})

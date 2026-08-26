@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"time"
 
 	twapi "github.com/teamwork/twapi-go-sdk"
 	"github.com/teamwork/twapi-go-sdk/projects"
@@ -90,7 +91,8 @@ func startPendingFileServer() (string, func(), error) {
 		// The real URL points at storage; this one comes back here so the example
 		// runs offline. Its signed headers tell the SDK to repeat the canned ACL.
 		uploadURL := fmt.Sprintf("http://%s/storage/tf_12345.md"+
-			"?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-SignedHeaders=host%%3Bx-amz-acl&X-Amz-Signature=c0ffee", r.Host)
+			"?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-SignedHeaders=host%%3Bx-amz-acl&X-Amz-Signature=c0ffee"+
+			"&X-Amz-Date=20260826T120000Z&X-Amz-Expires=600", r.Host)
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = fmt.Fprintf(w, `{"ref":"tf_12345.md","url":%q}`+"\n", uploadURL)
 	})
@@ -133,4 +135,51 @@ func startPendingFileServer() (string, func(), error) {
 	return ln.Addr().String(), func() {
 		close(stop)
 	}, nil
+}
+
+// ExampleNewPendingFileUploadPlan reserves the space and then describes the
+// upload rather than performing it, which is what a caller that never holds the
+// bytes has to do: a server handing the URL to the client that has the file, or
+// to a browser. The rules cannot be guessed from the URL, so they travel with
+// it.
+func ExampleNewPendingFileUploadPlan() {
+	address, stop, err := startPendingFileServer() // mock server for demonstration purposes
+	if err != nil {
+		fmt.Printf("failed to start server: %s", err)
+		return
+	}
+	defer stop()
+
+	ctx := context.Background()
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
+
+	const size = 7
+
+	presignedResponse, err := projects.PendingFilePresignedURL(ctx, engine,
+		projects.NewPendingFilePresignedURLRequest("plan.md", size))
+	if err != nil {
+		fmt.Printf("failed to reserve pending file: %s", err)
+		return
+	}
+
+	// The media type is derived from the name when it is not given, but the
+	// host mime table decides that, so this names it outright.
+	plan, err := projects.NewPendingFileUploadPlan(presignedResponse.URL, "plan.md", "text/markdown")
+	if err != nil {
+		fmt.Printf("failed to plan the upload: %s", err)
+		return
+	}
+
+	// Whoever holds the contents sends exactly this, adding a Content-Length of
+	// the size reserved above and no authorization of its own.
+	fmt.Printf("%s with %s\n", plan.Method, plan.Headers.Get("Content-Type"))
+	fmt.Printf("canned ACL: %q\n", plan.Headers.Get("X-Amz-Acl"))
+	fmt.Printf("before %s\n", plan.ExpiresAt.Format(time.RFC3339))
+	fmt.Printf("then attach reference %s\n", presignedResponse.Ref)
+
+	// Output:
+	// PUT with text/markdown
+	// canned ACL: "public-read"
+	// before 2026-08-26T12:10:00Z
+	// then attach reference tf_12345.md
 }
