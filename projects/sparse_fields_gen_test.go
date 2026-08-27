@@ -1218,12 +1218,14 @@ func TestTimeReportListFieldsApply(t *testing.T) {
 	fields := TimeReportListFields{
 		Users:    []UserField{UserFieldID},
 		Projects: []ProjectField{ProjectFieldID},
+		Tasks:    []TaskField{TaskFieldID},
 	}
 	query := url.Values{}
 	fields.apply(query)
 	checks := map[string]string{
 		"fields[users]":    "id",
 		"fields[projects]": "id",
+		"fields[tasks]":    "id",
 	}
 	for key, want := range checks {
 		if got := query.Get(key); got != want {

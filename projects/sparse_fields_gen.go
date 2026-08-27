@@ -1199,12 +1199,15 @@ type TimeReportListFields struct {
 	Users []UserField
 	// Projects controls fields[projects]=… on the response.
 	Projects []ProjectField
+	// Tasks controls fields[tasks]=… on the response.
+	Tasks []TaskField
 }
 
 // apply writes every populated slot to query as a fields[entity]=… parameter.
 func (f TimeReportListFields) apply(query url.Values) {
 	twapi.ApplySparseFields(query, "users", f.Users)
 	twapi.ApplySparseFields(query, "projects", f.Projects)
+	twapi.ApplySparseFields(query, "tasks", f.Tasks)
 }
 
 // TimelogGetFields selects sparse-fields slots for TimelogGetResponse. Leave a slot empty to receive the
