@@ -68,8 +68,11 @@ type SearchRequestPath struct{}
 // type.
 type SearchRequestType string
 
-// List of possible types for SearchRequestType.
+// List of possible types for SearchRequestType. Files and calendar events can
+// be filtered on, but the response cannot sideload them, so a hit of either
+// type arrives as a bare relationship.
 const (
+	SearchRequestTypeCalendarEvents    SearchRequestType = "calendarevents"
 	SearchRequestTypeComments          SearchRequestType = "comments"
 	SearchRequestTypeTaskComments      SearchRequestType = "taskcomments"
 	SearchRequestTypeMilestoneComments SearchRequestType = "milestonecomments"
@@ -77,6 +80,7 @@ const (
 	SearchRequestTypeLinkComments      SearchRequestType = "linkcomments"
 	SearchRequestTypeNotebookComments  SearchRequestType = "notebookcomments"
 	SearchRequestTypeCompanies         SearchRequestType = "companies"
+	SearchRequestTypeFiles             SearchRequestType = "files"
 	SearchRequestTypeLinks             SearchRequestType = "links"
 	SearchRequestTypeMessages          SearchRequestType = "messages"
 	SearchRequestTypeMilestones        SearchRequestType = "milestones"
@@ -114,9 +118,9 @@ type SearchRequestFilters struct {
 	// and must be at least 3 characters long.
 	SearchTerm string
 
-	// Type is an optional type to filter searches by their type. By default, all
-	// types are included in the results.
-	Type SearchRequestType
+	// Types optionally restricts the search to the given entity types, sent as
+	// the types query parameter. An empty list searches every type.
+	Types []SearchRequestType
 
 	// ProjectID is an optional project ID to filter searches by their associated
 	// project.
@@ -176,9 +180,7 @@ type SearchRequestFilters struct {
 func (s SearchRequestFilters) apply(req *http.Request) {
 	query := req.URL.Query()
 	query.Set("searchTerm", s.SearchTerm)
-	if s.Type != "" {
-		query.Set("type", string(s.Type))
-	}
+	querySetStrings(query, "types", s.Types)
 	if s.ProjectID > 0 {
 		query.Set("projectId", strconv.FormatInt(s.ProjectID, 10))
 	}
