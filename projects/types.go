@@ -143,10 +143,18 @@ type UserGroups struct {
 
 // LegacyUserGroups represents a collection of users, companies, teams, and job
 // roles in a legacy format, where IDs are represented as strings.
+//
+// The type is shared across endpoints that do not all accept the same groups.
+// JobRoleIDs in particular is not universal — the milestone routes drop it (see
+// MilestoneCreateRequest.Assignees) — so check the field that carries this type
+// rather than assuming every group reaches the endpoint.
 type LegacyUserGroups struct {
 	UserIDs    []int64
 	CompanyIDs []int64
 	TeamIDs    []int64
+
+	// JobRoleIDs is not accepted by every endpoint taking this type. Read the
+	// docs on the field carrying it before setting this.
 	JobRoleIDs []int64
 }
 
