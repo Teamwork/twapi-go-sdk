@@ -54,9 +54,10 @@ const (
 )
 
 // TimeReportSideload identifies the related entities that can be requested
-// alongside a time report via the API's include mechanism. Only the users and
-// projects sideloads are decoded into typed maps on the response; requesting
-// other sideloads is accepted by the API but not surfaced by this SDK.
+// alongside a time report via the API's include mechanism. Only the users,
+// projects and tasks sideloads are decoded into typed maps on the response;
+// requesting other sideloads is accepted by the API but not surfaced by this
+// SDK.
 type TimeReportSideload string
 
 // List of valid time report sideloads.
@@ -66,6 +67,11 @@ const (
 	TimeReportSideloadCompanies TimeReportSideload = "companies"
 	TimeReportSideloadTeams     TimeReportSideload = "teams"
 	TimeReportSideloadTasks     TimeReportSideload = "tasks"
+
+	// TimeReportSideloadTasksParentTasks adds the parents of the reported tasks
+	// to the tasks sideload and populates TimeReportTask.ParentTask. It is only
+	// meaningful on a task-grouped report.
+	TimeReportSideloadTasksParentTasks TimeReportSideload = "tasks.parentTasks"
 )
 
 // TimeReportColumns contains the time totals shared by every time report row.
@@ -132,7 +138,8 @@ type TimeReportTask struct {
 	// Task is the task the row aggregates time for.
 	Task twapi.Relationship `json:"task"`
 
-	// ParentTask is the task's parent, when it is a subtask.
+	// ParentTask is the task's parent, when it is a subtask. It is only
+	// populated when the request includes TimeReportSideloadTasksParentTasks.
 	ParentTask *twapi.Relationship `json:"parentTask"`
 }
 
@@ -248,8 +255,8 @@ type TimeReportListRequestFilters struct {
 	// TimeReportReportTypeTime.
 	ReportType TimeReportReportType
 
-	// Include lists the related entities to sideload. Only the users and projects
-	// sideloads are decoded into the response's typed Included maps.
+	// Include lists the related entities to sideload. Only the users, projects
+	// and tasks sideloads are decoded into the response's typed Included maps.
 	Include []TimeReportSideload
 
 	// Page is the page number to retrieve. Defaults to 1.
@@ -267,8 +274,8 @@ type TimeReportListRequestFilters struct {
 	// Fields restricts the attributes returned for each sideloaded entity. Each
 	// slot of TimeReportListFields is a separate `fields[entity]=…` selection;
 	// populated slots restrict the response, empty slots return the API default.
-	// Use the generated UserField and ProjectField constants to ensure values
-	// match real attributes.
+	// Use the generated UserField, ProjectField and TaskField constants to
+	// ensure values match real attributes.
 	Fields TimeReportListFields
 }
 
@@ -437,6 +444,10 @@ type TimeReportListResponse struct {
 
 		// Projects maps a project's string identifier to the sideloaded project.
 		Projects map[string]Project `json:"projects,omitempty"`
+
+		// Tasks maps a task's string identifier to the sideloaded task. A
+		// task-grouped report resolves its row names from here.
+		Tasks map[string]Task `json:"tasks,omitempty"`
 	} `json:"included"`
 }
 

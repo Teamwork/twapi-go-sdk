@@ -49,6 +49,41 @@ func ExampleTimeReportList() {
 	// user 12346 (Alex Smith) logged 750 minutes
 }
 
+func ExampleTimeReportList_groupedByTask() {
+	address, stop, err := startTimeReportServer() // mock server for demonstration purposes
+	if err != nil {
+		fmt.Printf("failed to start server: %s", err)
+		return
+	}
+	defer stop()
+
+	ctx := context.Background()
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
+
+	timeReportRequest := projects.NewTimeReportListRequest(
+		projects.TimeReportTypeTask,
+		twapi.Date(time.Now().AddDate(0, 0, -7)),
+		twapi.Date(time.Now()),
+	)
+	timeReportRequest.Filters.Include = []projects.TimeReportSideload{projects.TimeReportSideloadTasks}
+	timeReportRequest.Filters.Fields.Tasks = []projects.TaskField{projects.TaskFieldID, projects.TaskFieldName}
+
+	timeReportResponse, err := projects.TimeReportList(ctx, engine, timeReportRequest)
+	if err != nil {
+		fmt.Printf("failed to retrieve time report: %s", err)
+		return
+	}
+
+	for _, row := range timeReportResponse.TimeReport.Tasks {
+		task := timeReportResponse.Included.Tasks[strconv.FormatInt(row.Task.ID, 10)]
+		fmt.Printf("task %d (%s) logged %d minutes\n", row.Task.ID, task.Name, row.LoggedTime)
+	}
+
+	// Output:
+	// task 777 (Write the release notes) logged 120 minutes
+	// task 778 (Review the release notes) logged 45 minutes
+}
+
 func startTimeReportServer() (string, func(), error) {
 	ln, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
@@ -71,6 +106,26 @@ func startTimeReportServer() (string, func(), error) {
 				"users": {
 					"12345": {"id": 12345, "firstName": "Gary", "lastName": "Meehan"},
 					"12346": {"id": 12346, "firstName": "Alex", "lastName": "Smith"}
+				}
+			}
+		}`)
+	})
+
+	mux.HandleFunc("GET /projects/api/v3/time/report/task", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprintln(w, `{
+			"time": {
+				"tasks": [
+					{"loggedTime": 120, "billableTime": 120, "task": {"id": 777, "type": "tasks"}},
+					{"loggedTime": 45, "billableTime": 0, "task": {"id": 778, "type": "tasks"}}
+				]
+			},
+			"meta": {"page": {"hasMore": false}},
+			"included": {
+				"tasks": {
+					"777": {"id": 777, "name": "Write the release notes"},
+					"778": {"id": 778, "name": "Review the release notes"}
 				}
 			}
 		}`)

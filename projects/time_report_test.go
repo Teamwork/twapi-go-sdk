@@ -23,6 +23,7 @@ func TestTimeReportList(t *testing.T) {
 		req.Filters.Include = []projects.TimeReportSideload{
 			projects.TimeReportSideloadUsers,
 			projects.TimeReportSideloadProjects,
+			projects.TimeReportSideloadTasks,
 		}
 		return req
 	}
@@ -36,6 +37,9 @@ func TestTimeReportList(t *testing.T) {
 	}, {
 		name:  "grouped by project",
 		input: newRequest(projects.TimeReportTypeProject),
+	}, {
+		name:  "grouped by task",
+		input: newRequest(projects.TimeReportTypeTask),
 	}}
 
 	for _, tt := range tests {
