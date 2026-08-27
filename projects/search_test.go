@@ -80,6 +80,54 @@ func TestSearchRequestGeneration_noIncludeHighlights(t *testing.T) {
 	}
 }
 
+// TestSearchRequestGeneration_types pins the type filter on the query string.
+// The endpoint reads a comma-separated types, and ignores a singular type, so a
+// mismatch here silently searches every type instead of the ones asked for.
+func TestSearchRequestGeneration_types(t *testing.T) {
+	req := projects.NewSearchRequest("example")
+	req.Filters.Types = []projects.SearchRequestType{
+		projects.SearchRequestTypeTasks,
+		projects.SearchRequestTypeProjects,
+	}
+
+	httpReq, err := req.HTTPRequest(context.Background(), "https://test.com")
+	if err != nil {
+		t.Fatalf("unexpected error creating HTTP request: %s", err)
+	}
+
+	query, err := url.ParseQuery(httpReq.URL.RawQuery)
+	if err != nil {
+		t.Fatalf("failed to parse query string: %s", err)
+	}
+
+	if got := query.Get("types"); got != "tasks,projects" {
+		t.Errorf("expected types=tasks,projects but got %q", got)
+	}
+	if query.Has("type") {
+		t.Errorf("expected no singular type parameter but got %q", query.Get("type"))
+	}
+}
+
+// TestSearchRequestGeneration_noTypes guards the default: an unset filter must
+// send nothing, so the endpoint keeps searching every type.
+func TestSearchRequestGeneration_noTypes(t *testing.T) {
+	req := projects.NewSearchRequest("example")
+
+	httpReq, err := req.HTTPRequest(context.Background(), "https://test.com")
+	if err != nil {
+		t.Fatalf("unexpected error creating HTTP request: %s", err)
+	}
+
+	query, err := url.ParseQuery(httpReq.URL.RawQuery)
+	if err != nil {
+		t.Fatalf("failed to parse query string: %s", err)
+	}
+
+	if query.Has("types") {
+		t.Errorf("expected types to be unset but got %q", query.Get("types"))
+	}
+}
+
 func TestSearchItemHighlights(t *testing.T) {
 	tests := []struct {
 		name string
