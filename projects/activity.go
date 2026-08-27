@@ -195,10 +195,13 @@ const (
 // ActivityListRequestFilters contains the filters for loading multiple
 // activities.
 type ActivityListRequestFilters struct {
-	// StartDate is the start date for filtering activities.
+	// StartDate is the start date for filtering activities. The boundary is
+	// inclusive.
 	StartDate time.Time
 
-	// EndDate is the end date for filtering activities.
+	// EndDate is the end date for filtering activities. The boundary is
+	// inclusive, so a value at midnight covers only the first instant of that
+	// day: pass the end of the day to cover all of it.
 	EndDate time.Time
 
 	// LogItemTypes is the list of log item types to filter activities.

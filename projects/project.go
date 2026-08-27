@@ -1017,6 +1017,11 @@ type ProjectListRequestFilters struct {
 
 	// UpdatedAfter is an optional filter to retrieve projects updated after a
 	// specific date and time. It is sent in RFC3339 format.
+	//
+	// The boundary is exclusive: a project whose last activity falls exactly on
+	// it does not match. The endpoint compares the project's last activity, so
+	// any activity inside the project counts, not only edits to the project
+	// record itself.
 	UpdatedAfter *time.Time
 
 	// NotCompletedBefore is an optional filter to retrieve projects that were

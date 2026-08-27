@@ -1016,7 +1016,8 @@ type AllocationListRequestFilters struct {
 	// caller is an explicit member of.
 	OnlyProjectsWithExplicitMembership *bool
 
-	// UpdatedAfter returns only allocations updated after this moment.
+	// UpdatedAfter returns only allocations updated after this moment. The
+	// boundary is exclusive, unlike DeletedAfter's.
 	UpdatedAfter *time.Time
 
 	// DeletedAfter returns only allocations deleted after this moment. It is
