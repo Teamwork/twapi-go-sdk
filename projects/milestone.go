@@ -126,6 +126,12 @@ type MilestoneCreateRequest struct {
 
 	// Assignees is a list of users, companies and teams responsible for the
 	// milestone.
+	//
+	// The endpoint has no job-role assignee. JobRoleIDs is carried by the shared
+	// LegacyUserGroups type but never applied here: a job-role-only list is
+	// answered with 422 "Invalid milestone assignees", and a job role sent
+	// alongside a user is discarded silently, leaving a created milestone whose
+	// assignees are only the users, companies and teams that were sent.
 	Assignees LegacyUserGroups `json:"responsible-party-ids"`
 }
 
@@ -238,6 +244,13 @@ type MilestoneUpdateRequest struct {
 
 	// Assignees is a list of users, companies and teams responsible for the
 	// milestone.
+	//
+	// The endpoint has no job-role assignee, and unlike the create route it
+	// reports nothing when one is sent: JobRoleIDs is carried by the shared
+	// LegacyUserGroups type but never applied, and a job-role-only list is
+	// answered 200 with the milestone's assignees left exactly as they were. A
+	// job role sent alongside a user is discarded silently, so only the users,
+	// companies and teams that were sent take effect.
 	Assignees *LegacyUserGroups `json:"responsible-party-ids,omitempty"`
 }
 
