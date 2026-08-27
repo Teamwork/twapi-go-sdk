@@ -976,12 +976,12 @@ type TaskListRequestFilters struct {
 	// AssigneeUserIDs is an optional list of User IDs to filter tasks by assigned user.
 	AssigneeUserIDs []int64
 
-	// CreatedAfter is an optional filter to retrieve tasks created after a
-	// specific date and time.
+	// CreatedAfter is an optional filter to retrieve tasks created at or after a
+	// specific date and time. The boundary is inclusive.
 	CreatedAfter *time.Time
 
-	// CreatedBefore is an optional filter to retrieve tasks created before a
-	// specific date and time.
+	// CreatedBefore is an optional filter to retrieve tasks created at or before
+	// a specific date and time. The boundary is inclusive.
 	CreatedBefore *time.Time
 
 	// CreatedByUserIDs is an optional list of User IDs to filter tasks by
@@ -989,19 +989,25 @@ type TaskListRequestFilters struct {
 	CreatedByUserIDs []int64
 
 	// UpdatedAfter is an optional filter to retrieve tasks updated after a
-	// specific date and time.
+	// specific date and time. The boundary is exclusive: a task updated exactly
+	// on it does not match.
 	UpdatedAfter *time.Time
 
 	// UpdatedBefore is an optional filter to retrieve tasks updated before a
-	// specific date and time.
+	// specific date and time. The boundary is exclusive: a task updated exactly
+	// on it does not match.
 	UpdatedBefore *time.Time
 
-	// CompletedAfter is an optional filter to retrieve tasks completed after a
-	// specific date and time.
+	// CompletedAfter is an optional filter to retrieve tasks completed at or
+	// after a specific date and time. The boundary is inclusive. Setting it
+	// narrows the response to completed tasks, whatever IncludeCompletedTasks
+	// says.
 	CompletedAfter *time.Time
 
-	// CompletedBefore is an optional filter to retrieve tasks completed before a
-	// specific date and time.
+	// CompletedBefore is an optional filter to retrieve tasks completed at or
+	// before a specific date and time. The boundary is inclusive. Setting it
+	// narrows the response to completed tasks, whatever IncludeCompletedTasks
+	// says.
 	CompletedBefore *time.Time
 
 	// IncludeCompletedTasks indicates whether to include completed tasks in the
@@ -1015,10 +1021,24 @@ type TaskListRequestFilters struct {
 	IncludeTasksFromCompletedTasklists *bool
 
 	// DueAfter is an optional filter to retrieve tasks due after a specific date.
+	//
+	// The boundary rule depends on DueBefore. Set on its own, DueAfter is
+	// exclusive and the named day is left out; set alongside DueBefore, the
+	// endpoint switches to a range that includes both boundary days. Pass both
+	// bounds whenever an inclusive range is what you mean.
+	//
+	// A task with no due date of its own is matched on its milestone's due date.
 	DueAfter *twapi.Date
 
 	// DueBefore is an optional filter to retrieve tasks due before a specific
 	// date.
+	//
+	// The boundary rule depends on DueAfter. Set on its own, DueBefore is
+	// exclusive and the named day is left out; set alongside DueAfter, the
+	// endpoint switches to a range that includes both boundary days. Pass both
+	// bounds whenever an inclusive range is what you mean.
+	//
+	// A task with no due date of its own is matched on its milestone's due date.
 	DueBefore *twapi.Date
 
 	// TagIDs is an optional list of tag IDs to filter tasks by tags.

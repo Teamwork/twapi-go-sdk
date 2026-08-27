@@ -140,7 +140,8 @@ type SearchRequestFilters struct {
 	IncludeArchivedMessages *bool
 
 	// UpdatedAfter is an optional timestamp to filter searches updated after the
-	// specified time.
+	// specified time. The boundary is exclusive: an item updated exactly on it
+	// does not match.
 	UpdatedAfter time.Time
 
 	// ExtendedSearch is an optional flag to enable extended search, which allows

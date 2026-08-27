@@ -72,9 +72,11 @@ const (
 // WorkloadRequestFilters contains the filters for loading the workload.
 type WorkloadRequestFilters struct {
 	// StartDate is the start date for the workload. This is a required field.
+	// The boundary day is included.
 	StartDate twapi.Date
 
-	// EndDate is the end date for the workload. This is a required field.
+	// EndDate is the end date for the workload. This is a required field. The
+	// boundary day is included.
 	EndDate twapi.Date
 
 	// UserIDs is a list of user IDs to filter the workload by.

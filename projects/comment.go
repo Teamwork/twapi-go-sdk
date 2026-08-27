@@ -666,8 +666,9 @@ type CommentListRequestFilters struct {
 	// UserIDs is an optional list of user IDs to filter comments by users.
 	UserIDs []int64
 
-	// UpdatedAfter is an optional filter to retrieve only comments updated after
-	// the specified date and time.
+	// UpdatedAfter is an optional filter to retrieve only comments last edited
+	// after the specified date and time. The boundary is exclusive: a comment
+	// edited exactly on it does not match.
 	UpdatedAfter time.Time
 
 	// Page is the page number to retrieve. Defaults to 1.

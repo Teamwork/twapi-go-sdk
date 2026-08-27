@@ -731,6 +731,7 @@ Each example file has a `start{Resource}Server()` helper that returns `(address 
 - **Export everything** in request/response structs (PascalCase fields).
 - **Comment every exported type and function** with purpose and a link to the API docs.
 - **Comment struct fields** that are non-obvious.
+- **Document a date filter's boundary rule** — whether the boundary moment itself matches. A response never reveals it, so a caller that is not told brackets the window and re-filters the rows by hand. It is not guessable, and not uniform even inside one filter struct: on `TaskListRequestFilters`, `CreatedAfter`/`CompletedAfter` are inclusive while `UpdatedAfter` is exclusive; on `AllocationListRequestFilters`, `UpdatedAfter` is exclusive and `DeletedAfter` inclusive. Two shapes need a sentence rather than a word — a bound whose rule depends on another (`DueAfter`/`DueBefore` are each exclusive alone, but both set switches the endpoint to an inclusive range) and bounds that are not symmetric (`StartedAfterDate` includes the named day, `EndedBeforeDate` excludes it). Say it too when a filter narrows the result set on its own: `CompletedAfter`/`CompletedBefore` restrict the response to completed tasks whatever `IncludeCompletedTasks` says.
 - Reference format: `// https://apidocs.teamwork.com/docs/teamwork/...`
 
 ---

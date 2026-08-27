@@ -282,11 +282,16 @@ type CalendarEventListRequestFilters struct {
 	OrderMode twapi.OrderMode
 
 	// StartedAfterDate filters events that start after this date (YYYY-MM-DD
-	// format).
+	// format). The endpoint reads the date as the midnight that opens it and
+	// compares the event's start against it, so events on the named day are
+	// included.
 	StartedAfterDate twapi.Date
 
 	// EndedBeforeDate filters events that end before this date (YYYY-MM-DD
-	// format).
+	// format). The endpoint reads the date as the midnight that opens it and
+	// compares the event's end against it, so events on the named day are
+	// excluded — the two bounds are not symmetric. Pass the day after the last
+	// one the caller wants.
 	EndedBeforeDate twapi.Date
 
 	// Include specifies related resources to include.
