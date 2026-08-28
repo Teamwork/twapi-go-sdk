@@ -700,3 +700,92 @@ func TestTaskSubTaskIDsAreDecoded(t *testing.T) {
 		t.Errorf("unexpected subtask IDs: %v", resp.Task.SubTaskIDs)
 	}
 }
+
+// TestTaskWorkflowsRequestGeneration pins where the workflows block lands and
+// that it disappears when unset. It rides beside "task" rather than inside it,
+// and an empty object is not inert on every endpoint, so sending one on an
+// unrelated update would be a change of meaning rather than a wasted field.
+func TestTaskWorkflowsRequestGeneration(t *testing.T) {
+	placement := projects.TaskWorkflows{
+		WorkflowID:          new(int64(123)),
+		StageID:             new(int64(456)),
+		PositionAfterTaskID: new(int64(789)),
+	}
+
+	tests := []struct {
+		name    string
+		request twapi.HTTPRequester
+		want    *projects.TaskWorkflows
+	}{{
+		name:    "create without a placement",
+		request: projects.NewTaskCreateRequest(888, "test"),
+	}, {
+		name: "create with a placement",
+		request: func() projects.TaskCreateRequest {
+			req := projects.NewTaskCreateRequest(888, "test")
+			req.Workflows = placement
+			return req
+		}(),
+		want: &placement,
+	}, {
+		name:    "update without a placement",
+		request: projects.NewTaskUpdateRequest(12345),
+	}, {
+		name: "update with a placement",
+		request: func() projects.TaskUpdateRequest {
+			req := projects.NewTaskUpdateRequest(12345)
+			req.Workflows = placement
+			return req
+		}(),
+		want: &placement,
+	}}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			httpReq, err := tt.request.HTTPRequest(context.Background(), "https://test.teamwork.com")
+			if err != nil {
+				t.Fatalf("unexpected error creating HTTP request: %s", err)
+			}
+			body, err := io.ReadAll(httpReq.Body)
+			if err != nil {
+				t.Fatalf("failed to read request body: %s", err)
+			}
+
+			var payload struct {
+				Task      map[string]any          `json:"task"`
+				Workflows *projects.TaskWorkflows `json:"workflows"`
+			}
+			if err := json.Unmarshal(body, &payload); err != nil {
+				t.Fatalf("failed to decode request body %q: %s", body, err)
+			}
+
+			// A "workflows" key inside "task" is ignored by the endpoint, so the
+			// sibling position is the whole point.
+			if _, ok := payload.Task["workflows"]; ok {
+				t.Errorf("workflows must sit beside task, not inside it (body %q)", body)
+			}
+
+			if tt.want == nil {
+				if payload.Workflows != nil {
+					t.Errorf("expected workflows to be omitted but got %+v (body %q)", *payload.Workflows, body)
+				}
+				return
+			}
+			if payload.Workflows == nil {
+				t.Fatalf("expected workflows to reach the wire (body %q)", body)
+			}
+			for _, field := range []struct {
+				name      string
+				got, want *int64
+			}{
+				{"workflowId", payload.Workflows.WorkflowID, tt.want.WorkflowID},
+				{"stageId", payload.Workflows.StageID, tt.want.StageID},
+				{"positionAfterTask", payload.Workflows.PositionAfterTaskID, tt.want.PositionAfterTaskID},
+			} {
+				if field.got == nil || *field.got != *field.want {
+					t.Errorf("expected %s %d but got %v (body %q)", field.name, *field.want, field.got, body)
+				}
+			}
+		})
+	}
+}

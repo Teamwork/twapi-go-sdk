@@ -223,17 +223,53 @@ func (t TaskAttachments) IsZero() bool {
 	return len(t.Files) == 0 && len(t.PendingFiles) == 0
 }
 
-// TaskWorkflowStage represents the workflow stage associated with a task. This
-// is used when creating or updating a task to set the workflow stage of the
-// task.
+// TaskWorkflowStage reports which stage of a workflow a task sits in. It is the
+// response shape, carried by Task.WorkflowStages; the request side is
+// TaskWorkflows, whose fields differ.
 type TaskWorkflowStage struct {
 	// WorkflowID is the unique identifier of the workflow associated with the
 	// task.
 	WorkflowID *int64 `json:"workflowId"`
 
 	// StageID is the unique identifier of the workflow stage associated with the
-	// task.
+	// task. A task in the workflow's backlog reports 0.
 	StageID *int64 `json:"stageId"`
+}
+
+// TaskWorkflows places a task in a stage of a workflow while creating or
+// updating it, saving the follow-up request WorkflowStageTaskMove would cost.
+//
+// It reaches the endpoint as a "workflows" object beside "task", and both
+// identifiers are needed: a stage without its workflow is ignored. The endpoints
+// treat it differently, and neither says so in the response.
+//
+// On create, the task joins every workflow attached to its project, in the
+// backlog. This moves it out of the backlog of the one workflow it names --
+// silently doing nothing at all if that workflow is not attached to the project,
+// so the workflow has to be one of the project's own.
+//
+// On update, the task must already be in the named workflow or the endpoint
+// answers 404. Unlike the routes behind WorkflowStageTaskMove, neither endpoint
+// asks for permission to edit the workflow; the task's own edit permission is
+// what is checked.
+type TaskWorkflows struct {
+	// WorkflowID is the identifier of the workflow that owns the stage. Required
+	// alongside StageID.
+	WorkflowID *int64 `json:"workflowId,omitempty"`
+
+	// StageID is the identifier of the stage to place the task in. Zero, or unset,
+	// leaves the task in the backlog.
+	StageID *int64 `json:"stageId,omitempty"`
+
+	// PositionAfterTaskID is the identifier of the task after which this one is
+	// placed within the stage. Unset appends it to the end.
+	PositionAfterTaskID *int64 `json:"positionAfterTask,omitempty"`
+}
+
+// IsZero reports whether no workflow placement was requested, so that the field
+// is omitted from the request instead of being sent as an empty object.
+func (t TaskWorkflows) IsZero() bool {
+	return t.WorkflowID == nil && t.StageID == nil && t.PositionAfterTaskID == nil
 }
 
 // TaskUpdateRequestPath contains the path parameters for creating a
@@ -297,6 +333,9 @@ type TaskCreateRequest struct {
 	// exist in the project, files uploaded with PendingFileCreate, or both.
 	Attachments TaskAttachments `json:"-"`
 
+	// Workflows places the task in a stage of one of its project's workflows.
+	Workflows TaskWorkflows `json:"-"`
+
 	// ChangeFollowers is the list of users, teams or clients/companies that will
 	// receive notifications when the task is updated.
 	ChangeFollowers UserGroups `json:"changeFollowers,omitzero"`
@@ -330,11 +369,13 @@ func (t TaskCreateRequest) HTTPRequest(ctx context.Context, server string) (*htt
 		Options      TaskOptions       `json:"taskOptions"`
 		Predecessors []TaskPredecessor `json:"predecessors,omitempty"`
 		Attachments  TaskAttachments   `json:"attachments,omitzero"`
+		Workflows    TaskWorkflows     `json:"workflows,omitzero"`
 	}{
 		Task:         t,
 		Options:      t.Options,
 		Predecessors: t.Predecessors,
 		Attachments:  t.Attachments,
+		Workflows:    t.Workflows,
 	}
 
 	var body bytes.Buffer
@@ -455,6 +496,9 @@ type TaskUpdateRequest struct {
 	// additive, so files already attached to the task are left alone.
 	Attachments TaskAttachments `json:"-"`
 
+	// Workflows moves the task to a stage of a workflow it is already in.
+	Workflows TaskWorkflows `json:"-"`
+
 	// ChangeFollowers is the list of users, teams or clients/companies that will
 	// receive notifications when the task is updated.
 	ChangeFollowers *UserGroups `json:"changeFollowers,omitempty"`
@@ -487,11 +531,13 @@ func (t TaskUpdateRequest) HTTPRequest(ctx context.Context, server string) (*htt
 		Options      TaskOptions       `json:"taskOptions"`
 		Predecessors []TaskPredecessor `json:"predecessors,omitempty"`
 		Attachments  TaskAttachments   `json:"attachments,omitzero"`
+		Workflows    TaskWorkflows     `json:"workflows,omitzero"`
 	}{
 		Task:         t,
 		Options:      t.Options,
 		Predecessors: t.Predecessors,
 		Attachments:  t.Attachments,
+		Workflows:    t.Workflows,
 	}
 
 	var body bytes.Buffer
