@@ -84,6 +84,40 @@ func ExampleTimeReportList_groupedByTask() {
 	// task 778 (Review the release notes) logged 45 minutes
 }
 
+func ExampleTimeReportTotals() {
+	address, stop, err := startTimeReportServer() // mock server for demonstration purposes
+	if err != nil {
+		fmt.Printf("failed to start server: %s", err)
+		return
+	}
+	defer stop()
+
+	ctx := context.Background()
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
+
+	totalsRequest := projects.NewTimeReportTotalsRequest(
+		projects.TimeReportGroupByWeek,
+		twapi.Date(time.Date(2026, time.August, 1, 0, 0, 0, 0, time.UTC)),
+		twapi.Date(time.Date(2026, time.August, 9, 0, 0, 0, 0, time.UTC)),
+	)
+
+	totalsResponse, err := projects.TimeReportTotals(ctx, engine, totalsRequest)
+	if err != nil {
+		fmt.Printf("failed to retrieve time report totals: %s", err)
+		return
+	}
+
+	for _, period := range totalsResponse.Dates {
+		fmt.Printf("%s to %s: %d minutes logged\n", period.StartDate, period.EndDate, period.LoggedTime)
+	}
+	fmt.Printf("total: %d minutes logged\n", totalsResponse.LoggedTime)
+
+	// Output:
+	// 2026-08-01 to 2026-08-02: 810 minutes logged
+	// 2026-08-03 to 2026-08-09: 750 minutes logged
+	// total: 1560 minutes logged
+}
+
 func startTimeReportServer() (string, func(), error) {
 	ln, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
@@ -128,6 +162,20 @@ func startTimeReportServer() (string, func(), error) {
 					"778": {"id": 778, "name": "Review the release notes"}
 				}
 			}
+		}`)
+	})
+
+	mux.HandleFunc("GET /projects/api/v3/time/report/totals", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprintln(w, `{
+			"loggedTime": 1560, "billableTime": 1200, "nonBillableTime": 360, "billedTime": 240, "estimatedTime": 0,
+			"dates": [
+				{"startDate": "2026-08-01", "endDate": "2026-08-02", "loggedTime": 810, "billableTime": 600,
+				 "nonBillableTime": 210, "billedTime": 120, "estimatedTime": 0},
+				{"startDate": "2026-08-03", "endDate": "2026-08-09", "loggedTime": 750, "billableTime": 600,
+				 "nonBillableTime": 150, "billedTime": 120, "estimatedTime": 0}
+			]
 		}`)
 	})
 
