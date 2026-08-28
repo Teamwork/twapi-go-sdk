@@ -491,3 +491,216 @@ func TimeReportList(
 ) (*TimeReportListResponse, error) {
 	return twapi.Execute[TimeReportListRequest, *TimeReportListResponse](ctx, engine, req)
 }
+
+var (
+	_ twapi.HTTPRequester = (*TimeReportTotalsRequest)(nil)
+	_ twapi.HTTPResponser = (*TimeReportTotalsResponse)(nil)
+)
+
+// TimeReportGroupBy identifies the period a time report's totals are bucketed
+// by. It maps to the `groupBy` query parameter of the
+// `/time/report/totals.json` endpoint.
+type TimeReportGroupBy string
+
+// List of possible time report totals periods.
+const (
+	TimeReportGroupByDay   TimeReportGroupBy = "day"
+	TimeReportGroupByWeek  TimeReportGroupBy = "week"
+	TimeReportGroupByMonth TimeReportGroupBy = "month"
+)
+
+// TimeReportTotalsRequestFilters contains the filters for loading time report
+// totals.
+type TimeReportTotalsRequestFilters struct {
+	// StartDate is the inclusive start of the report window. This is a required
+	// field.
+	StartDate twapi.Date
+
+	// EndDate is the inclusive end of the report window. This is a required
+	// field.
+	EndDate twapi.Date
+
+	// GroupBy is the period each entry of the response covers. The endpoint
+	// defaults to TimeReportGroupByDay.
+	//
+	// Buckets are keyed by day of year (day and week) or month number (month)
+	// with no year, so a window spanning more than one calendar year folds the
+	// same day or month of different years into one entry. Split such a window
+	// at 1 January and send one request per year.
+	//
+	// Every period in the window is returned, in order, and a period with no
+	// time is a row of zeros. The first and last periods are clipped to the
+	// window, so they can be shorter than a full week or month. Weeks start on
+	// the calling user's start-of-week day (Monday unless the user set Sunday),
+	// so two users can get different buckets from the same query, and a week
+	// that covers only a weekend is omitted when it carries no time.
+	GroupBy TimeReportGroupBy
+
+	// Type is the dimension the report counts entries by. It never splits the
+	// totals into rows, but it can narrow them: TimeReportTypeTask and
+	// TimeReportTypeTasklist drop time not logged on a task, and
+	// TimeReportTypeTeam keeps only time logged by team members. When set, the
+	// response also carries RowsCount and the per-entry averages; when empty,
+	// both are omitted and every timelog matching the filters is counted.
+	Type TimeReportType
+
+	// ProjectIDs filters the report to the given projects.
+	ProjectIDs []int64
+
+	// UserIDs filters the report to the given users.
+	UserIDs []int64
+
+	// TaskIDs filters the report to the given tasks.
+	TaskIDs []int64
+
+	// TasklistIDs filters the report to the given tasklists.
+	TasklistIDs []int64
+
+	// TeamIDs filters the report to the given teams.
+	TeamIDs []int64
+
+	// CompanyIDs filters the report to the given companies.
+	CompanyIDs []int64
+
+	// TimelogTagIDs filters the report to timelogs carrying the given tags.
+	TimelogTagIDs []int64
+
+	// IncludeArchivedProjects includes time from archived projects when set to
+	// true. When nil the API default (false) applies.
+	IncludeArchivedProjects *bool
+
+	// IncludeCompletedTasks includes time on completed tasks when set to true.
+	// When nil the API default (true) applies.
+	IncludeCompletedTasks *bool
+
+	// ReportType selects the report variant. When empty the API defaults to
+	// TimeReportReportTypeTime.
+	ReportType TimeReportReportType
+}
+
+func (f TimeReportTotalsRequestFilters) apply(req *http.Request) {
+	query := req.URL.Query()
+	querySetDate(query, "startDate", &f.StartDate)
+	querySetDate(query, "endDate", &f.EndDate)
+	querySetString(query, "groupBy", f.GroupBy)
+	querySetString(query, "type", f.Type)
+	querySetInt64s(query, "projectIds", f.ProjectIDs)
+	querySetInt64s(query, "userIds", f.UserIDs)
+	querySetInt64s(query, "taskIds", f.TaskIDs)
+	querySetInt64s(query, "tasklistIds", f.TasklistIDs)
+	querySetInt64s(query, "teamIds", f.TeamIDs)
+	querySetInt64s(query, "companyIds", f.CompanyIDs)
+	querySetInt64s(query, "timelogTagIds", f.TimelogTagIDs)
+	querySetBool(query, "includeArchivedProjects", f.IncludeArchivedProjects)
+	querySetBool(query, "includeCompletedTasks", f.IncludeCompletedTasks)
+	querySetString(query, "reportType", f.ReportType)
+	req.URL.RawQuery = query.Encode()
+}
+
+// TimeReportTotalsRequest represents the request for loading the totals of a
+// time report bucketed by day, week or month.
+//
+// https://apidocs.teamwork.com/docs/teamwork/v3/time-tracking/get-projects-api-v3-time-report-totals-json
+type TimeReportTotalsRequest struct {
+	// Filters contains the filters for loading the totals.
+	Filters TimeReportTotalsRequestFilters
+}
+
+// NewTimeReportTotalsRequest creates a new TimeReportTotalsRequest bucketed by
+// the given period and windowed by the given dates.
+func NewTimeReportTotalsRequest(
+	groupBy TimeReportGroupBy,
+	startDate twapi.Date,
+	endDate twapi.Date,
+) TimeReportTotalsRequest {
+	return TimeReportTotalsRequest{
+		Filters: TimeReportTotalsRequestFilters{
+			StartDate: startDate,
+			EndDate:   endDate,
+			GroupBy:   groupBy,
+		},
+	}
+}
+
+// HTTPRequest creates an HTTP request for the TimeReportTotalsRequest.
+func (r TimeReportTotalsRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
+	uri := server + "/projects/api/v3/time/report/totals.json"
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, uri, nil)
+	if err != nil {
+		return nil, err
+	}
+	r.Filters.apply(req)
+	return req, nil
+}
+
+// TimeReportTotalsPeriod is the total for one period of a time report. The
+// period is inclusive on both ends; a day has StartDate equal to EndDate.
+type TimeReportTotalsPeriod struct {
+	TimeReportColumns
+
+	// StartDate is the first day of the period.
+	StartDate twapi.Date `json:"startDate"`
+
+	// EndDate is the last day of the period.
+	EndDate twapi.Date `json:"endDate"`
+}
+
+// TimeReportTotalsResponse contains the totals of a time report over the
+// requested window, bucketed by the requested period.
+//
+// https://apidocs.teamwork.com/docs/teamwork/v3/time-tracking/get-projects-api-v3-time-report-totals-json
+type TimeReportTotalsResponse struct {
+	// TimeReportColumns holds the totals over the whole window.
+	TimeReportColumns
+
+	// Dates holds one entry per period in the window, in order.
+	Dates []TimeReportTotalsPeriod `json:"dates"`
+
+	// RowsCount is the number of entries of the requested Type in the window. It
+	// is only present when the request sets Type.
+	RowsCount *int64 `json:"rowsCount,omitempty"`
+
+	// LoggedTimeAverage is LoggedTime divided by RowsCount, in minutes. It is
+	// only present when the request sets Type.
+	LoggedTimeAverage *int64 `json:"loggedTimeAverage,omitempty"`
+
+	// BilledTimeAverage is BilledTime divided by RowsCount, in minutes. It is
+	// only present when the request sets Type.
+	BilledTimeAverage *int64 `json:"billedTimeAverage,omitempty"`
+
+	// BillableTimeAverage is BillableTime divided by RowsCount, in minutes. It is
+	// only present when the request sets Type.
+	BillableTimeAverage *int64 `json:"billableTimeAverage,omitempty"`
+
+	// NonBillableTimeAverage is NonBillableTime divided by RowsCount, in minutes.
+	// It is only present when the request sets Type.
+	NonBillableTimeAverage *int64 `json:"nonBillableTimeAverage,omitempty"`
+
+	// EstimatedTimeAverage is EstimatedTime divided by RowsCount, in minutes. It
+	// is only present when the request sets Type.
+	EstimatedTimeAverage *int64 `json:"estimatedTimeAverage,omitempty"`
+}
+
+// HandleHTTPResponse handles the HTTP response for the
+// TimeReportTotalsResponse. If some unexpected HTTP status code is returned by
+// the API, a twapi.HTTPError is returned.
+func (r *TimeReportTotalsResponse) HandleHTTPResponse(resp *http.Response) error {
+	if resp.StatusCode != http.StatusOK {
+		return twapi.NewHTTPError(resp, "failed to retrieve time report totals")
+	}
+	if err := json.NewDecoder(resp.Body).Decode(r); err != nil {
+		return fmt.Errorf("failed to decode retrieve time report totals response: %w", err)
+	}
+	return nil
+}
+
+// TimeReportTotals retrieves the totals of a time report bucketed by period
+// using the provided request and returns the response.
+func TimeReportTotals(
+	ctx context.Context,
+	engine *twapi.Engine,
+	req TimeReportTotalsRequest,
+) (*TimeReportTotalsResponse, error) {
+	return twapi.Execute[TimeReportTotalsRequest, *TimeReportTotalsResponse](ctx, engine, req)
+}
