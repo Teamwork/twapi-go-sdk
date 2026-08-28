@@ -498,8 +498,7 @@ var (
 )
 
 // TimeReportGroupBy identifies the period a time report's totals are bucketed
-// by. It maps to the `groupBy` query parameter of the
-// `/time/report/totals.json` endpoint.
+// by. It maps to the `groupBy` parameter of `/time/report/totals.json`.
 type TimeReportGroupBy string
 
 // List of possible time report totals periods.
@@ -520,28 +519,23 @@ type TimeReportTotalsRequestFilters struct {
 	// field.
 	EndDate twapi.Date
 
-	// GroupBy is the period each entry of the response covers. The endpoint
-	// defaults to TimeReportGroupByDay.
+	// GroupBy is the period each entry covers. The endpoint defaults to
+	// TimeReportGroupByDay.
 	//
-	// Buckets are keyed by day of year (day and week) or month number (month)
-	// with no year, so a window spanning more than one calendar year folds the
-	// same day or month of different years into one entry. Split such a window
-	// at 1 January and send one request per year.
+	// Buckets are keyed by day of year or month number, with no year, so a
+	// multi-year window folds the same day or month of different years into one
+	// entry: split it at 1 January, one request per year.
 	//
-	// Every period in the window is returned, in order, and a period with no
-	// time is a row of zeros. The first and last periods are clipped to the
-	// window, so they can be shorter than a full week or month. Weeks start on
-	// the calling user's start-of-week day (Monday unless the user set Sunday),
-	// so two users can get different buckets from the same query, and a week
-	// that covers only a weekend is omitted when it carries no time.
+	// Every period is returned in order, empty ones as zeros, with the first
+	// and last clipped to the window. Weeks start on the calling user's
+	// start-of-week day (Monday by default), so buckets differ per user, and a
+	// weekend-only week carrying no time is omitted.
 	GroupBy TimeReportGroupBy
 
-	// Type is the dimension the report counts entries by. It never splits the
-	// totals into rows, but it can narrow them: TimeReportTypeTask and
-	// TimeReportTypeTasklist drop time not logged on a task, and
-	// TimeReportTypeTeam keeps only time logged by team members. When set, the
-	// response also carries RowsCount and the per-entry averages; when empty,
-	// both are omitted and every timelog matching the filters is counted.
+	// Type is the dimension entries are counted by, and it turns on RowsCount
+	// and the averages. It never splits the totals into rows, but it does
+	// narrow them: task and tasklist drop time not logged on a task, and team
+	// keeps only time logged by team members.
 	Type TimeReportType
 
 	// ProjectIDs filters the report to the given projects.
@@ -573,8 +567,10 @@ type TimeReportTotalsRequestFilters struct {
 	// When nil the API default (true) applies.
 	IncludeCompletedTasks *bool
 
-	// ReportType selects the report variant. When empty the API defaults to
-	// TimeReportReportTypeTime.
+	// ReportType does not change the totals — this endpoint reads it only when
+	// authorising the request, where some variants satisfy a plan check that an
+	// empty value does not. The numbers are identical either way, so set it
+	// only if an otherwise valid request is answered 403.
 	ReportType TimeReportReportType
 }
 
@@ -634,8 +630,8 @@ func (r TimeReportTotalsRequest) HTTPRequest(ctx context.Context, server string)
 	return req, nil
 }
 
-// TimeReportTotalsPeriod is the total for one period of a time report. The
-// period is inclusive on both ends; a day has StartDate equal to EndDate.
+// TimeReportTotalsPeriod is one period's total. Both dates are inclusive; a
+// day has StartDate equal to EndDate.
 type TimeReportTotalsPeriod struct {
 	TimeReportColumns
 
@@ -657,28 +653,23 @@ type TimeReportTotalsResponse struct {
 	// Dates holds one entry per period in the window, in order.
 	Dates []TimeReportTotalsPeriod `json:"dates"`
 
-	// RowsCount is the number of entries of the requested Type in the window. It
-	// is only present when the request sets Type.
+	// RowsCount is the number of entries of the requested Type in the window.
+	// It and every average below are nil unless the request sets Type.
 	RowsCount *int64 `json:"rowsCount,omitempty"`
 
-	// LoggedTimeAverage is LoggedTime divided by RowsCount, in minutes. It is
-	// only present when the request sets Type.
+	// LoggedTimeAverage is LoggedTime divided by RowsCount, in minutes.
 	LoggedTimeAverage *int64 `json:"loggedTimeAverage,omitempty"`
 
-	// BilledTimeAverage is BilledTime divided by RowsCount, in minutes. It is
-	// only present when the request sets Type.
+	// BilledTimeAverage is BilledTime divided by RowsCount, in minutes.
 	BilledTimeAverage *int64 `json:"billedTimeAverage,omitempty"`
 
-	// BillableTimeAverage is BillableTime divided by RowsCount, in minutes. It is
-	// only present when the request sets Type.
+	// BillableTimeAverage is BillableTime divided by RowsCount, in minutes.
 	BillableTimeAverage *int64 `json:"billableTimeAverage,omitempty"`
 
 	// NonBillableTimeAverage is NonBillableTime divided by RowsCount, in minutes.
-	// It is only present when the request sets Type.
 	NonBillableTimeAverage *int64 `json:"nonBillableTimeAverage,omitempty"`
 
-	// EstimatedTimeAverage is EstimatedTime divided by RowsCount, in minutes. It
-	// is only present when the request sets Type.
+	// EstimatedTimeAverage is EstimatedTime divided by RowsCount, in minutes.
 	EstimatedTimeAverage *int64 `json:"estimatedTimeAverage,omitempty"`
 }
 
@@ -695,8 +686,7 @@ func (r *TimeReportTotalsResponse) HandleHTTPResponse(resp *http.Response) error
 	return nil
 }
 
-// TimeReportTotals retrieves the totals of a time report bucketed by period
-// using the provided request and returns the response.
+// TimeReportTotals retrieves the totals of a time report bucketed by period.
 func TimeReportTotals(
 	ctx context.Context,
 	engine *twapi.Engine,
