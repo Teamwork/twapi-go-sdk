@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-var reHexColor = regexp.MustCompile(`^#([0-9a-f]{6})$`)
+var reHexColor = regexp.MustCompile(`^#?([0-9a-f]{6})$`)
 
 // HTTPError represents an error response from the API.
 type HTTPError struct {
@@ -257,33 +257,114 @@ func (n NullableInt64) MarshalJSON() ([]byte, error) {
 }
 
 // HexColor defines a hexadecimal color.
+//
+// The leading "#" is optional on the way in and always present on the way out:
+// endpoints are not consistent about sending it, and a colour that fails to
+// decode takes the whole response down with it. The six digits are what the
+// type stores, lower-cased.
 type HexColor string
 
-// MarshalJSON encodes the type to JSON format.
+// MarshalJSON encodes the type to JSON format, always with the leading "#".
 func (h HexColor) MarshalJSON() ([]byte, error) {
-	return fmt.Appendf(nil, `"%s"`, h), nil
+	return fmt.Appendf(nil, `"%s"`, h.String()), nil
 }
 
-// UnmarshalJSON validate and parse v into a hexadecimal type.
+// UnmarshalJSON validate and parse v into a hexadecimal type. A value with no
+// leading "#" is accepted and normalised; the empty string is not — use
+// OptionalHexColor for a field an endpoint can leave blank.
 func (h *HexColor) UnmarshalJSON(v []byte) error {
-	v = bytes.TrimSpace(v)
-	v = bytes.ToLower(v)
-	v = bytes.Trim(v, `"`)
-
-	if !reHexColor.Match(v) {
-		return fmt.Errorf("invalid hexadecimal color: %s", v)
+	color, ok := parseHexColor(v)
+	if !ok {
+		return fmt.Errorf("invalid hexadecimal color: %s", unquote(v))
 	}
 
-	*h = HexColor(v[1:])
+	*h = HexColor(color)
 	return nil
 }
 
-// String returns the hexadecimal color as a string.
+// String returns the hexadecimal color as a string, with its leading "#".
 func (h HexColor) String() string {
 	return "#" + string(h)
 }
 
-// NewHexColor creates a pointer to new hexadecimal color.
+// NewHexColor creates a pointer to new hexadecimal color. The value is
+// normalised, so "#8BC34A" and "8bc34a" produce the same colour. A value that
+// is not a hexadecimal colour is stored as given: the signature has nowhere to
+// report the error, so the API rejects it instead.
 func NewHexColor(color string) *HexColor {
+	if normalized, ok := parseHexColor([]byte(color)); ok {
+		color = normalized
+	}
 	return new(HexColor(color))
+}
+
+// OptionalHexColor is HexColor for the fields an endpoint can leave blank.
+// HexColor rejects the empty string, so a model whose colour is only set
+// sometimes cannot use it — the project update endpoints report no colour for a
+// project nobody has rated, and every such row would fail to decode.
+//
+// Unset round-trips back to the empty string rather than to null, which is how
+// these endpoints spell it. That also keeps the declared string type accurate
+// for consumers deriving a JSON Schema from these models, which is the trap
+// OptionalDateTime cannot avoid, being defined over time.Time.
+type OptionalHexColor string
+
+// MarshalJSON encodes the type to JSON format, as "#rrggbb" or as the empty
+// string when unset.
+func (h OptionalHexColor) MarshalJSON() ([]byte, error) {
+	if h == "" {
+		return []byte(`""`), nil
+	}
+	return HexColor(h).MarshalJSON()
+}
+
+// UnmarshalJSON validates and parses v into an optional hexadecimal type,
+// reading null, the empty string and a bare "#" as unset, and everything else
+// as a HexColor.
+//
+// The bare "#" is what a HexColor with no value encodes to, on either side of
+// the wire: an endpoint modelling an optional colour with its own non-optional
+// type answers a record that has none with the sign alone.
+func (h *OptionalHexColor) UnmarshalJSON(v []byte) error {
+	if bytes.Equal(bytes.TrimSpace(v), []byte("null")) {
+		*h = ""
+		return nil
+	}
+	if unquoted := unquote(v); len(unquoted) == 0 || bytes.Equal(unquoted, []byte("#")) {
+		*h = ""
+		return nil
+	}
+
+	var color HexColor
+	if err := color.UnmarshalJSON(v); err != nil {
+		return err
+	}
+
+	*h = OptionalHexColor(color)
+	return nil
+}
+
+// String returns the hexadecimal color with its leading "#", or the empty
+// string when unset.
+func (h OptionalHexColor) String() string {
+	if h == "" {
+		return ""
+	}
+	return HexColor(h).String()
+}
+
+// parseHexColor extracts the six digits a HexColor stores out of a JSON string
+// or a bare value, tolerating surrounding quotes, whitespace, upper case and a
+// missing "#". ok is false when v is not a hexadecimal colour.
+func parseHexColor(v []byte) (string, bool) {
+	match := reHexColor.FindSubmatch(bytes.ToLower(unquote(v)))
+	if match == nil {
+		return "", false
+	}
+	return string(match[1]), true
+}
+
+// unquote trims the whitespace and the surrounding quotes of a JSON value.
+func unquote(v []byte) []byte {
+	return bytes.Trim(bytes.TrimSpace(v), `"`)
 }

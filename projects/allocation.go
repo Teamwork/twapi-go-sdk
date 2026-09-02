@@ -228,11 +228,11 @@ type Allocation struct {
 	// HoursPerDay is a rounded float over the same value.
 	SecondsPerDay int64 `json:"secondsPerDay"`
 
-	// Color is the allocation's colour as six hexadecimal digits. The API
-	// returns it without a leading "#", which is why this is a plain string
-	// rather than a twapi.HexColor: that type requires the "#" and would reject
-	// every value the API sends.
-	Color string `json:"color"`
+	// Color is the allocation's colour. The API returns it as six hexadecimal
+	// digits with no leading "#", which twapi.HexColor normalises on the way in
+	// and restores on the way out. The endpoint requires a colour on every
+	// allocation, so this is never blank.
+	Color twapi.HexColor `json:"color"`
 
 	// Status is the lifecycle state of the allocation. A list request reports
 	// one state or the other and never both: only a request with

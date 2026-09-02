@@ -145,3 +145,107 @@ func TestDateTimeAsMapKey(t *testing.T) {
 		}
 	})
 }
+
+// TestHexColorRoundTrip covers the spellings an endpoint uses for a colour that
+// is always set. The leading "#" is optional on the way in — the allocation
+// endpoints send six bare digits, which this type used to reject outright — and
+// always present on the way out, whichever form arrived.
+func TestHexColorRoundTrip(t *testing.T) {
+	tests := []struct {
+		name    string
+		in      string
+		want    string
+		wantErr bool
+	}{
+		{name: "with the leading sign", in: `"#8bc34a"`, want: `"#8bc34a"`},
+		{name: "without the leading sign", in: `"8bc34a"`, want: `"#8bc34a"`},
+		{name: "upper case", in: `"#8BC34A"`, want: `"#8bc34a"`},
+		{name: "empty", in: `""`, wantErr: true},
+		{name: "null", in: `null`, wantErr: true},
+		{name: "not a colour", in: `"green"`, wantErr: true},
+		{name: "too many digits", in: `"#8bc34ab"`, wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var color twapi.HexColor
+			err := json.Unmarshal([]byte(tt.in), &color)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("expected an error for %s but got %q", tt.in, color)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error for %s: %s", tt.in, err)
+			}
+
+			encoded, err := json.Marshal(color)
+			if err != nil {
+				t.Fatalf("unexpected error encoding %s: %s", tt.in, err)
+			}
+			if string(encoded) != tt.want {
+				t.Errorf("expected %s to encode as %s but got %s", tt.in, tt.want, encoded)
+			}
+		})
+	}
+}
+
+// TestNewHexColorNormalises pins the constructor against the "##rrggbb" a
+// caller passing the form it reads off a design tool would otherwise produce:
+// the type stores the digits alone and String adds the sign back.
+func TestNewHexColorNormalises(t *testing.T) {
+	for _, in := range []string{"#8BC34A", "8bc34a"} {
+		if got := twapi.NewHexColor(in).String(); got != "#8bc34a" {
+			t.Errorf("expected NewHexColor(%q) to be #8bc34a but got %s", in, got)
+		}
+	}
+}
+
+// TestOptionalHexColorRoundTrip covers the shapes an endpoint uses for a colour
+// that may be unset. HexColor takes every one of them but the blank, which is
+// the whole difference between the two types.
+//
+// Unset must come back out as the empty string rather than as null or as the
+// bare "#" HexColor's zero value produces: the type is declared as a string, and
+// consumers deriving a JSON Schema from these models validate against that.
+func TestOptionalHexColorRoundTrip(t *testing.T) {
+	tests := []struct {
+		name    string
+		in      string
+		want    string
+		wantErr bool
+	}{
+		{name: "with the leading sign", in: `"#8BC34A"`, want: `"#8bc34a"`},
+		{name: "without the leading sign", in: `"8bc34a"`, want: `"#8bc34a"`},
+		{name: "empty", in: `""`, want: `""`},
+		{name: "null", in: `null`, want: `""`},
+		{name: "the bare sign", in: `"#"`, want: `""`},
+		{name: "not a colour", in: `"green"`, wantErr: true},
+		{name: "too short", in: `"#8bc34"`, wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var color twapi.OptionalHexColor
+			err := json.Unmarshal([]byte(tt.in), &color)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("expected an error for %s but got %q", tt.in, color)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error for %s: %s", tt.in, err)
+			}
+
+			encoded, err := json.Marshal(color)
+			if err != nil {
+				t.Fatalf("unexpected error encoding %s: %s", tt.in, err)
+			}
+			if string(encoded) != tt.want {
+				t.Errorf("expected %s to encode as %s but got %s", tt.in, tt.want, encoded)
+			}
+		})
+	}
+}

@@ -160,9 +160,11 @@ type CustomFieldOptionsDropdownChoice struct {
 	// Value is the display value of the choice.
 	Value string `json:"value"`
 
-	// Color is the hexadecimal color code associated with the choice, without the
-	// leading "#".
-	Color twapi.HexColor `json:"color"`
+	// Color is the color associated with the choice. It is optional, and the key
+	// is left out of a request that does not set one: the endpoint rejects the
+	// bare "#" a twapi.HexColor with no value would encode to, so a choice
+	// created without a colour could not be sent at all.
+	Color twapi.OptionalHexColor `json:"color,omitempty"`
 }
 
 // CustomFieldOptionsRating store the options for rating type.
@@ -171,9 +173,11 @@ type CustomFieldOptionsRating struct {
 	// "heart".
 	Icon string `json:"icon"`
 
-	// Color is the hexadecimal color code associated with the rating, without the
-	// leading "#".
-	Color twapi.HexColor `json:"color"`
+	// Color is the color associated with the rating icons. It is optional, and
+	// the key is left out of a request that does not set one: the endpoint
+	// rejects the bare "#" a twapi.HexColor with no value would encode to, so a
+	// rating created without a colour could not be sent at all.
+	Color twapi.OptionalHexColor `json:"color,omitempty"`
 }
 
 func (CustomFieldOptionsRating) options() {}
