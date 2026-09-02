@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -214,6 +213,18 @@ type ActivityListRequestFilters struct {
 	// share an identifier.
 	ItemIDs []int64
 
+	// ProjectIDs filters activities by the projects they belong to. The
+	// project-scoped route takes its project from the path and ignores this
+	// filter.
+	ProjectIDs []int64
+
+	// UserIDs filters activities by the users that created them.
+	UserIDs []int64
+
+	// ExcludeUserIDs filters out activities created by these users. Pass the
+	// logged-in user's identifier to drop their own activity from the feed.
+	ExcludeUserIDs []int64
+
 	// OrderBy is the field to sort the results by. Use the ActivityOrderBy
 	// constants. The endpoint defaults to date.
 	OrderBy ActivityOrderBy
@@ -243,38 +254,17 @@ type ActivityListRequestFilters struct {
 
 func (a ActivityListRequestFilters) apply(req *http.Request) {
 	query := req.URL.Query()
-	if !a.StartDate.IsZero() {
-		query.Set("startDate", a.StartDate.Format(time.RFC3339))
-	}
-	if !a.EndDate.IsZero() {
-		query.Set("endDate", a.EndDate.Format(time.RFC3339))
-	}
-	if len(a.LogItemTypes) > 0 {
-		logItemTypes := make([]string, len(a.LogItemTypes))
-		for i, logType := range a.LogItemTypes {
-			logItemTypes[i] = string(logType)
-		}
-		query.Set("activityTypes", strings.Join(logItemTypes, ","))
-	}
-	if len(a.ItemIDs) > 0 {
-		itemIDs := make([]string, len(a.ItemIDs))
-		for i, itemID := range a.ItemIDs {
-			itemIDs[i] = strconv.FormatInt(itemID, 10)
-		}
-		query.Set("itemIds", strings.Join(itemIDs, ","))
-	}
-	if a.OrderBy != "" {
-		query.Set("orderBy", string(a.OrderBy))
-	}
-	if a.OrderMode != "" {
-		query.Set("orderMode", string(a.OrderMode))
-	}
-	if a.Page > 0 {
-		query.Set("page", strconv.FormatInt(a.Page, 10))
-	}
-	if a.PageSize > 0 {
-		query.Set("pageSize", strconv.FormatInt(a.PageSize, 10))
-	}
+	querySetTimestamp(query, "startDate", &a.StartDate)
+	querySetTimestamp(query, "endDate", &a.EndDate)
+	querySetStrings(query, "activityTypes", a.LogItemTypes)
+	querySetInt64s(query, "itemIds", a.ItemIDs)
+	querySetInt64s(query, "projectIds", a.ProjectIDs)
+	querySetInt64s(query, "userIds", a.UserIDs)
+	querySetInt64s(query, "excludeUserIds", a.ExcludeUserIDs)
+	querySetString(query, "orderBy", a.OrderBy)
+	querySetString(query, "orderMode", a.OrderMode)
+	querySetInt64(query, "page", a.Page)
+	querySetInt64(query, "pageSize", a.PageSize)
 	a.Fields.apply(query)
 	a.CountMode.Apply(query)
 	req.URL.RawQuery = query.Encode()

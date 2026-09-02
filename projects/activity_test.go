@@ -114,45 +114,66 @@ func TestLogItemType_UnmarshalText(t *testing.T) {
 	})
 }
 
-func TestActivityListItemIDs(t *testing.T) {
-	tests := []struct {
-		name    string
-		itemIDs []int64
-		want    string
+func TestActivityListIDFilters(t *testing.T) {
+	filters := []struct {
+		param string
+		set   func(*projects.ActivityListRequestFilters, []int64)
 	}{{
-		name: "unset item ids are not sent",
+		param: "itemIds",
+		set:   func(f *projects.ActivityListRequestFilters, ids []int64) { f.ItemIDs = ids },
 	}, {
-		name:    "single item id",
-		itemIDs: []int64{777},
-		want:    "777",
+		param: "projectIds",
+		set:   func(f *projects.ActivityListRequestFilters, ids []int64) { f.ProjectIDs = ids },
 	}, {
-		name:    "multiple item ids are comma-separated",
-		itemIDs: []int64{777, 12345},
-		want:    "777,12345",
+		param: "userIds",
+		set:   func(f *projects.ActivityListRequestFilters, ids []int64) { f.UserIDs = ids },
+	}, {
+		param: "excludeUserIds",
+		set:   func(f *projects.ActivityListRequestFilters, ids []int64) { f.ExcludeUserIDs = ids },
 	}}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			req := projects.NewActivityListRequest()
-			req.Filters.ItemIDs = tt.itemIDs
+	tests := []struct {
+		name string
+		ids  []int64
+		want string
+	}{{
+		name: "unset ids are not sent",
+	}, {
+		name: "single id",
+		ids:  []int64{777},
+		want: "777",
+	}, {
+		name: "multiple ids are comma-separated",
+		ids:  []int64{777, 12345},
+		want: "777,12345",
+	}}
 
-			httpReq, err := req.HTTPRequest(context.Background(), "https://test.com")
-			if err != nil {
-				t.Fatalf("unexpected error creating HTTP request: %s", err)
-			}
-			query, err := url.ParseQuery(httpReq.URL.RawQuery)
-			if err != nil {
-				t.Fatalf("failed to parse query string: %s", err)
-			}
+	for _, filter := range filters {
+		t.Run(filter.param, func(t *testing.T) {
+			for _, tt := range tests {
+				t.Run(tt.name, func(t *testing.T) {
+					req := projects.NewActivityListRequest()
+					filter.set(&req.Filters, tt.ids)
 
-			if tt.want == "" {
-				if _, ok := query["itemIds"]; ok {
-					t.Errorf("expected no itemIds parameter, got %q", query.Get("itemIds"))
-				}
-				return
-			}
-			if got := query.Get("itemIds"); got != tt.want {
-				t.Errorf("itemIds = %q, want %q", got, tt.want)
+					httpReq, err := req.HTTPRequest(context.Background(), "https://test.com")
+					if err != nil {
+						t.Fatalf("unexpected error creating HTTP request: %s", err)
+					}
+					query, err := url.ParseQuery(httpReq.URL.RawQuery)
+					if err != nil {
+						t.Fatalf("failed to parse query string: %s", err)
+					}
+
+					if tt.want == "" {
+						if _, ok := query[filter.param]; ok {
+							t.Errorf("expected no %s parameter, got %q", filter.param, query.Get(filter.param))
+						}
+						return
+					}
+					if got := query.Get(filter.param); got != tt.want {
+						t.Errorf("%s = %q, want %q", filter.param, got, tt.want)
+					}
+				})
 			}
 		})
 	}
