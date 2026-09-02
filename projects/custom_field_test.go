@@ -316,3 +316,50 @@ func TestCustomFieldUnmarshalJSONOptions(t *testing.T) {
 		})
 	}
 }
+
+// TestCustomFieldOptionsColorIsOptional pins both halves of an optional colour
+// on the choice-based options, which are the same structs on the way in and on
+// the way out.
+//
+// A twapi.HexColor with no value encodes to the bare "#", which the endpoint
+// rejects, so a request that sets no colour has to leave the key out entirely.
+// The read direction has to accept that same "#", which is what the endpoint
+// answers for a choice created without one.
+func TestCustomFieldOptionsColorIsOptional(t *testing.T) {
+	t.Run("an unset colour sends no key", func(t *testing.T) {
+		encoded, err := json.Marshal(projects.CustomFieldOptionsDropdown{
+			Choices: []projects.CustomFieldOptionsDropdownChoice{
+				{Value: "Blocked"},
+				{Value: "Shipped", Color: "8bc34a"},
+			},
+		})
+		if err != nil {
+			t.Fatalf("unexpected error encoding the options: %s", err)
+		}
+
+		const want = `{"choices":[{"value":"Blocked"},{"value":"Shipped","color":"#8bc34a"}]}`
+		if string(encoded) != want {
+			t.Errorf("expected %s but got %s", want, encoded)
+		}
+	})
+
+	t.Run("a colourless choice decodes", func(t *testing.T) {
+		var options projects.CustomFieldOptionsDropdown
+		if err := json.Unmarshal([]byte(`{"choices":[{"value":"Blocked","color":"#"}]}`), &options); err != nil {
+			t.Fatalf("unexpected error decoding the options: %s", err)
+		}
+		if got := options.Choices[0].Color; got != "" {
+			t.Errorf("expected the bare sign to decode as unset but got %q", got)
+		}
+	})
+
+	t.Run("a rating colour behaves the same", func(t *testing.T) {
+		encoded, err := json.Marshal(projects.CustomFieldOptionsRating{Icon: "star"})
+		if err != nil {
+			t.Fatalf("unexpected error encoding the options: %s", err)
+		}
+		if string(encoded) != `{"icon":"star"}` {
+			t.Errorf(`expected {"icon":"star"} but got %s`, encoded)
+		}
+	})
+}

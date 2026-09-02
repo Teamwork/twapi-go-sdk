@@ -69,9 +69,9 @@ type ProjectStatusUpdate struct {
 	HealthLabel string `json:"healthLabel"`
 
 	// Color is the colour of Health, as a hex value with a leading number sign.
-	// It is empty when the health is not set. It is a plain string rather than a
-	// twapi.HexColor for that reason.
-	Color string `json:"color"`
+	// It is empty when the health is not set, which is why it is a
+	// twapi.OptionalHexColor: twapi.HexColor rejects the empty value.
+	Color twapi.OptionalHexColor `json:"color"`
 
 	// ProjectID is the identifier of the project the update belongs to.
 	ProjectID int64 `json:"projectId"`
