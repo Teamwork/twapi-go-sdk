@@ -789,3 +789,201 @@ func TestTaskWorkflowsRequestGeneration(t *testing.T) {
 		})
 	}
 }
+
+// TestTaskListFiltersApplied pins the whole query string the task list builds
+// when every filter is populated, against the parameter names the endpoint
+// documents:
+//
+// https://apidocs.teamwork.com/docs/teamwork/v3/tasks/get-projects-api-v3-tasks-json
+//
+// Comparing the complete map rather than a subset is deliberate. An
+// unrecognised query key is silently ignored by the API, so a misspelled
+// parameter looks exactly like a working one from the caller's side — only an
+// exact comparison catches it, and only an exact comparison catches a filter
+// that stopped reaching the wire.
+//
+// StartAfter is deliberately absent, so that TestTaskListStartAfterAlone can
+// pin it as the only date bound reaching the wire.
+func TestTaskListFiltersApplied(t *testing.T) {
+	createdAfter := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+	createdBefore := time.Date(2026, 2, 3, 4, 5, 6, 0, time.UTC)
+	updatedAfter := time.Date(2026, 3, 4, 5, 6, 7, 0, time.UTC)
+	updatedBefore := time.Date(2026, 4, 5, 6, 7, 8, 0, time.UTC)
+	completedAfter := time.Date(2026, 5, 6, 7, 8, 9, 0, time.UTC)
+	completedBefore := time.Date(2026, 6, 7, 8, 9, 10, 0, time.UTC)
+	dueAfter := twapi.Date(time.Date(2026, 7, 8, 0, 0, 0, 0, time.UTC))
+	dueBefore := twapi.Date(time.Date(2026, 8, 9, 0, 0, 0, 0, time.UTC))
+
+	req := projects.TaskListRequest{
+		Filters: projects.TaskListRequestFilters{
+			TaskRequestFilters: projects.TaskRequestFilters{
+				IncludeRelatedTasks:          true,
+				IncludeCompletedPredecessors: true,
+				IncludeTasksWithoutDueDates:  new(false),
+				Include: []projects.TaskRequestSideload{
+					projects.TaskRequestSideloadCustomFields,
+				},
+			},
+
+			SearchTerm: "acme",
+
+			AssigneeUserIDs:        []int64{777, 888},
+			ExcludeAssigneeUserIDs: []int64{999},
+
+			CreatedAfter:     &createdAfter,
+			CreatedBefore:    &createdBefore,
+			CreatedByUserIDs: []int64{12345},
+			UpdatedAfter:     &updatedAfter,
+			UpdatedBefore:    &updatedBefore,
+			CompletedAfter:   &completedAfter,
+			CompletedBefore:  &completedBefore,
+
+			IncludeCompleted:          new(true),
+			IncludeCompletedTasklists: new(true),
+
+			DateFilter: projects.TaskDateFilterStarted,
+			DueAfter:   &dueAfter,
+			DueBefore:  &dueBefore,
+
+			TagIDs:       []int64{111, 222},
+			MatchAllTags: new(true),
+
+			OnlyUnassigned: new(false),
+			OnlyUnplanned:  new(true),
+
+			OrderBy:              projects.TaskOrderByCustomField,
+			OrderMode:            twapi.OrderModeDescending,
+			OrderByCustomFieldID: 42,
+
+			Page:      2,
+			PageSize:  25,
+			CountMode: twapi.ListCountModeExact,
+
+			Fields: projects.TaskListFields{
+				Tasks: []projects.TaskField{projects.TaskFieldName},
+			},
+		},
+	}
+
+	want := map[string]string{
+		"includeRelatedTasks":          "true",
+		"includeCompletedPredecessors": "true",
+		"includeTasksWithoutDueDates":  "false",
+		"include":                      "customfields",
+
+		"searchTerm": "acme",
+
+		"responsiblePartyIds":        "777,888",
+		"excludeResponsiblePartyIds": "999",
+
+		"createdAfter":     "2026-01-02T03:04:05Z",
+		"createdBefore":    "2026-02-03T04:05:06Z",
+		"createdByUserIds": "12345",
+		"updatedAfter":     "2026-03-04T05:06:07Z",
+		"updatedBefore":    "2026-04-05T06:07:08Z",
+		"completedAfter":   "2026-05-06T07:08:09Z",
+		"completedBefore":  "2026-06-07T08:09:10Z",
+
+		"includeCompletedTasks": "true",
+		"showCompletedLists":    "true",
+
+		"taskFilter": "started",
+		"dueAfter":   "2026-07-08",
+		"dueBefore":  "2026-08-09",
+
+		"tagIds":       "111,222",
+		"matchAllTags": "true",
+
+		"onlyUnassignedTasks": "false",
+		"onlyUnplanned":       "true",
+
+		"orderBy":              "customfield",
+		"orderMode":            "desc",
+		"orderByCustomFieldId": "42",
+
+		"page":       "2",
+		"pageSize":   "25",
+		"skipCounts": "false",
+
+		"fields[tasks]": "name",
+	}
+
+	query := listQuery(t, req)
+
+	for key, expected := range want {
+		if got := query.Get(key); got != expected {
+			t.Errorf("expected %s=%q but got %q", key, expected, got)
+		}
+	}
+	for key := range query {
+		if _, ok := want[key]; !ok {
+			t.Errorf("unexpected query parameter %s=%q", key, query.Get(key))
+		}
+	}
+}
+
+// TestTaskListFiltersUnset checks the zero-value filters send nothing, so the
+// endpoint applies its own defaults — TaskDateFilterAnytime among them —
+// rather than receiving a wall of false.
+func TestTaskListFiltersUnset(t *testing.T) {
+	query := listQuery(t, projects.TaskListRequest{})
+	if len(query) != 0 {
+		t.Errorf("expected no query parameters but got %v", query)
+	}
+}
+
+// TestTaskListStartAfterAlone pins the start-date bound on the query string,
+// and that nothing sends the endpoint's companion `endDate`: with both set the
+// endpoint stops reading `startDate` as a start-date bound at all.
+func TestTaskListStartAfterAlone(t *testing.T) {
+	startAfter := twapi.Date(time.Date(2026, 3, 4, 0, 0, 0, 0, time.UTC))
+
+	query := listQuery(t, projects.TaskListRequest{
+		Filters: projects.TaskListRequestFilters{
+			StartAfter: &startAfter,
+		},
+	})
+
+	if got := query.Get("startDate"); got != "2026-03-04" {
+		t.Errorf("expected startDate=%q but got %q", "2026-03-04", got)
+	}
+	if got := query.Get("endDate"); got != "" {
+		t.Errorf("expected no endDate but got %q", got)
+	}
+}
+
+// TestTaskListDateFilterValuesReachTheWire drives every published date filter
+// through the query string. The endpoint rejects an unknown value with 400, and
+// answers a value it does understand with an ordinary task list, so a constant
+// carrying a typo is only visible here.
+func TestTaskListDateFilterValuesReachTheWire(t *testing.T) {
+	for _, dateFilter := range []projects.TaskDateFilter{
+		projects.TaskDateFilterAnytime,
+		projects.TaskDateFilterOverdue,
+		projects.TaskDateFilterToday,
+		projects.TaskDateFilterTomorrow,
+		projects.TaskDateFilterYesterday,
+		projects.TaskDateFilterThisWeek,
+		projects.TaskDateFilterUpcoming,
+		projects.TaskDateFilterStarted,
+		projects.TaskDateFilterWithin7,
+		projects.TaskDateFilterWithin14,
+		projects.TaskDateFilterWithin30,
+		projects.TaskDateFilterWithin365,
+		projects.TaskDateFilterNoDate,
+		projects.TaskDateFilterNoDueDate,
+		projects.TaskDateFilterNoStartDate,
+		projects.TaskDateFilterHasDate,
+	} {
+		t.Run(string(dateFilter), func(t *testing.T) {
+			query := listQuery(t, projects.TaskListRequest{
+				Filters: projects.TaskListRequestFilters{
+					DateFilter: dateFilter,
+				},
+			})
+			if got := query.Get("taskFilter"); got != string(dateFilter) {
+				t.Errorf("expected taskFilter=%q but got %q", dateFilter, got)
+			}
+		})
+	}
+}

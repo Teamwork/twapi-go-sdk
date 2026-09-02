@@ -1011,6 +1011,79 @@ const (
 	TaskOrderByParentTask           TaskOrderBy = "parenttask"
 )
 
+// TaskDateFilter selects tasks by where their dates fall relative to today, in
+// the calling user's own timezone. It is the `taskFilter` query parameter, and
+// its values are the words the task UI puts in front of users.
+type TaskDateFilter string
+
+// Supported task date filters. The endpoint applies TaskDateFilterAnytime when
+// none is sent, and rejects an unknown value with 400.
+const (
+	// TaskDateFilterAnytime applies no date restriction. It is the endpoint's
+	// default.
+	TaskDateFilterAnytime TaskDateFilter = "anytime"
+
+	// TaskDateFilterOverdue returns tasks due before today that are not
+	// completed. A task with no due date is matched on its milestone's. Completed
+	// tasks never match, even with IncludeCompletedTasks set.
+	TaskDateFilterOverdue TaskDateFilter = "overdue"
+
+	// TaskDateFilterToday returns tasks due today, and does not add the overdue
+	// ones.
+	TaskDateFilterToday TaskDateFilter = "today"
+
+	// TaskDateFilterTomorrow returns tasks due tomorrow.
+	TaskDateFilterTomorrow TaskDateFilter = "tomorrow"
+
+	// TaskDateFilterYesterday returns tasks due yesterday.
+	TaskDateFilterYesterday TaskDateFilter = "yesterday"
+
+	// TaskDateFilterThisWeek returns tasks due in the calendar week containing
+	// today, including the days of it that have already passed. The week starts
+	// on the calling user's start-of-week setting.
+	TaskDateFilterThisWeek TaskDateFilter = "thisweek"
+
+	// TaskDateFilterUpcoming returns tasks due today or later.
+	TaskDateFilterUpcoming TaskDateFilter = "upcoming"
+
+	// TaskDateFilterStarted returns tasks whose start date has arrived and whose
+	// due date has not passed: start date on or before today, and either no due
+	// date at all or one falling today or later. A task that started and is
+	// already overdue does not match.
+	TaskDateFilterStarted TaskDateFilter = "started"
+
+	// TaskDateFilterWithin7 returns tasks due between today and 7 days from
+	// today, both included.
+	TaskDateFilterWithin7 TaskDateFilter = "within7"
+
+	// TaskDateFilterWithin14 returns tasks due between today and 14 days from
+	// today, both included.
+	TaskDateFilterWithin14 TaskDateFilter = "within14"
+
+	// TaskDateFilterWithin30 returns tasks due between today and 30 days from
+	// today, both included.
+	TaskDateFilterWithin30 TaskDateFilter = "within30"
+
+	// TaskDateFilterWithin365 returns tasks due between today and 365 days from
+	// today, both included.
+	TaskDateFilterWithin365 TaskDateFilter = "within365"
+
+	// TaskDateFilterNoDate returns tasks with no start date, no due date and no
+	// milestone.
+	TaskDateFilterNoDate TaskDateFilter = "nodate"
+
+	// TaskDateFilterNoDueDate returns tasks with no due date and no milestone to
+	// borrow one from.
+	TaskDateFilterNoDueDate TaskDateFilter = "noduedate"
+
+	// TaskDateFilterNoStartDate returns tasks with no start date, whatever their
+	// due date.
+	TaskDateFilterNoStartDate TaskDateFilter = "nostartdate"
+
+	// TaskDateFilterHasDate returns tasks carrying a start date or a due date.
+	TaskDateFilterHasDate TaskDateFilter = "hasdate"
+)
+
 // TaskListRequestFilters contains the filters for loading multiple tasks.
 type TaskListRequestFilters struct {
 	TaskRequestFilters
@@ -1021,6 +1094,16 @@ type TaskListRequestFilters struct {
 
 	// AssigneeUserIDs is an optional list of User IDs to filter tasks by assigned user.
 	AssigneeUserIDs []int64
+
+	// ExcludeAssigneeUserIDs is an optional list of user IDs whose tasks are left
+	// out of the results. A task is dropped when any one of the listed users is
+	// assigned to it, even when it also carries assignees nobody excluded. A user
+	// reached only through a team, company or job-role assignment on the task is
+	// not matched, the same way AssigneeUserIDs does not match one.
+	//
+	// It composes with every other filter, AssigneeUserIDs included: the
+	// exclusion is applied on top of whatever the rest matched.
+	ExcludeAssigneeUserIDs []int64
 
 	// CreatedAfter is an optional filter to retrieve tasks created at or after a
 	// specific date and time. The boundary is inclusive.
@@ -1056,15 +1139,34 @@ type TaskListRequestFilters struct {
 	// says.
 	CompletedBefore *time.Time
 
-	// IncludeCompletedTasks indicates whether to include completed tasks in the
+	// IncludeCompleted indicates whether to include completed tasks in the
 	// results. When nil or false, completed tasks are excluded (the API default).
 	// Set to true to include them.
-	IncludeCompletedTasks *bool
+	IncludeCompleted *bool
 
-	// IncludeTasksFromCompletedTasklists indicates whether to include tasks that
+	// IncludeCompletedTasklists indicates whether to include tasks that
 	// belong to completed tasklists. When nil or false, those tasks are excluded
 	// (the API default). Set to true to include them.
-	IncludeTasksFromCompletedTasklists *bool
+	IncludeCompletedTasklists *bool
+
+	// DateFilter selects tasks by where their dates fall relative to today, in
+	// the calling user's own timezone. See the TaskDateFilter constants for what
+	// each value returns. Left unset it sends nothing and the endpoint applies
+	// TaskDateFilterAnytime, which restricts nothing.
+	DateFilter TaskDateFilter
+
+	// StartAfter is an optional filter to retrieve tasks whose own start date
+	// falls on or after this date, sent as the endpoint's `startDate`. The
+	// boundary is inclusive, and a task with no start date of its own never
+	// matches — there is no milestone fallback.
+	//
+	// The endpoint has no upper bound to pair it with. Its companion `endDate`
+	// parameter is deliberately not modelled here: on its own it reads the due
+	// date rather than a start or end date, which DueBefore already covers, and
+	// sending it alongside `startDate` stops the endpoint reading either one as
+	// a bound at all — it switches to a window on the due date, and answers 400
+	// for a window longer than the maximum it allows.
+	StartAfter *twapi.Date
 
 	// DueAfter is an optional filter to retrieve tasks due after a specific date.
 	//
@@ -1100,6 +1202,9 @@ type TaskListRequestFilters struct {
 	// OnlyUnplanned is an optional flag to only return tasks that are
 	// unassigned, have no due date, or are missing estimated time.
 	OnlyUnplanned *bool
+
+	// OnlyCompleted is an optional flag to only return tasks that are completed.
+	OnlyCompleted *bool
 
 	// OrderBy is the field to sort the results by. Use the TaskOrderBy
 	// constants. The endpoint defaults to duedate.
@@ -1138,6 +1243,7 @@ func (t TaskListRequestFilters) apply(req *http.Request) {
 	query := req.URL.Query()
 	querySetString(query, "searchTerm", t.SearchTerm)
 	querySetInt64s(query, "responsiblePartyIds", t.AssigneeUserIDs)
+	querySetInt64s(query, "excludeResponsiblePartyIds", t.ExcludeAssigneeUserIDs)
 	querySetTimestamp(query, "createdAfter", t.CreatedAfter)
 	querySetTimestamp(query, "createdBefore", t.CreatedBefore)
 	querySetInt64s(query, "createdByUserIds", t.CreatedByUserIDs)
@@ -1145,14 +1251,17 @@ func (t TaskListRequestFilters) apply(req *http.Request) {
 	querySetTimestamp(query, "updatedBefore", t.UpdatedBefore)
 	querySetTimestamp(query, "completedAfter", t.CompletedAfter)
 	querySetTimestamp(query, "completedBefore", t.CompletedBefore)
-	querySetBool(query, "includeCompletedTasks", t.IncludeCompletedTasks)
-	querySetBool(query, "showCompletedLists", t.IncludeTasksFromCompletedTasklists)
+	querySetBool(query, "includeCompletedTasks", t.IncludeCompleted)
+	querySetBool(query, "showCompletedLists", t.IncludeCompletedTasklists)
+	querySetString(query, "taskFilter", t.DateFilter)
+	querySetDate(query, "startDate", t.StartAfter)
 	querySetDate(query, "dueAfter", t.DueAfter)
 	querySetDate(query, "dueBefore", t.DueBefore)
 	querySetInt64s(query, "tagIds", t.TagIDs)
 	querySetBool(query, "matchAllTags", t.MatchAllTags)
 	querySetBool(query, "onlyUnassignedTasks", t.OnlyUnassigned)
 	querySetBool(query, "onlyUnplanned", t.OnlyUnplanned)
+	querySetBool(query, "completedOnly", t.OnlyCompleted)
 	querySetString(query, "orderBy", t.OrderBy)
 	querySetString(query, "orderMode", t.OrderMode)
 	querySetInt64(query, "orderByCustomFieldId", t.OrderByCustomFieldID)
