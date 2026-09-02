@@ -91,6 +91,12 @@ type Project struct {
 	// Tags is a list of tags associated with the project.
 	Tags []twapi.Relationship `json:"tags"`
 
+	// Update is the project's current status update, the one carrying the health
+	// rating shown on the dashboard. Sideload
+	// ProjectRequestSideloadProjectUpdates to resolve it, or read the update
+	// itself with ProjectStatusUpdateList.
+	Update *twapi.Relationship `json:"update"`
+
 	// LastWorkedAt is the date and time when the project was last worked on.
 	//
 	// Attention: This field isn't populated when the project is retrieved as a
@@ -654,10 +660,11 @@ func ProjectClone(
 // projects.
 //
 // Only ProjectRequestSideloadProjectCategories,
-// ProjectRequestSideloadCustomFields and ProjectRequestSideloadCustomFieldValues
-// are decoded into the typed Included struct of the get and list responses. The
-// remaining values are accepted by the endpoint and reach the wire, but their
-// payloads are discarded until the responses grow a slot for them.
+// ProjectRequestSideloadCustomFields, ProjectRequestSideloadCustomFieldValues
+// and ProjectRequestSideloadProjectUpdates are decoded into the typed Included
+// struct of the get and list responses. The remaining values are accepted by
+// the endpoint and reach the wire, but their payloads are discarded until the
+// responses grow a slot for them.
 type ProjectRequestSideload string
 
 // List of possible sideload options for ProjectRequestSideload.
@@ -775,6 +782,11 @@ type ProjectGetResponse struct {
 		//
 		// The key is the string representation of the custom field value ID.
 		CustomFieldValues map[string]CustomFieldValue `json:"customfieldProjects,omitempty"`
+		// ProjectUpdates contains the projects' current status updates, resolving
+		// Project.Update.
+		//
+		// The key is the string representation of the project update ID.
+		ProjectUpdates map[string]ProjectStatusUpdate `json:"projectUpdates,omitempty"`
 	} `json:"included"`
 }
 
@@ -1245,6 +1257,11 @@ type ProjectListResponse struct {
 		//
 		// The key is the string representation of the custom field value ID.
 		CustomFieldValues map[string]CustomFieldValue `json:"customfieldProjects,omitempty"`
+		// ProjectUpdates contains the projects' current status updates, resolving
+		// Project.Update.
+		//
+		// The key is the string representation of the project update ID.
+		ProjectUpdates map[string]ProjectStatusUpdate `json:"projectUpdates,omitempty"`
 	} `json:"included"`
 }
 
