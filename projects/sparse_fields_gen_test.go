@@ -831,6 +831,7 @@ func TestProjectGetFieldsApply(t *testing.T) {
 		ProjectCategories: []ProjectCategoryField{ProjectCategoryFieldID},
 		CustomFields:      []CustomFieldField{CustomFieldFieldOptions},
 		CustomFieldValues: []CustomFieldValueField{CustomFieldValueFieldID},
+		ProjectUpdates:    []ProjectStatusUpdateField{ProjectStatusUpdateFieldID},
 	}
 	query := url.Values{}
 	fields.apply(query)
@@ -839,6 +840,7 @@ func TestProjectGetFieldsApply(t *testing.T) {
 		"fields[projectCategories]":   "id",
 		"fields[customfields]":        "options",
 		"fields[customfieldProjects]": "id",
+		"fields[projectUpdates]":      "id",
 	}
 	for key, want := range checks {
 		if got := query.Get(key); got != want {
@@ -868,6 +870,7 @@ func TestProjectListFieldsApply(t *testing.T) {
 		ProjectCategories: []ProjectCategoryField{ProjectCategoryFieldID},
 		CustomFields:      []CustomFieldField{CustomFieldFieldOptions},
 		CustomFieldValues: []CustomFieldValueField{CustomFieldValueFieldID},
+		ProjectUpdates:    []ProjectStatusUpdateField{ProjectStatusUpdateFieldID},
 	}
 	query := url.Values{}
 	fields.apply(query)
@@ -876,6 +879,7 @@ func TestProjectListFieldsApply(t *testing.T) {
 		"fields[projectCategories]":   "id",
 		"fields[customfields]":        "options",
 		"fields[customfieldProjects]": "id",
+		"fields[projectUpdates]":      "id",
 	}
 	for key, want := range checks {
 		if got := query.Get(key); got != want {
@@ -888,6 +892,41 @@ func TestProjectListFieldsApply(t *testing.T) {
 // fields[*]=… query parameters.
 func TestProjectListFieldsZeroValue(t *testing.T) {
 	var fields ProjectListFields
+	query := url.Values{}
+	fields.apply(query)
+	for key := range query {
+		if strings.HasPrefix(key, "fields[") {
+			t.Errorf("unexpected sparse-fields parameter %q on zero-value container", key)
+		}
+	}
+}
+
+// TestProjectStatusUpdateListFieldsApply verifies that populated ProjectStatusUpdateListFields slots emit the
+// expected fields[entity]=… query parameters.
+func TestProjectStatusUpdateListFieldsApply(t *testing.T) {
+	fields := ProjectStatusUpdateListFields{
+		ProjectUpdates: []ProjectStatusUpdateField{ProjectStatusUpdateFieldID},
+		Users:          []UserField{UserFieldID},
+		Projects:       []ProjectField{ProjectFieldID},
+	}
+	query := url.Values{}
+	fields.apply(query)
+	checks := map[string]string{
+		"fields[projectUpdates]": "id",
+		"fields[users]":          "id",
+		"fields[projects]":       "id",
+	}
+	for key, want := range checks {
+		if got := query.Get(key); got != want {
+			t.Errorf("%s = %q, want %q", key, got, want)
+		}
+	}
+}
+
+// TestProjectStatusUpdateListFieldsZeroValue verifies that an unset ProjectStatusUpdateListFields emits no
+// fields[*]=… query parameters.
+func TestProjectStatusUpdateListFieldsZeroValue(t *testing.T) {
+	var fields ProjectStatusUpdateListFields
 	query := url.Values{}
 	fields.apply(query)
 	for key := range query {

@@ -203,6 +203,15 @@ func TestListOrderingApplied(t *testing.T) {
 		}(),
 		want: map[string]string{"orderBy": "name", "orderMode": "desc"},
 	}, {
+		name: "project status update",
+		req: func() twapi.HTTPRequester {
+			req := projects.NewProjectStatusUpdateListRequest()
+			req.Filters.OrderBy = projects.ProjectStatusUpdateOrderByHealth
+			req.Filters.OrderMode = twapi.OrderModeAscending
+			return req
+		}(),
+		want: map[string]string{"orderBy": "health", "orderMode": "asc"},
+	}, {
 		name: "rate project user",
 		req: func() twapi.HTTPRequester {
 			req := projects.NewRateProjectUserListRequest(123)
@@ -373,6 +382,9 @@ func TestListOrderingOmittedWhenUnset(t *testing.T) {
 		{name: "notebook", req: projects.NotebookListRequest{}, keys: []string{"orderBy", "orderMode"}},
 		{name: "project", req: projects.ProjectListRequest{}, keys: []string{
 			"orderBy", "orderMode", "orderByCustomFieldId",
+		}},
+		{name: "project status update", req: projects.ProjectStatusUpdateListRequest{}, keys: []string{
+			"orderBy", "orderMode",
 		}},
 		{name: "rate project user", req: projects.RateProjectUserListRequest{}, keys: []string{"orderBy", "orderMode"}},
 		{

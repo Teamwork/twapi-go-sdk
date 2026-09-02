@@ -388,6 +388,7 @@ const (
 	ProjectFieldCompany      ProjectField = "company"
 	ProjectFieldOwner        ProjectField = "projectOwner"
 	ProjectFieldTags         ProjectField = "tags"
+	ProjectFieldUpdate       ProjectField = "update"
 	ProjectFieldLastWorkedAt ProjectField = "lastWorkedOn"
 	ProjectFieldCreatedAt    ProjectField = "createdAt"
 	ProjectFieldCreatedBy    ProjectField = "createdBy"
@@ -398,6 +399,30 @@ const (
 	ProjectFieldStatus       ProjectField = "status"
 	ProjectFieldIsBillable   ProjectField = "isBillable"
 	ProjectFieldType         ProjectField = "type"
+)
+
+// ProjectStatusUpdateField identifies a JSON-tagged attribute of ProjectStatusUpdate usable for v3 sparse fieldsets.
+type ProjectStatusUpdateField string
+
+// List of possible ProjectStatusUpdate fields.
+const (
+	ProjectStatusUpdateFieldID              ProjectStatusUpdateField = "id"
+	ProjectStatusUpdateFieldText            ProjectStatusUpdateField = "text"
+	ProjectStatusUpdateFieldHealth          ProjectStatusUpdateField = "health"
+	ProjectStatusUpdateFieldHealthLabel     ProjectStatusUpdateField = "healthLabel"
+	ProjectStatusUpdateFieldColor           ProjectStatusUpdateField = "color"
+	ProjectStatusUpdateFieldProjectID       ProjectStatusUpdateField = "projectId"
+	ProjectStatusUpdateFieldProject         ProjectStatusUpdateField = "project"
+	ProjectStatusUpdateFieldCreatedBy       ProjectStatusUpdateField = "createdBy"
+	ProjectStatusUpdateFieldCreatedAt       ProjectStatusUpdateField = "createdAt"
+	ProjectStatusUpdateFieldUpdatedAt       ProjectStatusUpdateField = "updatedAt"
+	ProjectStatusUpdateFieldIsActive        ProjectStatusUpdateField = "isActive"
+	ProjectStatusUpdateFieldDeleted         ProjectStatusUpdateField = "deleted"
+	ProjectStatusUpdateFieldDeletedAt       ProjectStatusUpdateField = "deletedAt"
+	ProjectStatusUpdateFieldDeletedBy       ProjectStatusUpdateField = "deletedBy"
+	ProjectStatusUpdateFieldLikeFromUserIDs ProjectStatusUpdateField = "likeFromUserIDs"
+	ProjectStatusUpdateFieldLikeFromUsers   ProjectStatusUpdateField = "likeFromUsers"
+	ProjectStatusUpdateFieldReactions       ProjectStatusUpdateField = "reactions"
 )
 
 // SkillField identifies a JSON-tagged attribute of Skill usable for v3 sparse fieldsets.
@@ -999,6 +1024,8 @@ type ProjectGetFields struct {
 	CustomFields []CustomFieldField
 	// CustomFieldValues controls fields[customfieldProjects]=… on the response.
 	CustomFieldValues []CustomFieldValueField
+	// ProjectUpdates controls fields[projectUpdates]=… on the response.
+	ProjectUpdates []ProjectStatusUpdateField
 }
 
 // apply writes every populated slot to query as a fields[entity]=… parameter.
@@ -1007,6 +1034,7 @@ func (f ProjectGetFields) apply(query url.Values) {
 	twapi.ApplySparseFields(query, "projectCategories", f.ProjectCategories)
 	twapi.ApplySparseFields(query, "customfields", f.CustomFields)
 	twapi.ApplySparseFields(query, "customfieldProjects", f.CustomFieldValues)
+	twapi.ApplySparseFields(query, "projectUpdates", f.ProjectUpdates)
 }
 
 // ProjectListFields selects sparse-fields slots for ProjectListResponse. Leave a slot empty to receive the
@@ -1020,6 +1048,8 @@ type ProjectListFields struct {
 	CustomFields []CustomFieldField
 	// CustomFieldValues controls fields[customfieldProjects]=… on the response.
 	CustomFieldValues []CustomFieldValueField
+	// ProjectUpdates controls fields[projectUpdates]=… on the response.
+	ProjectUpdates []ProjectStatusUpdateField
 }
 
 // apply writes every populated slot to query as a fields[entity]=… parameter.
@@ -1028,6 +1058,25 @@ func (f ProjectListFields) apply(query url.Values) {
 	twapi.ApplySparseFields(query, "projectCategories", f.ProjectCategories)
 	twapi.ApplySparseFields(query, "customfields", f.CustomFields)
 	twapi.ApplySparseFields(query, "customfieldProjects", f.CustomFieldValues)
+	twapi.ApplySparseFields(query, "projectUpdates", f.ProjectUpdates)
+}
+
+// ProjectStatusUpdateListFields selects sparse-fields slots for ProjectStatusUpdateListResponse. Leave a slot empty to receive the
+// API default for that entity; populate it to restrict the attributes returned.
+type ProjectStatusUpdateListFields struct {
+	// ProjectUpdates controls fields[projectUpdates]=… on the response.
+	ProjectUpdates []ProjectStatusUpdateField
+	// Users controls fields[users]=… on the response.
+	Users []UserField
+	// Projects controls fields[projects]=… on the response.
+	Projects []ProjectField
+}
+
+// apply writes every populated slot to query as a fields[entity]=… parameter.
+func (f ProjectStatusUpdateListFields) apply(query url.Values) {
+	twapi.ApplySparseFields(query, "projectUpdates", f.ProjectUpdates)
+	twapi.ApplySparseFields(query, "users", f.Users)
+	twapi.ApplySparseFields(query, "projects", f.Projects)
 }
 
 // SearchFields selects sparse-fields slots for SearchResponse. Leave a slot empty to receive the
