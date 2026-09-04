@@ -30,13 +30,13 @@ func TestCustomFieldCreate(t *testing.T) {
 		name: "all fields",
 		input: projects.CustomFieldCreateRequest{
 			Name:        fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
-			Type:        projects.CustomFieldTypeNumberDecimal,
+			Type:        projects.CustomFieldTypeRating,
 			Entity:      projects.CustomFieldEntityProject,
 			Description: new("integration test custom field"),
 			Required:    new(false),
 			ProjectID:   &testResources.ProjectID,
-			Options: projects.CustomFieldOptionsNumberDecimal{
-				DecimalPoints: new(2),
+			Options: projects.CustomFieldOptionsRating{
+				Icon: "star",
 			},
 			CurrencyCode: new("USD"),
 			Unit:         new(projects.CustomFieldUnitPercent),
