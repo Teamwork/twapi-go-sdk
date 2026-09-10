@@ -987,3 +987,45 @@ func TestTaskListDateFilterValuesReachTheWire(t *testing.T) {
 		})
 	}
 }
+
+// TestTaskGetHideDeletedReachesTheWire pins the three states of the filter on
+// the query string. The endpoint answers a live task the same way whether or
+// not the parameter is sent, so a dropped value is only visible here.
+func TestTaskGetHideDeletedReachesTheWire(t *testing.T) {
+	tests := []struct {
+		name        string
+		hideDeleted bool
+		want        string
+	}{
+		{name: "omitted", want: ""},
+		{name: "set", hideDeleted: true, want: "true"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := projects.NewTaskGetRequest(777)
+			req.Filters.HideDeleted = tt.hideDeleted
+
+			query := listQuery(t, req)
+			if got := query.Get("hideDeleted"); got != tt.want {
+				t.Errorf("expected hideDeleted=%q but got %q", tt.want, got)
+			}
+		})
+	}
+}
+
+// TestTaskGetHideDeletedKeepsTheSharedFilters guards the embedded filters
+// against being dropped by the wrapper's own apply.
+func TestTaskGetHideDeletedKeepsTheSharedFilters(t *testing.T) {
+	req := projects.NewTaskGetRequest(777)
+	req.Filters.HideDeleted = true
+	req.Filters.IncludeRelatedTasks = true
+
+	query := listQuery(t, req)
+	if got := query.Get("hideDeleted"); got != "true" {
+		t.Errorf("expected hideDeleted=%q but got %q", "true", got)
+	}
+	if got := query.Get("includeRelatedTasks"); got != "true" {
+		t.Errorf("expected includeRelatedTasks=%q but got %q", "true", got)
+	}
+}

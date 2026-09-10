@@ -869,6 +869,27 @@ type TaskGetRequestPath struct {
 	ID int64 `json:"id"`
 }
 
+// TaskGetRequestFilters contains the filters for loading a single task.
+type TaskGetRequestFilters struct {
+	TaskRequestFilters
+
+	// HideDeleted answers a deleted task with 404 instead of returning it. By
+	// default this endpoint serves a deleted task with 200, unlike the list
+	// endpoint, which never includes one — so a caller that only wants live
+	// tasks has to ask for it. Only this endpoint reads the parameter.
+	HideDeleted bool
+}
+
+func (t TaskGetRequestFilters) apply(req *http.Request) {
+	t.TaskRequestFilters.apply(req)
+
+	query := req.URL.Query()
+	if t.HideDeleted {
+		query.Set("hideDeleted", "true")
+	}
+	req.URL.RawQuery = query.Encode()
+}
+
 // TaskGetRequest represents the request body for loading a single task.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/tasks/get-projects-api-v3-tasks-task-id-json
@@ -877,7 +898,7 @@ type TaskGetRequest struct {
 	Path TaskGetRequestPath
 
 	// Filters contains the filters for loading a single task.
-	Filters TaskRequestFilters
+	Filters TaskGetRequestFilters
 
 	// Fields restricts the attributes returned for the task and each of its
 	// sideloads. Each slot of TaskGetFields is a separate `fields[entity]=…`
