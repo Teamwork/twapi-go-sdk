@@ -57,7 +57,7 @@ func startProjectStatusUpdateServer() (string, func(), error) {
 		}
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = fmt.Fprintln(w, `{"meta":{"page":{"hasMore":false}},"projectUpdates":[{"id":777,"text":"**Blocked** on the vendor contract.","health":1,"healthLabel":"Needs Attention","color":"#F44336","projectId":12345,"createdBy":98765,"isActive":true}],"included":{"users":{"98765":{"id":98765,"firstName":"John","lastName":"Doe"}}}}`)
+		_, _ = fmt.Fprintln(w, `{"meta":{"page":{"hasMore":false}},"projectUpdates":[{"id":777,"text":"**Blocked** on the vendor contract.","health":1,"healthLabel":"Needs Attention","color":"#F44336","project":{"id":12345,"type":"projects"},"createdBy":98765,"isActive":true}],"included":{"users":{"98765":{"id":98765,"firstName":"John","lastName":"Doe"}}}}`)
 	})
 
 	server := &http.Server{

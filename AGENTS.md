@@ -201,6 +201,46 @@ Color       *string `json:"color,omitempty"`
 Notify      *bool   `json:"notify-current-user,omitempty"`
 ```
 
+### One field per relationship
+
+An entity model carries a foreign key **once**. When the payload spells the same
+relation twice — a scalar id and a sideload reference — keep only the
+`twapi.Relationship`:
+
+```go
+// Wrong: two fields, one relation.
+ProjectID int64              `json:"projectId"`
+Project   twapi.Relationship `json:"project"`
+
+// Right.
+Project twapi.Relationship `json:"project"`
+```
+
+`Relationship.ID` is the same number, so the scalar adds nothing and costs
+something: two fields to keep in sync, two ways to ask the same question, and —
+because the generator emits one constant per JSON-tagged attribute — two
+`<Entity>Field` constants where a caller selecting the wrong one gets a
+relation they cannot follow. The `Relationship` is the one to keep because it
+also carries `Type`, which is what resolves the entity in `Included`.
+
+Scope, so the rule is not read too widely:
+
+- **Entity models only.** A request struct takes the id it writes
+  (`TaskUpdateRequest.TasklistID`), and a `*RequestPath` holds ids by
+  definition — neither is a duplicate of anything.
+- **Both names must denote the same relation.** `Allocation.Project` alongside
+  `ProjectStatusUpdate.ProjectID` is two structs, not a duplicate; and an
+  `*EffectiveRate`-style field pointing at a different entity than its
+  neighbouring id is a different relation that happens to read similarly.
+- **A list is not exempt.** `[]twapi.Relationship` beside a `[]int64` of the
+  same relation is the same mistake at plural scale.
+
+The package holds no exception to this. `ProjectStatusUpdate` carried both pairs
+(`ProjectID`/`Project` and `LikeFromUserIDs`/`LikeFromUsers`) and both scalars
+were removed rather than documented — a breaking change under
+[Releases and version bumps](#releases-and-version-bumps), so it costs a
+minor bump, but a duplicate left in place is copied into the next model.
+
 ### Typed enums over raw strings
 
 Any field whose value is restricted to a fixed set the API accepts — sort keys (`OrderBy`), include/sideload lists, status values, type discriminators, etc. — **must** be exposed as a named `string` typedef with one exported constant per allowed value. Never expose those fields as `string` or `[]string`.

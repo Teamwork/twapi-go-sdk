@@ -73,9 +73,6 @@ type ProjectStatusUpdate struct {
 	// twapi.OptionalHexColor: twapi.HexColor rejects the empty value.
 	Color twapi.OptionalHexColor `json:"color"`
 
-	// ProjectID is the identifier of the project the update belongs to.
-	ProjectID int64 `json:"projectId"`
-
 	// Project is the relationship to the project the update belongs to.
 	Project twapi.Relationship `json:"project"`
 
@@ -101,9 +98,6 @@ type ProjectStatusUpdate struct {
 
 	// DeletedBy is the identifier of the user who deleted the update.
 	DeletedBy *int64 `json:"deletedBy"`
-
-	// LikeFromUserIDs are the identifiers of the users who liked the update.
-	LikeFromUserIDs []int64 `json:"likeFromUserIDs"`
 
 	// LikeFromUsers are the relationships to the users who liked the update.
 	LikeFromUsers []twapi.Relationship `json:"likeFromUsers"`
