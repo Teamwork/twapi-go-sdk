@@ -394,6 +394,12 @@ What follows from that:
 - The media type the `PUT` declares is what the stored file keeps — the later copy to the permanent bucket preserves the temporary object's metadata — so it is derived from the file name, with an override for callers who know better.
 - The composite operation (`PendingFileCreate`) is a plain function over both steps, so its request and response types deliberately do not implement `twapi.HTTPRequester`/`HTTPResponser`. The individual steps stay exported (`PendingFilePresignedURL`, `PendingFileUpload`) for callers that stream a large file or hand the URL to a browser. A caller that never holds the bytes at all — a server telling a client where to send a file it has on disk — reserves with `PendingFilePresignedURL` and describes the rest with `NewPendingFileUploadPlan`, which reports the method, headers and expiry without sending anything. `Content-Length` is deliberately absent from `PendingFileUploadPlan.Headers`: Go derives it from the request, and its value is the size already reserved.
 
+### File downloads go through the web application, not the API
+
+`File.DownloadURL` is `{server}/?action=viewFile&fileId=…&v=…`, a route on the web application rather than under `/projects/api/v3`. `FileDownloadRequest` builds that same address from the session's server so the session authenticates it like any other request. The route answers 302 to a signed storage URL, which the HTTP client follows on its own; the change of host drops the session's credentials, and the signature is what authorises the second hop. A Bearer token authenticates it the same way it does the v3 endpoints, so a session that can list files can download them.
+
+`FileDownloadResponse` deliberately does not implement `twapi.HTTPResponser`: `twapi.Execute` closes the response body before returning, and here the body is the content, so `FileDownload` goes through `twapi.ExecuteRaw` and hands the body to the caller to close. `GET /projects/api/v3/files/{id}/thumbnail` redirects to the same object for storage-hosted files but answers 400 for the rest, so it is not a substitute.
+
 ### HTTPRequest implementation (POST/PUT/PATCH)
 
 ```go

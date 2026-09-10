@@ -215,6 +215,45 @@ const (
 	CustomFieldValueFieldUpdatedAt    CustomFieldValueField = "updatedAt"
 )
 
+// FileField identifies a JSON-tagged attribute of File usable for v3 sparse fieldsets.
+type FileField string
+
+// List of possible File fields.
+const (
+	FileFieldID                  FileField = "id"
+	FileFieldDisplayName         FileField = "displayName"
+	FileFieldOriginalName        FileField = "originalName"
+	FileFieldDescription         FileField = "description"
+	FileFieldSize                FileField = "size"
+	FileFieldStatus              FileField = "status"
+	FileFieldIsPrivate           FileField = "isPrivate"
+	FileFieldIsLocked            FileField = "isLocked"
+	FileFieldLockedBy            FileField = "lockedBy"
+	FileFieldLockedAt            FileField = "lockedAt"
+	FileFieldVersionID           FileField = "versionId"
+	FileFieldVersion             FileField = "version"
+	FileFieldLatestFileVersionNo FileField = "latestFileVersionNo"
+	FileFieldVersions            FileField = "versions"
+	FileFieldProjectID           FileField = "projectId"
+	FileFieldProject             FileField = "project"
+	FileFieldCategoryID          FileField = "categoryId"
+	FileFieldCategory            FileField = "category"
+	FileFieldTagIDs              FileField = "tagIds"
+	FileFieldTags                FileField = "tags"
+	FileFieldFileSource          FileField = "fileSource"
+	FileFieldUploadedBy          FileField = "uploadedBy"
+	FileFieldUploadedAt          FileField = "uploadedAt"
+	FileFieldUpdatedAt           FileField = "updatedAt"
+	FileFieldDeletedAt           FileField = "deletedAt"
+	FileFieldDeletedBy           FileField = "deletedBy"
+	FileFieldDownloadURL         FileField = "downloadURL"
+	FileFieldPreviewURL          FileField = "previewURL"
+	FileFieldThumbURL            FileField = "thumbURL"
+	FileFieldRelatedItems        FileField = "relatedItems"
+	FileFieldCommentsCount       FileField = "commentsCount"
+	FileFieldShareable           FileField = "shareable"
+)
+
 // JobRoleField identifies a JSON-tagged attribute of JobRole usable for v3 sparse fieldsets.
 type JobRoleField string
 
@@ -841,6 +880,54 @@ type CustomFieldValueListFields struct {
 // apply writes every populated slot to query as a fields[entity]=… parameter.
 func (f CustomFieldValueListFields) apply(query url.Values) {
 	twapi.ApplySparseFields(query, "customfieldValues", f.CustomFieldValues)
+}
+
+// FileGetFields selects sparse-fields slots for FileGetResponse. Leave a slot empty to receive the
+// API default for that entity; populate it to restrict the attributes returned.
+type FileGetFields struct {
+	// File controls fields[files]=… on the response.
+	File []FileField
+	// Users controls fields[users]=… on the response.
+	Users []UserField
+	// Projects controls fields[projects]=… on the response.
+	Projects []ProjectField
+	// Tags controls fields[tags]=… on the response.
+	Tags []TagField
+	// Tasks controls fields[tasks]=… on the response.
+	Tasks []TaskField
+}
+
+// apply writes every populated slot to query as a fields[entity]=… parameter.
+func (f FileGetFields) apply(query url.Values) {
+	twapi.ApplySparseFields(query, "files", f.File)
+	twapi.ApplySparseFields(query, "users", f.Users)
+	twapi.ApplySparseFields(query, "projects", f.Projects)
+	twapi.ApplySparseFields(query, "tags", f.Tags)
+	twapi.ApplySparseFields(query, "tasks", f.Tasks)
+}
+
+// FileListFields selects sparse-fields slots for FileListResponse. Leave a slot empty to receive the
+// API default for that entity; populate it to restrict the attributes returned.
+type FileListFields struct {
+	// Files controls fields[files]=… on the response.
+	Files []FileField
+	// Users controls fields[users]=… on the response.
+	Users []UserField
+	// Projects controls fields[projects]=… on the response.
+	Projects []ProjectField
+	// Tags controls fields[tags]=… on the response.
+	Tags []TagField
+	// Tasks controls fields[tasks]=… on the response.
+	Tasks []TaskField
+}
+
+// apply writes every populated slot to query as a fields[entity]=… parameter.
+func (f FileListFields) apply(query url.Values) {
+	twapi.ApplySparseFields(query, "files", f.Files)
+	twapi.ApplySparseFields(query, "users", f.Users)
+	twapi.ApplySparseFields(query, "projects", f.Projects)
+	twapi.ApplySparseFields(query, "tags", f.Tags)
+	twapi.ApplySparseFields(query, "tasks", f.Tasks)
 }
 
 // JobRoleGetFields selects sparse-fields slots for JobRoleGetResponse. Leave a slot empty to receive the
