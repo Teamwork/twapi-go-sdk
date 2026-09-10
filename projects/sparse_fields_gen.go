@@ -406,23 +406,21 @@ type ProjectStatusUpdateField string
 
 // List of possible ProjectStatusUpdate fields.
 const (
-	ProjectStatusUpdateFieldID              ProjectStatusUpdateField = "id"
-	ProjectStatusUpdateFieldText            ProjectStatusUpdateField = "text"
-	ProjectStatusUpdateFieldHealth          ProjectStatusUpdateField = "health"
-	ProjectStatusUpdateFieldHealthLabel     ProjectStatusUpdateField = "healthLabel"
-	ProjectStatusUpdateFieldColor           ProjectStatusUpdateField = "color"
-	ProjectStatusUpdateFieldProjectID       ProjectStatusUpdateField = "projectId"
-	ProjectStatusUpdateFieldProject         ProjectStatusUpdateField = "project"
-	ProjectStatusUpdateFieldCreatedBy       ProjectStatusUpdateField = "createdBy"
-	ProjectStatusUpdateFieldCreatedAt       ProjectStatusUpdateField = "createdAt"
-	ProjectStatusUpdateFieldUpdatedAt       ProjectStatusUpdateField = "updatedAt"
-	ProjectStatusUpdateFieldIsActive        ProjectStatusUpdateField = "isActive"
-	ProjectStatusUpdateFieldDeleted         ProjectStatusUpdateField = "deleted"
-	ProjectStatusUpdateFieldDeletedAt       ProjectStatusUpdateField = "deletedAt"
-	ProjectStatusUpdateFieldDeletedBy       ProjectStatusUpdateField = "deletedBy"
-	ProjectStatusUpdateFieldLikeFromUserIDs ProjectStatusUpdateField = "likeFromUserIDs"
-	ProjectStatusUpdateFieldLikeFromUsers   ProjectStatusUpdateField = "likeFromUsers"
-	ProjectStatusUpdateFieldReactions       ProjectStatusUpdateField = "reactions"
+	ProjectStatusUpdateFieldID            ProjectStatusUpdateField = "id"
+	ProjectStatusUpdateFieldText          ProjectStatusUpdateField = "text"
+	ProjectStatusUpdateFieldHealth        ProjectStatusUpdateField = "health"
+	ProjectStatusUpdateFieldHealthLabel   ProjectStatusUpdateField = "healthLabel"
+	ProjectStatusUpdateFieldColor         ProjectStatusUpdateField = "color"
+	ProjectStatusUpdateFieldProject       ProjectStatusUpdateField = "project"
+	ProjectStatusUpdateFieldCreatedBy     ProjectStatusUpdateField = "createdBy"
+	ProjectStatusUpdateFieldCreatedAt     ProjectStatusUpdateField = "createdAt"
+	ProjectStatusUpdateFieldUpdatedAt     ProjectStatusUpdateField = "updatedAt"
+	ProjectStatusUpdateFieldIsActive      ProjectStatusUpdateField = "isActive"
+	ProjectStatusUpdateFieldDeleted       ProjectStatusUpdateField = "deleted"
+	ProjectStatusUpdateFieldDeletedAt     ProjectStatusUpdateField = "deletedAt"
+	ProjectStatusUpdateFieldDeletedBy     ProjectStatusUpdateField = "deletedBy"
+	ProjectStatusUpdateFieldLikeFromUsers ProjectStatusUpdateField = "likeFromUsers"
+	ProjectStatusUpdateFieldReactions     ProjectStatusUpdateField = "reactions"
 )
 
 // SkillField identifies a JSON-tagged attribute of Skill usable for v3 sparse fieldsets.
