@@ -67,9 +67,6 @@ type FileVersion struct {
 	// ID is the unique identifier of the version.
 	ID int64 `json:"fileVersionId"`
 
-	// FileID is the unique identifier of the file this version belongs to.
-	FileID int64 `json:"fileId"`
-
 	// File is the file this version belongs to.
 	File twapi.Relationship `json:"file"`
 
@@ -94,9 +91,6 @@ type FileVersion struct {
 
 	// Status is the storage state of the version.
 	Status FileStatus `json:"status"`
-
-	// ProjectID is the unique identifier of the project the file belongs to.
-	ProjectID int64 `json:"projectId"`
 
 	// Project is the project the file belongs to.
 	Project twapi.Relationship `json:"project"`
@@ -160,9 +154,6 @@ type File struct {
 	// LockedAt is when the lock was taken, if the file is locked.
 	LockedAt *time.Time `json:"lockedAt"`
 
-	// VersionID is the unique identifier of the selected version.
-	VersionID int64 `json:"versionId"`
-
 	// Version is the selected version.
 	Version twapi.Relationship `json:"version"`
 
@@ -173,20 +164,11 @@ type File struct {
 	// request sets IncludeVersions.
 	Versions []FileVersion `json:"versions,omitempty"`
 
-	// ProjectID is the unique identifier of the project the file belongs to.
-	ProjectID int64 `json:"projectId"`
-
 	// Project is the project the file belongs to.
 	Project twapi.Relationship `json:"project"`
 
-	// CategoryID is the unique identifier of the file category, if any.
-	CategoryID *int64 `json:"categoryId"`
-
 	// Category is the file category, if any.
 	Category *twapi.Relationship `json:"category"`
-
-	// TagIDs is the list of tag IDs associated with the file.
-	TagIDs []int64 `json:"tagIds,omitempty"`
 
 	// Tags is the list of tags associated with the file.
 	Tags []twapi.Relationship `json:"tags,omitempty"`
