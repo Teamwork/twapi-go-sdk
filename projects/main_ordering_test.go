@@ -136,6 +136,15 @@ func TestListOrderingApplied(t *testing.T) {
 			"orderByFieldId": "777",
 		},
 	}, {
+		name: "file",
+		req: func() twapi.HTTPRequester {
+			req := projects.NewFileListRequest()
+			req.Filters.OrderBy = projects.FileOrderByDateUploaded
+			req.Filters.OrderMode = twapi.OrderModeDescending
+			return req
+		}(),
+		want: map[string]string{"orderBy": "dateuploaded", "orderMode": "desc"},
+	}, {
 		name: "job role",
 		req: func() twapi.HTTPRequester {
 			req := projects.NewJobRoleListRequest()
@@ -375,6 +384,7 @@ func TestListOrderingOmittedWhenUnset(t *testing.T) {
 			req:  projects.CustomItemRecordListRequest{Path: projects.CustomItemRecordListRequestPath{CustomItemID: 123}},
 			keys: []string{"orderBy", "orderMode", "orderByFieldId"},
 		},
+		{name: "file", req: projects.FileListRequest{}, keys: []string{"orderBy", "orderMode"}},
 		{name: "job role", req: projects.JobRoleListRequest{}, keys: []string{"orderMode"}},
 		{name: "message", req: projects.MessageListRequest{}, keys: []string{"orderBy", "orderMode"}},
 		{name: "message reply", req: projects.MessageReplyListRequest{}, keys: []string{"orderBy", "orderMode"}},

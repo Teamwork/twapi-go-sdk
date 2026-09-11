@@ -49,6 +49,16 @@ var sparseFieldsGetRequests = []struct {
 		"fields[customfieldCompanies]": "id",
 	},
 }, {
+	name: "file",
+	populated: func() projects.FileGetRequest {
+		req := projects.NewFileGetRequest(1)
+		req.Fields.File = []projects.FileField{projects.FileFieldID}
+		req.Fields.Users = []projects.UserField{projects.UserFieldID}
+		return req
+	}(),
+	zero: projects.NewFileGetRequest(1),
+	want: map[string]string{"fields[files]": "id", "fields[users]": "id"},
+}, {
 	name: "jobrole",
 	populated: func() projects.JobRoleGetRequest {
 		req := projects.NewJobRoleGetRequest(1)

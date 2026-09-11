@@ -106,6 +106,12 @@ type MessageReply struct {
 	// deleted, indicating whether the reply is currently relevant and visible to
 	// the team, or if it has been set aside for reference or removed from view.
 	Status MessageReplyStatus `json:"status"`
+
+	// Attachments is the list of files attached to this reply, each referencing
+	// a file by ID. A message's own attachments are carried by the reply that
+	// holds its body. Read one with FileGet or fetch its content with
+	// FileDownload.
+	Attachments []twapi.Relationship `json:"attachments"`
 }
 
 // MessageReplyUpdateRequestPath contains the path parameters for creating a

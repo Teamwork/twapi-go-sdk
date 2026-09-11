@@ -389,6 +389,84 @@ func TestCustomFieldValueListFieldsZeroValue(t *testing.T) {
 	}
 }
 
+// TestFileGetFieldsApply verifies that populated FileGetFields slots emit the
+// expected fields[entity]=… query parameters.
+func TestFileGetFieldsApply(t *testing.T) {
+	fields := FileGetFields{
+		File:     []FileField{FileFieldID},
+		Users:    []UserField{UserFieldID},
+		Projects: []ProjectField{ProjectFieldID},
+		Tags:     []TagField{TagFieldID},
+		Tasks:    []TaskField{TaskFieldID},
+	}
+	query := url.Values{}
+	fields.apply(query)
+	checks := map[string]string{
+		"fields[files]":    "id",
+		"fields[users]":    "id",
+		"fields[projects]": "id",
+		"fields[tags]":     "id",
+		"fields[tasks]":    "id",
+	}
+	for key, want := range checks {
+		if got := query.Get(key); got != want {
+			t.Errorf("%s = %q, want %q", key, got, want)
+		}
+	}
+}
+
+// TestFileGetFieldsZeroValue verifies that an unset FileGetFields emits no
+// fields[*]=… query parameters.
+func TestFileGetFieldsZeroValue(t *testing.T) {
+	var fields FileGetFields
+	query := url.Values{}
+	fields.apply(query)
+	for key := range query {
+		if strings.HasPrefix(key, "fields[") {
+			t.Errorf("unexpected sparse-fields parameter %q on zero-value container", key)
+		}
+	}
+}
+
+// TestFileListFieldsApply verifies that populated FileListFields slots emit the
+// expected fields[entity]=… query parameters.
+func TestFileListFieldsApply(t *testing.T) {
+	fields := FileListFields{
+		Files:    []FileField{FileFieldID},
+		Users:    []UserField{UserFieldID},
+		Projects: []ProjectField{ProjectFieldID},
+		Tags:     []TagField{TagFieldID},
+		Tasks:    []TaskField{TaskFieldID},
+	}
+	query := url.Values{}
+	fields.apply(query)
+	checks := map[string]string{
+		"fields[files]":    "id",
+		"fields[users]":    "id",
+		"fields[projects]": "id",
+		"fields[tags]":     "id",
+		"fields[tasks]":    "id",
+	}
+	for key, want := range checks {
+		if got := query.Get(key); got != want {
+			t.Errorf("%s = %q, want %q", key, got, want)
+		}
+	}
+}
+
+// TestFileListFieldsZeroValue verifies that an unset FileListFields emits no
+// fields[*]=… query parameters.
+func TestFileListFieldsZeroValue(t *testing.T) {
+	var fields FileListFields
+	query := url.Values{}
+	fields.apply(query)
+	for key := range query {
+		if strings.HasPrefix(key, "fields[") {
+			t.Errorf("unexpected sparse-fields parameter %q on zero-value container", key)
+		}
+	}
+}
+
 // TestJobRoleGetFieldsApply verifies that populated JobRoleGetFields slots emit the
 // expected fields[entity]=… query parameters.
 func TestJobRoleGetFieldsApply(t *testing.T) {

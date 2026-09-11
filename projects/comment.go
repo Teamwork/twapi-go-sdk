@@ -83,6 +83,10 @@ type Comment struct {
 	// DeletedAt is the date and time when the comment was deleted, if it was
 	// deleted.
 	DeletedAt *time.Time `json:"dateDeleted"`
+
+	// Files is the list of files attached to this comment, each referencing a
+	// file by ID. Read one with FileGet or fetch its content with FileDownload.
+	Files []twapi.Relationship `json:"files"`
 }
 
 // CommentSideload contains minimal information about a comment, used for
