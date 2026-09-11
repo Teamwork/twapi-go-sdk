@@ -101,6 +101,11 @@ type Task struct {
 	// Tags is the list of tags associated with this task.
 	Tags []twapi.Relationship `json:"tags"`
 
+	// Attachments is the list of files attached to this task, each referencing
+	// a file by ID. Files the caller cannot see are left out. Read one with
+	// FileGet or fetch its content with FileDownload.
+	Attachments []twapi.Relationship `json:"attachments"`
+
 	// Predecessors is the list of tasks that must be completed before this task
 	// can be started or completed. This is only populated when providing the
 	// IncludeRelatedTasks filter in the request, and completed predecessors are

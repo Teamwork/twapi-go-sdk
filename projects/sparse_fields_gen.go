@@ -128,6 +128,7 @@ const (
 	CommentFieldDeleted      CommentField = "deleted"
 	CommentFieldDeletedBy    CommentField = "deletedBy"
 	CommentFieldDeletedAt    CommentField = "dateDeleted"
+	CommentFieldFiles        CommentField = "files"
 )
 
 // CommentSideloadField identifies a JSON-tagged attribute of CommentSideload usable for v3 sparse fieldsets.
@@ -303,6 +304,7 @@ const (
 	MessageFieldMeta            MessageField = "meta"
 	MessageFieldCreatedAt       MessageField = "createdAt"
 	MessageFieldUpdatedAt       MessageField = "updatedAt"
+	MessageFieldAttachments     MessageField = "attachments"
 )
 
 // MessageReplyField identifies a JSON-tagged attribute of MessageReply usable for v3 sparse fieldsets.
@@ -310,14 +312,15 @@ type MessageReplyField string
 
 // List of possible MessageReply fields.
 const (
-	MessageReplyFieldID        MessageReplyField = "id"
-	MessageReplyFieldBody      MessageReplyField = "body"
-	MessageReplyFieldAuthor    MessageReplyField = "author"
-	MessageReplyFieldMessage   MessageReplyField = "message"
-	MessageReplyFieldMeta      MessageReplyField = "meta"
-	MessageReplyFieldCreatedAt MessageReplyField = "createdAt"
-	MessageReplyFieldUpdatedAt MessageReplyField = "updatedAt"
-	MessageReplyFieldStatus    MessageReplyField = "status"
+	MessageReplyFieldID          MessageReplyField = "id"
+	MessageReplyFieldBody        MessageReplyField = "body"
+	MessageReplyFieldAuthor      MessageReplyField = "author"
+	MessageReplyFieldMessage     MessageReplyField = "message"
+	MessageReplyFieldMeta        MessageReplyField = "meta"
+	MessageReplyFieldCreatedAt   MessageReplyField = "createdAt"
+	MessageReplyFieldUpdatedAt   MessageReplyField = "updatedAt"
+	MessageReplyFieldStatus      MessageReplyField = "status"
+	MessageReplyFieldAttachments MessageReplyField = "attachments"
 )
 
 // MilestoneField identifies a JSON-tagged attribute of Milestone usable for v3 sparse fieldsets.
@@ -503,6 +506,7 @@ const (
 	TaskFieldParentTask             TaskField = "parentTask"
 	TaskFieldAssignees              TaskField = "assignees"
 	TaskFieldTags                   TaskField = "tags"
+	TaskFieldAttachments            TaskField = "attachments"
 	TaskFieldPredecessors           TaskField = "predecessors"
 	TaskFieldSubTaskIDs             TaskField = "subTaskIds"
 	TaskFieldWorkflowStages         TaskField = "workflowStages"
