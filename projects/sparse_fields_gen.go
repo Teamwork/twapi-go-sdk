@@ -935,11 +935,14 @@ func (f FileListFields) apply(query url.Values) {
 type JobRoleGetFields struct {
 	// JobRole controls fields[jobRoles]=… on the response.
 	JobRole []JobRoleField
+	// Users controls fields[users]=… on the response.
+	Users []UserField
 }
 
 // apply writes every populated slot to query as a fields[entity]=… parameter.
 func (f JobRoleGetFields) apply(query url.Values) {
 	twapi.ApplySparseFields(query, "jobRoles", f.JobRole)
+	twapi.ApplySparseFields(query, "users", f.Users)
 }
 
 // JobRoleListFields selects sparse-fields slots for JobRoleListResponse. Leave a slot empty to receive the
@@ -947,11 +950,14 @@ func (f JobRoleGetFields) apply(query url.Values) {
 type JobRoleListFields struct {
 	// JobRoles controls fields[jobRoles]=… on the response.
 	JobRoles []JobRoleField
+	// Users controls fields[users]=… on the response.
+	Users []UserField
 }
 
 // apply writes every populated slot to query as a fields[entity]=… parameter.
 func (f JobRoleListFields) apply(query url.Values) {
 	twapi.ApplySparseFields(query, "jobRoles", f.JobRoles)
+	twapi.ApplySparseFields(query, "users", f.Users)
 }
 
 // LinkListFields selects sparse-fields slots for LinkListResponse. Leave a slot empty to receive the

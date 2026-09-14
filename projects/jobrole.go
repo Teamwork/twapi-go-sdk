@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	twapi "github.com/teamwork/twapi-go-sdk"
@@ -67,13 +66,24 @@ type JobRole struct {
 	// DeletedAt is the date and time when the job role was deleted.
 	DeletedAt *time.Time `json:"deletedAt"`
 
-	// Users contains the list of users associated with this job role.
+	// Users contains the list of users associated with this job role. It is only
+	// returned when the users sideload is requested.
 	Users []twapi.Relationship `json:"users"`
 
 	// PrimaryUsers contains the list of users who have this job role as their
-	// primary role.
+	// primary role. It is only returned when the users sideload is requested.
 	PrimaryUsers []twapi.Relationship `json:"primaryUsers"`
 }
+
+// JobRoleRequestSideload contains the possible sideload options when loading
+// job roles.
+type JobRoleRequestSideload string
+
+// List of possible sideload options for JobRoleRequestSideload.
+const (
+	JobRoleRequestSideloadUsers      JobRoleRequestSideload = "users"
+	JobRoleRequestSideloadCurrencies JobRoleRequestSideload = "currencies"
+)
 
 // JobRoleCreateRequest represents the request body for creating a new
 // job role.
@@ -306,6 +316,11 @@ type JobRoleGetRequest struct {
 	// Path contains the path parameters for the request.
 	Path JobRoleGetRequestPath
 
+	// Include contains additional related information to include in the response
+	// as a sideload. Requesting JobRoleRequestSideloadUsers is what populates
+	// JobRole.Users and JobRole.PrimaryUsers.
+	Include []JobRoleRequestSideload
+
 	// Fields restricts the attributes returned for the job role. Each slot of
 	// JobRoleGetFields is a separate `fields[entity]=…` selection; populated
 	// slots restrict the response, empty slots return the API default. Use the
@@ -333,6 +348,7 @@ func (s JobRoleGetRequest) HTTPRequest(ctx context.Context, server string) (*htt
 	}
 
 	query := req.URL.Query()
+	querySetStrings(query, "include", s.Include)
 	s.Fields.apply(query)
 	req.URL.RawQuery = query.Encode()
 
@@ -346,6 +362,22 @@ func (s JobRoleGetRequest) HTTPRequest(ctx context.Context, server string) (*htt
 // sparsefields:get
 type JobRoleGetResponse struct {
 	JobRole JobRole `json:"jobRole"`
+
+	Included struct {
+		// Users contains the users assigned to the job role, sideloaded when
+		// JobRoleRequestSideloadUsers is requested.
+		//
+		// The key is the string representation of the user ID.
+		Users map[string]User `json:"users,omitempty"`
+
+		// Currencies contains the currencies of the job role's billable and cost
+		// rates, sideloaded when JobRoleRequestSideloadCurrencies is requested.
+		//
+		// The key is the string representation of the currency ID.
+		//
+		// sparsefields:skip
+		Currencies map[string]Currency `json:"currencies,omitempty"`
+	} `json:"included"`
 }
 
 // HandleHTTPResponse handles the HTTP response for the JobRoleGetResponse. If
@@ -376,16 +408,6 @@ func JobRoleGet(
 // job roles.
 type JobRoleListRequestPath struct{}
 
-// JobRoleListRequestSideload contains the possible sideload options when
-// loading multiple job roles.
-type JobRoleListRequestSideload string
-
-// List of possible sideload options for JobRoleListRequestSideload.
-const (
-	JobRoleListRequestSideloadUsers      JobRoleListRequestSideload = "users"
-	JobRoleListRequestSideloadCurrencies JobRoleListRequestSideload = "currencies"
-)
-
 // JobRoleListRequestFilters contains the filters for loading multiple job
 // roles.
 type JobRoleListRequestFilters struct {
@@ -407,8 +429,9 @@ type JobRoleListRequestFilters struct {
 	PageSize int64
 
 	// Include contains additional related information to include in the response
-	// as a sideload.
-	Include []JobRoleListRequestSideload
+	// as a sideload. Requesting JobRoleRequestSideloadUsers is what populates
+	// JobRole.Users and JobRole.PrimaryUsers.
+	Include []JobRoleRequestSideload
 
 	// CountMode selects whether the API computes the exact number of job roles
 	// matching the filters, reported in Meta.Page.Count. Defaults to
@@ -437,13 +460,7 @@ func (s JobRoleListRequestFilters) apply(req *http.Request) {
 	if s.PageSize > 0 {
 		query.Set("pageSize", strconv.FormatInt(s.PageSize, 10))
 	}
-	if len(s.Include) > 0 {
-		var include []string
-		for _, sideload := range s.Include {
-			include = append(include, string(sideload))
-		}
-		query.Set("include", strings.Join(include, ","))
-	}
+	querySetStrings(query, "include", s.Include)
 	s.Fields.apply(query)
 	s.CountMode.Apply(query)
 	req.URL.RawQuery = query.Encode()
@@ -495,6 +512,22 @@ type JobRoleListResponse struct {
 
 	Meta     twapi.ListMeta `json:"meta"`
 	JobRoles []JobRole      `json:"jobRoles"`
+
+	Included struct {
+		// Users contains the users assigned to the job roles, sideloaded when
+		// JobRoleRequestSideloadUsers is requested.
+		//
+		// The key is the string representation of the user ID.
+		Users map[string]User `json:"users,omitempty"`
+
+		// Currencies contains the currencies of the job roles' billable and cost
+		// rates, sideloaded when JobRoleRequestSideloadCurrencies is requested.
+		//
+		// The key is the string representation of the currency ID.
+		//
+		// sparsefields:skip
+		Currencies map[string]Currency `json:"currencies,omitempty"`
+	} `json:"included"`
 }
 
 // HandleHTTPResponse handles the HTTP response for the JobRoleListResponse. If
