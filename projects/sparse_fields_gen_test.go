@@ -472,11 +472,13 @@ func TestFileListFieldsZeroValue(t *testing.T) {
 func TestJobRoleGetFieldsApply(t *testing.T) {
 	fields := JobRoleGetFields{
 		JobRole: []JobRoleField{JobRoleFieldID},
+		Users:   []UserField{UserFieldID},
 	}
 	query := url.Values{}
 	fields.apply(query)
 	checks := map[string]string{
 		"fields[jobRoles]": "id",
+		"fields[users]":    "id",
 	}
 	for key, want := range checks {
 		if got := query.Get(key); got != want {
@@ -503,11 +505,13 @@ func TestJobRoleGetFieldsZeroValue(t *testing.T) {
 func TestJobRoleListFieldsApply(t *testing.T) {
 	fields := JobRoleListFields{
 		JobRoles: []JobRoleField{JobRoleFieldID},
+		Users:    []UserField{UserFieldID},
 	}
 	query := url.Values{}
 	fields.apply(query)
 	checks := map[string]string{
 		"fields[jobRoles]": "id",
+		"fields[users]":    "id",
 	}
 	for key, want := range checks {
 		if got := query.Get(key); got != want {
