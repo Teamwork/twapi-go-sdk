@@ -291,6 +291,37 @@ func TestTaskComplete(t *testing.T) {
 	}
 }
 
+func TestTaskUncomplete(t *testing.T) {
+	if engine == nil {
+		t.Skip("Skipping test because the engine is not initialized")
+	}
+
+	taskID, taskCleanup, err := createTask(t, testResources.TasklistID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(taskCleanup)
+
+	ctx := t.Context()
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	t.Cleanup(cancel)
+
+	if _, err = projects.TaskComplete(ctx, engine, projects.NewTaskCompleteRequest(taskID)); err != nil {
+		t.Fatalf("unexpected error completing task: %s", err)
+	}
+	if _, err = projects.TaskUncomplete(ctx, engine, projects.NewTaskUncompleteRequest(taskID)); err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	task, err := projects.TaskGet(ctx, engine, projects.NewTaskGetRequest(taskID))
+	if err != nil {
+		t.Fatalf("unexpected error getting task: %s", err)
+	}
+	if task.Task.Status != "reopened" {
+		t.Errorf("expected status reopened, got %q", task.Task.Status)
+	}
+}
+
 func TestTaskMoveRequestGeneration(t *testing.T) {
 	tests := []struct {
 		name             string

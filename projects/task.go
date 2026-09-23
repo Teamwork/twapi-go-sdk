@@ -22,6 +22,8 @@ var (
 	_ twapi.HTTPResponser = (*TaskDeleteResponse)(nil)
 	_ twapi.HTTPRequester = (*TaskCompleteRequest)(nil)
 	_ twapi.HTTPResponser = (*TaskCompleteResponse)(nil)
+	_ twapi.HTTPRequester = (*TaskUncompleteRequest)(nil)
+	_ twapi.HTTPResponser = (*TaskUncompleteResponse)(nil)
 	_ twapi.HTTPRequester = (*TaskMoveRequest)(nil)
 	_ twapi.HTTPResponser = (*TaskMoveResponse)(nil)
 	_ twapi.HTTPRequester = (*TaskGetRequest)(nil)
@@ -713,6 +715,68 @@ func TaskComplete(
 	req TaskCompleteRequest,
 ) (*TaskCompleteResponse, error) {
 	return twapi.Execute[TaskCompleteRequest, *TaskCompleteResponse](ctx, engine, req)
+}
+
+// TaskUncompleteRequestPath contains the path parameters for reopening a task.
+type TaskUncompleteRequestPath struct {
+	// ID is the unique identifier of the task to be reopened.
+	ID int64
+}
+
+// TaskUncompleteRequest represents the request body for reopening a completed
+// task.
+//
+// https://apidocs.teamwork.com/docs/teamwork/v1/tasks/put-tasks-id-uncomplete-json
+type TaskUncompleteRequest struct {
+	// Path contains the path parameters for the request.
+	Path TaskUncompleteRequestPath `json:"-"`
+}
+
+// NewTaskUncompleteRequest creates a new TaskUncompleteRequest with the
+// provided task ID. The ID is required to reopen a task.
+func NewTaskUncompleteRequest(taskID int64) TaskUncompleteRequest {
+	return TaskUncompleteRequest{
+		Path: TaskUncompleteRequestPath{
+			ID: taskID,
+		},
+	}
+}
+
+// HTTPRequest creates an HTTP request for the TaskUncompleteRequest.
+func (t TaskUncompleteRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
+	uri := server + "/tasks/" + strconv.FormatInt(t.Path.ID, 10) + "/uncomplete.json"
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, uri, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
+}
+
+// TaskUncompleteResponse represents the response body for reopening a task.
+//
+// https://apidocs.teamwork.com/docs/teamwork/v1/tasks/put-tasks-id-uncomplete-json
+type TaskUncompleteResponse struct{}
+
+// HandleHTTPResponse handles the HTTP response for the TaskUncompleteResponse.
+// If some unexpected HTTP status code is returned by the API, a twapi.HTTPError
+// is returned.
+func (t *TaskUncompleteResponse) HandleHTTPResponse(resp *http.Response) error {
+	if resp.StatusCode != http.StatusOK {
+		return twapi.NewHTTPError(resp, "failed to uncomplete task")
+	}
+	return nil
+}
+
+// TaskUncomplete reopens a completed task using the provided request and
+// returns the response.
+func TaskUncomplete(
+	ctx context.Context,
+	engine *twapi.Engine,
+	req TaskUncompleteRequest,
+) (*TaskUncompleteResponse, error) {
+	return twapi.Execute[TaskUncompleteRequest, *TaskUncompleteResponse](ctx, engine, req)
 }
 
 // TaskDetachFromParent is the ParentTaskID value that detaches a subtask,
