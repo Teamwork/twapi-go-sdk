@@ -2,6 +2,7 @@ package projects_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"testing"
@@ -25,14 +26,15 @@ func TestProjectCreate(t *testing.T) {
 	}, {
 		name: "all fields",
 		input: projects.ProjectCreateRequest{
-			Name:        fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
-			Description: new("This is a test project"),
-			StartAt:     new(projects.NewLegacyDate(time.Now().Add(24 * time.Hour))),
-			EndAt:       new(projects.NewLegacyDate(time.Now().Add(48 * time.Hour))),
-			CategoryID:  &testResources.ProjectCategoryID,
-			CompanyID:   testResources.CompanyID,
-			OwnerID:     &testResources.UserID,
-			TagIDs:      []int64{testResources.TagID},
+			Name:                fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
+			Description:         new("This is a test project"),
+			StartAt:             new(projects.NewLegacyDate(time.Now().Add(24 * time.Hour))),
+			EndAt:               new(projects.NewLegacyDate(time.Now().Add(48 * time.Hour))),
+			CategoryID:          &testResources.ProjectCategoryID,
+			CompanyID:           testResources.CompanyID,
+			OwnerID:             &testResources.UserID,
+			TagIDs:              []int64{testResources.TagID},
+			TimelogRequiresTask: true,
 		},
 	}}
 
@@ -82,15 +84,16 @@ func TestProjectUpdate(t *testing.T) {
 			Path: projects.ProjectUpdateRequestPath{
 				ID: projectID,
 			},
-			Name:        new(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100))),
-			Description: new("This is a test project"),
-			StartAt:     new(projects.NewLegacyDate(time.Now().Add(24 * time.Hour))),
-			EndAt:       new(projects.NewLegacyDate(time.Now().Add(48 * time.Hour))),
-			CategoryID:  &testResources.ProjectCategoryID,
-			CompanyID:   &testResources.CompanyID,
-			OwnerID:     &testResources.UserID,
-			TagIDs:      []int64{testResources.TagID},
-			Status:      new(projects.ProjectStatusArchived),
+			Name:                new(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100))),
+			Description:         new("This is a test project"),
+			StartAt:             new(projects.NewLegacyDate(time.Now().Add(24 * time.Hour))),
+			EndAt:               new(projects.NewLegacyDate(time.Now().Add(48 * time.Hour))),
+			CategoryID:          &testResources.ProjectCategoryID,
+			CompanyID:           &testResources.CompanyID,
+			OwnerID:             &testResources.UserID,
+			TagIDs:              []int64{testResources.TagID},
+			Status:              new(projects.ProjectStatusArchived),
+			TimelogRequiresTask: new(true),
 		},
 	}}
 

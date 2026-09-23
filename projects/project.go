@@ -79,6 +79,10 @@ type Project struct {
 	// EndAt is the end date of the project.
 	EndAt *time.Time `json:"endAt"`
 
+	// TimelogRequiresTask indicates whether time logged to the project must be
+	// against a task. When true, a time entry without a task is rejected.
+	TimelogRequiresTask bool `json:"timelogRequiresTask"`
+
 	// Category is the category associated with the project.
 	Category *twapi.Relationship `json:"category"`
 
@@ -152,6 +156,10 @@ type ProjectCreateRequest struct {
 	// EndAt is an optional end date for the project. By default it doesn't have
 	// an end date.
 	EndAt *LegacyDate `json:"end-date,omitempty"`
+
+	// TimelogRequiresTask indicates whether time logged to the project must be
+	// against a task. Defaults to false.
+	TimelogRequiresTask bool `json:"timelogRequiresTask"`
 
 	// CategoryID is an optional ID of the category associated with the project.
 	CategoryID *int64 `json:"category-id,omitempty"`
@@ -258,6 +266,10 @@ type ProjectUpdateRequest struct {
 
 	// EndAt is the end date for the project.
 	EndAt *LegacyDate `json:"end-date,omitempty"`
+
+	// TimelogRequiresTask indicates whether time logged to the project must be
+	// against a task.
+	TimelogRequiresTask *bool `json:"timelogRequiresTask,omitempty"`
 
 	// CategoryID is the ID of the category associated with the project.
 	CategoryID *int64 `json:"category-id,omitempty"`
