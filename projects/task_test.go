@@ -47,6 +47,7 @@ func TestTaskCreate(t *testing.T) {
 			Options: projects.TaskOptions{
 				Notify:            true,
 				CheckInvalidUsers: true,
+				UseDefaults:       true,
 			},
 			Name:             fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
 			Description:      new("<h1>This is a test task</h1>"),
@@ -207,6 +208,7 @@ func TestTaskUpdate(t *testing.T) {
 			Options: projects.TaskOptions{
 				Notify:            true,
 				CheckInvalidUsers: true,
+				UseDefaults:       true,
 			},
 			Name:             new(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100))),
 			Description:      new("<h1>This is a test task</h1>"),
