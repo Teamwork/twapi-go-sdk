@@ -166,6 +166,9 @@ type TaskOptions struct {
 	// assignees are invalid. If set to false, the API will ignore invalid
 	// assignees and assign the task to valid ones.
 	CheckInvalidUsers bool `json:"checkInvalidusers"`
+	// UseDefaults indicates whether to use default values for unspecified fields
+	// when creating or updating the task.
+	UseDefaults bool `json:"useDefaults"`
 }
 
 // TaskPredecessorType defines the predecessor constraint type
