@@ -26,6 +26,16 @@ var (
 // prevent burnout, and ensure that deadlines are met without placing too much
 // pressure on any single person.
 //
+// A task counts towards a user's day when the user is assigned to it directly
+// (team, company and job-role assignments are not counted), it has an estimate
+// and it has a due date, or its milestone does. Completed tasks are left out.
+// Its estimate is divided between the user assignees and then spread evenly
+// over the user's working days from start to due date, both included; a task
+// with no start date puts it all on the due date, and one with a start date but
+// no due date of its own or from its milestone is not counted at all. A custom split (see TaskCapacity) replaces the
+// even spread for the user it belongs to. Parent tasks and their subtasks are
+// counted independently.
+//
 // More information can be found at:
 // https://support.teamwork.com/projects/workload/using-the-workload-planner
 type Workload struct {
@@ -45,17 +55,46 @@ type WorkloadUser struct {
 }
 
 // WorkloadUserDate represents the workload information for a specific user on a
-// specific date. It includes the user's capacity, capacity in minutes, and
-// whether the user is unavailable on that date.
+// specific date. Both figures are the day's planned load, not the time left.
 type WorkloadUserDate struct {
-	// Capacity is the user's capacity percentage for the day.
+	// Capacity is CapacityMinutes as a percentage of the user's working minutes
+	// for the day, rounded to one decimal. Above 100 the user is over capacity.
 	Capacity float64 `json:"capacity"`
 
-	// CapacityMinutes is the user's capacity in minutes for the day.
+	// CapacityMinutes is the planned load in minutes: the user's share of the
+	// estimates of the tasks falling on the day, plus the day's unavailable
+	// time.
 	CapacityMinutes int64 `json:"capacityMinutes"`
 
-	// UnavailableDay indicates whether the user is unavailable on that date.
+	// UnavailableDay indicates whether the day's unavailable time covers all of
+	// the user's working hours.
 	UnavailableDay bool `json:"unavailableDay"`
+
+	// IsHoliday indicates whether the day is a holiday for the user.
+	IsHoliday bool `json:"isHoliday"`
+
+	// Projects breaks the day down by project, naming the tasks that fall on
+	// it. The day's unavailable time is included in every project's figures,
+	// so they do not add up to the day's.
+	Projects []WorkloadUserDateProject `json:"projects,omitempty"`
+}
+
+// WorkloadUserDateProject is one project's part of a user's day.
+type WorkloadUserDateProject struct {
+	// Capacity is CapacityMinutes as a percentage of the user's working minutes
+	// for the day.
+	Capacity float64 `json:"capacity"`
+
+	// CapacityMinutes is the user's share of the day's estimates for this
+	// project's tasks, plus the day's unavailable time.
+	CapacityMinutes int64 `json:"capacityMinutes"`
+
+	// Project is the project.
+	Project twapi.Relationship `json:"project"`
+
+	// Tasks are the project's tasks that fall on the day. Sideload
+	// WorkloadGetRequestSideloadTasks to read their dates and estimates.
+	Tasks []twapi.Relationship `json:"tasks"`
 }
 
 // WorkloadGetRequestSideload represents the related objects that can be
@@ -64,9 +103,23 @@ type WorkloadGetRequestSideload string
 
 // List of valid sideload options for the workload response.
 const (
-	WorkloadGetRequestSideloadUsers              WorkloadGetRequestSideload = "users"
-	WorkloadGetRequestSideloadWorkingHours       WorkloadGetRequestSideload = "workingHours"
-	WorkloadGetRequestSideloadWorkingHourEntries WorkloadGetRequestSideload = "workingHourEntries"
+	WorkloadGetRequestSideloadUsers WorkloadGetRequestSideload = "users"
+
+	// WorkloadGetRequestSideloadWorkingHours returns each user's working hours
+	// under Included.WorkingHours.
+	WorkloadGetRequestSideloadWorkingHours WorkloadGetRequestSideload = "users.workingHours"
+
+	// WorkloadGetRequestSideloadWorkingHourEntries returns each user's working
+	// hours together with their per-weekday entries.
+	WorkloadGetRequestSideloadWorkingHourEntries WorkloadGetRequestSideload = "users.workingHours.workingHoursEntry"
+
+	// WorkloadGetRequestSideloadTasks returns the tasks counted in the
+	// response under Included.Tasks.
+	WorkloadGetRequestSideloadTasks WorkloadGetRequestSideload = "tasks"
+
+	// WorkloadGetRequestSideloadTaskCapacities returns the tasks and their
+	// custom splits, under Included.Tasks and Included.TaskCapacities.
+	WorkloadGetRequestSideloadTaskCapacities WorkloadGetRequestSideload = "tasks.taskCapacities"
 )
 
 // WorkloadRequestFilters contains the filters for loading the workload.
@@ -231,11 +284,7 @@ type WorkloadResponse struct {
 			Object twapi.Relationship `json:"object"`
 
 			// Entries is a list of relationships to the working hour entries
-			// associated with these working hours.
-			//
-			// Each entry in this list represents a specific day's working hours
-			// for the user, including the number of task hours assigned for
-			// that day.
+			// associated with these working hours, one per weekday.
 			Entries []twapi.Relationship `json:"entries"`
 		} `json:"workingHours,omitempty"`
 
@@ -244,16 +293,9 @@ type WorkloadResponse struct {
 		//
 		// The key is the string representation of the working hour entry ID.
 		//
-		// Note: Each working hour entry represents a specific day's working hours
-		// for a user, including the number of task hours assigned for that day.
-		// The "workingHour" field links back to the parent working hours object.
-		// The "weekday" field indicates the day of the week (e.g., "Monday",
-		// "Tuesday") for which these working hours apply.
-		//
-		// This structure allows you to see not only the overall working hours
-		// for a user but also how those hours are distributed across different
-		// days of the week, along with the specific task hours assigned for each
-		// day.
+		// Each entry is one weekday of a user's working hours. The
+		// "workingHour" field links back to the parent working hours object,
+		// whose "object" names the user.
 		WorkingHoursEntries map[string]struct {
 			// ID is the unique identifier for the working hour entry.
 			ID int64 `json:"id"`
@@ -269,10 +311,22 @@ type WorkloadResponse struct {
 			// which these working hours apply.
 			Weekday string `json:"weekday"`
 
-			// TaskHours represents the number of task hours assigned for this
-			// particular day.
+			// TaskHours is the number of hours the user works on this weekday,
+			// which is the denominator of a day's Capacity. It is not the time
+			// already planned.
 			TaskHours float64 `json:"taskHours"`
 		} `json:"workingHourEntries,omitempty"`
+
+		// Tasks is a map of task IDs to the tasks counted in the response.
+		//
+		// The key is the string representation of the task ID.
+		Tasks map[string]Task `json:"tasks,omitempty"`
+
+		// TaskCapacities is a map of row IDs to the custom splits of the tasks
+		// counted in the response. A task with no rows is on the even spread.
+		//
+		// The key is the string representation of the row ID.
+		TaskCapacities map[string]TaskCapacity `json:"taskCapacities,omitempty"`
 	} `json:"included"`
 }
 
