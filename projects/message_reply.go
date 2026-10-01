@@ -145,6 +145,14 @@ type MessageReplyCreateRequest struct {
 	// the new message reply. It can be a MessageReplyNotifyAll, or
 	// MessageReplyNotifyGroup. If not provided, no notifications will be sent.
 	Notify messageNotifier `json:"notify,omitempty"`
+
+	// Attachments are the identifiers of files that already exist in the
+	// project and will be attached to the message reply.
+	Attachments LegacyNumericList `json:"attachments,omitempty"`
+
+	// PendingFileAttachments are files uploaded with PendingFileCreate that will
+	// be attached to the message reply. Attaching consumes the references.
+	PendingFileAttachments []PendingFileRef `json:"pendingFileAttachments,omitempty"`
 }
 
 // NewMessageReplyCreateRequest creates a new MessageReplyCreateRequest with the provided
@@ -246,6 +254,18 @@ type MessageReplyUpdateRequest struct {
 	// the new message reply. It can be a MessageReplyNotifyAll, or
 	// MessageReplyNotifyGroup. If not provided, no notifications will be sent.
 	Notify messageNotifier `json:"notify,omitempty"`
+
+	// Attachments are the identifiers of files that already exist in the
+	// project and will be attached to the message reply. Attaching is additive:
+	// files already attached to the reply are left alone. The update route
+	// takes a comma-separated string only, which is how LegacyNumericList
+	// encodes.
+	Attachments LegacyNumericList `json:"attachments,omitempty"`
+
+	// PendingFileAttachments are files uploaded with PendingFileCreate that will
+	// be attached to the message reply. Attaching consumes the references, and
+	// is additive: files already attached to the reply are left alone.
+	PendingFileAttachments []PendingFileRef `json:"pendingFileAttachments,omitempty"`
 }
 
 // NewMessageReplyUpdateRequest creates a new MessageReplyUpdateRequest with the
