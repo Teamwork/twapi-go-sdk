@@ -229,11 +229,12 @@ type CommentCreateRequest struct {
 	// CommentNotifyGroup. If not provided, no notifications will be sent.
 	Notify commentNotifier `json:"notify,omitempty"`
 
+	// FileIDs are the identifiers of files that already exist in the project and
+	// will be attached to the comment. A file from another project is rejected.
+	FileIDs LegacyNumericList `json:"fileIds,omitempty"`
+
 	// PendingFileAttachments are files uploaded with PendingFileCreate that will
 	// be attached to the comment. Attaching consumes the references.
-	//
-	// This endpoint cannot attach a file that already exists in the project;
-	// unlike tasks, it accepts pending file references only.
 	PendingFileAttachments []PendingFileRef `json:"pendingFileAttachments,omitempty"`
 }
 
@@ -398,12 +399,19 @@ type CommentUpdateRequest struct {
 	// CommentNotifyGroup. If not provided, no notifications will be sent.
 	Notify commentNotifier `json:"notify,omitempty"`
 
+	// FileIDs are the identifiers of files that already exist in the project and
+	// will be attached to the comment. Attaching is additive: files already
+	// attached to the comment are left alone. A file from another project is
+	// rejected.
+	//
+	// The update route takes a comma-separated string only, which is how
+	// LegacyNumericList encodes. An empty value removes every attached file, so
+	// the key is omitted when there is nothing to attach.
+	FileIDs LegacyNumericList `json:"fileIds,omitempty"`
+
 	// PendingFileAttachments are files uploaded with PendingFileCreate that will
 	// be attached to the comment. Attaching consumes the references, and is
 	// additive: files already attached to the comment are left alone.
-	//
-	// This endpoint cannot attach a file that already exists in the project;
-	// unlike tasks, it accepts pending file references only.
 	PendingFileAttachments []PendingFileRef `json:"pendingFileAttachments,omitempty"`
 }
 

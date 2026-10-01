@@ -93,6 +93,53 @@ func TestAttachmentsEncoding(t *testing.T) {
 			},
 		},
 	}, {
+		name: "comment create with an existing file",
+		requester: func() projects.CommentCreateRequest {
+			req := projects.NewCommentCreateRequestInTask(777, "example")
+			req.FileIDs = projects.LegacyNumericList{1, 2}
+			return req
+		}(),
+		want: map[string]any{
+			"comment": map[string]any{"fileIds": "1,2"},
+		},
+	}, {
+		// The update route rejects fileIds as a JSON array.
+		name: "comment update with an existing file",
+		requester: func() projects.CommentUpdateRequest {
+			req := projects.NewCommentUpdateRequest(12345)
+			req.FileIDs = projects.LegacyNumericList{1}
+			req.PendingFileAttachments = []projects.PendingFileRef{"tf_A"}
+			return req
+		}(),
+		want: map[string]any{
+			"comment": map[string]any{"fileIds": "1", "pendingFileAttachments": []any{"tf_A"}},
+		},
+	}, {
+		name: "message reply create with pending and existing files",
+		requester: func() projects.MessageReplyCreateRequest {
+			req := projects.NewMessageReplyCreateRequest(777, "body")
+			req.PendingFileAttachments = []projects.PendingFileRef{"tf_A"}
+			req.Attachments = projects.LegacyNumericList{1, 2}
+			return req
+		}(),
+		want: map[string]any{
+			"messagereply": map[string]any{
+				"pendingFileAttachments": []any{"tf_A"},
+				"attachments":            "1,2",
+			},
+		},
+	}, {
+		// The update route rejects attachments as a JSON array.
+		name: "message reply update with an existing file",
+		requester: func() projects.MessageReplyUpdateRequest {
+			req := projects.NewMessageReplyUpdateRequest(12345)
+			req.Attachments = projects.LegacyNumericList{1}
+			return req
+		}(),
+		want: map[string]any{
+			"messagereply": map[string]any{"attachments": "1"},
+		},
+	}, {
 		name:      "file create carries the reference in the file envelope",
 		requester: projects.NewFileCreateRequest(777, "tf_A"),
 		want: map[string]any{
@@ -140,6 +187,50 @@ func TestAttachmentsOmittedWhenNotRequested(t *testing.T) {
 				if _, ok := body[key]; ok {
 					t.Errorf("expected no %q key in the request body, got %v", key, body[key])
 				}
+			}
+		})
+	}
+}
+
+// TestLegacyFileIDsOmittedWhenNotRequested guards the legacy routes, where an
+// empty fileIds on a comment update removes every file already attached.
+func TestLegacyFileIDsOmittedWhenNotRequested(t *testing.T) {
+	tests := []struct {
+		name      string
+		requester twapi.HTTPRequester
+		envelope  string
+		key       string
+	}{{
+		name:      "comment create",
+		requester: projects.NewCommentCreateRequestInTask(777, "example"),
+		envelope:  "comment",
+		key:       "fileIds",
+	}, {
+		name:      "comment update",
+		requester: projects.NewCommentUpdateRequest(12345),
+		envelope:  "comment",
+		key:       "fileIds",
+	}, {
+		name:      "message reply create",
+		requester: projects.NewMessageReplyCreateRequest(777, "body"),
+		envelope:  "messagereply",
+		key:       "attachments",
+	}, {
+		name:      "message reply update",
+		requester: projects.NewMessageReplyUpdateRequest(12345),
+		envelope:  "messagereply",
+		key:       "attachments",
+	}}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			body := encodeRequestBody(t, tt.requester)
+			envelope, ok := body[tt.envelope].(map[string]any)
+			if !ok {
+				t.Fatalf("expected a %q object in the request body, got %v", tt.envelope, body)
+			}
+			if value, ok := envelope[tt.key]; ok {
+				t.Errorf("expected no %q key, got %v", tt.key, value)
 			}
 		})
 	}
