@@ -31,7 +31,7 @@ func TestCustomFieldCreate(t *testing.T) {
 		input: projects.CustomFieldCreateRequest{
 			Name:        fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100)),
 			Type:        projects.CustomFieldTypeRating,
-			Entity:      projects.CustomFieldEntityProject,
+			Entity:      projects.CustomFieldEntityTask,
 			Description: new("integration test custom field"),
 			Required:    new(false),
 			ProjectID:   &testResources.ProjectID,

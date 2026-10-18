@@ -342,7 +342,7 @@ type CustomFieldCreateRequest struct {
 
 	// ProjectID is the unique identifier of the project the custom field is
 	// scoped to. When omitted, the custom field is created at the installation
-	// level.
+	// level. The API rejects it when Entity is "project".
 	ProjectID *int64 `json:"projectId,omitempty"`
 
 	// Options holds the available options for dropdown-style custom fields.
