@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -18,6 +19,10 @@ var (
 	_ twapi.HTTPResponser = (*TimelogCreateResponse)(nil)
 	_ twapi.HTTPRequester = (*TimelogUpdateRequest)(nil)
 	_ twapi.HTTPResponser = (*TimelogUpdateResponse)(nil)
+	_ twapi.HTTPRequester = (*TimelogBulkMoveRequest)(nil)
+	_ twapi.HTTPResponser = (*TimelogBulkMoveResponse)(nil)
+	_ twapi.HTTPRequester = (*TimelogBulkBillableUpdateRequest)(nil)
+	_ twapi.HTTPResponser = (*TimelogBulkBillableUpdateResponse)(nil)
 	_ twapi.HTTPRequester = (*TimelogDeleteRequest)(nil)
 	_ twapi.HTTPResponser = (*TimelogDeleteResponse)(nil)
 	_ twapi.HTTPRequester = (*TimelogGetRequest)(nil)
@@ -374,6 +379,265 @@ func TimelogUpdate(
 	req TimelogUpdateRequest,
 ) (*TimelogUpdateResponse, error) {
 	return twapi.Execute[TimelogUpdateRequest, *TimelogUpdateResponse](ctx, engine, req)
+}
+
+// TimelogBulkMoveRequestPath contains the path parameters for moving several
+// timelogs to another project.
+type TimelogBulkMoveRequestPath struct {
+	// ProjectID is the project the timelogs are currently logged against. Only
+	// timelogs in this project are moved.
+	ProjectID int64
+}
+
+// TimelogBulkMoveRequest represents the request body for moving several
+// timelogs from one project to another in a single request, through
+// PUT /projects/{id}/time_entries/move.json.
+//
+// The endpoint only moves timelogs that are in the source project, are not
+// deleted and have not been added to an invoice; any other listed ID is skipped
+// and the response count shows how many moved. A moved timelog loses its task
+// and its project-level tags, since neither belongs to the destination. To move
+// a single timelog onto a task in the destination, use TimelogUpdateRequest
+// with TaskID instead. The caller needs permission to log time in both
+// projects.
+type TimelogBulkMoveRequest struct {
+	// Path contains the path parameters for the request.
+	Path TimelogBulkMoveRequestPath `json:"-"`
+
+	// TargetProjectID is the project that will receive the timelogs.
+	TargetProjectID int64 `json:"projectId"`
+
+	// TimelogIDs are the timelogs to move. The endpoint reads them as a
+	// comma-separated list.
+	TimelogIDs LegacyNumericList `json:"timelogIdList"`
+}
+
+// NewTimelogBulkMoveRequest creates a new TimelogBulkMoveRequest moving the
+// given timelogs from the source project to the target project.
+func NewTimelogBulkMoveRequest(sourceProjectID, targetProjectID int64, timelogIDs []int64) TimelogBulkMoveRequest {
+	return TimelogBulkMoveRequest{
+		Path: TimelogBulkMoveRequestPath{
+			ProjectID: sourceProjectID,
+		},
+		TargetProjectID: targetProjectID,
+		TimelogIDs:      timelogIDs,
+	}
+}
+
+// HTTPRequest creates an HTTP request for the TimelogBulkMoveRequest.
+func (t TimelogBulkMoveRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
+	uri := server + "/projects/" + strconv.FormatInt(t.Path.ProjectID, 10) + "/time_entries/move.json"
+
+	// no envelope on this endpoint, the parameters are read from the top level
+	var body bytes.Buffer
+	if err := json.NewEncoder(&body).Encode(t); err != nil {
+		return nil, fmt.Errorf("failed to encode bulk move timelogs request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, uri, &body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	return req, nil
+}
+
+// TimelogBulkMoveResponse represents the response body for moving several
+// timelogs to another project.
+type TimelogBulkMoveResponse struct {
+	// Status is "OK" when the move was applied.
+	Status string `json:"STATUS"`
+
+	// MovedCount is the number of timelogs that were moved. It can be lower
+	// than the number of IDs sent, since timelogs outside the source project,
+	// deleted or already invoiced are skipped. The endpoint does not say which
+	// ones were skipped.
+	MovedCount LegacyNumber `json:"numberOfMovedTimelogs"`
+}
+
+// HandleHTTPResponse handles the HTTP response for the
+// TimelogBulkMoveResponse. If some unexpected HTTP status code is returned by
+// the API, a twapi.HTTPError is returned.
+//
+// The endpoint can also answer 200 with an `errMsg` body and no `STATUS`, for
+// example when none of the listed timelogs could be moved or the caller cannot
+// log time in one of the projects. That is reported as a twapi.HTTPError
+// carrying the 200 status and the body as its details, so nothing is mistaken
+// for a successful move.
+func (t *TimelogBulkMoveResponse) HandleHTTPResponse(resp *http.Response) error {
+	if resp.StatusCode != http.StatusOK {
+		return twapi.NewHTTPError(resp, "failed to bulk move timelogs")
+	}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("failed to read bulk move timelogs response: %w", err)
+	}
+	var envelope struct {
+		Status string `json:"STATUS"`
+	}
+	if err := json.Unmarshal(body, &envelope); err != nil || !strings.EqualFold(envelope.Status, "OK") {
+		details := string(body)
+		if details == "" {
+			details = "no response body"
+		}
+		return &twapi.HTTPError{
+			StatusCode: resp.StatusCode,
+			Headers:    resp.Header,
+			Message:    "failed to bulk move timelogs",
+			Details:    details,
+		}
+	}
+	if err := json.Unmarshal(body, t); err != nil {
+		return fmt.Errorf("failed to decode bulk move timelogs response: %w", err)
+	}
+	return nil
+}
+
+// TimelogBulkMove moves several timelogs from one project to another in a
+// single request, and returns how many were moved.
+func TimelogBulkMove(
+	ctx context.Context,
+	engine *twapi.Engine,
+	req TimelogBulkMoveRequest,
+) (*TimelogBulkMoveResponse, error) {
+	return twapi.Execute[TimelogBulkMoveRequest, *TimelogBulkMoveResponse](ctx, engine, req)
+}
+
+// TimelogBulkBillableUpdateFilters selects the timelogs a bulk billable update
+// changes. Every filter narrows the selection; a filter left empty does not
+// restrict it. With every filter empty the update reaches every timelog in the
+// installation that the caller can see, so callers should always set at least
+// ProjectIDs.
+type TimelogBulkBillableUpdateFilters struct {
+	// ProjectIDs restricts the update to timelogs in these projects.
+	ProjectIDs LegacyNumericList `json:"projectId,omitempty"`
+
+	// UserIDs restricts the update to timelogs logged for these users. It is
+	// ignored when UserCompanyIDs is set.
+	UserIDs LegacyNumericList `json:"userId,omitempty"`
+
+	// UserCompanyIDs restricts the update to timelogs logged for users who
+	// belong to these companies.
+	UserCompanyIDs LegacyNumericList `json:"companyId,omitempty"`
+
+	// ProjectCompanyIDs restricts the update to timelogs in projects owned by
+	// these companies.
+	ProjectCompanyIDs LegacyNumericList `json:"projectsFromCompanyId,omitempty"`
+
+	// FromDate restricts the update to timelogs logged on or after the start of
+	// this day, in the caller's timezone.
+	FromDate *LegacyDate `json:"fromDate,omitempty"`
+
+	// ToDate restricts the update to timelogs logged on or before the end of
+	// this day, in the caller's timezone.
+	ToDate *LegacyDate `json:"toDate,omitempty"`
+
+	// BillableType restricts the update to timelogs that are currently billable
+	// or non-billable. Use the TimelogBillableType constants. The endpoint
+	// defaults to all. Setting it to the opposite of the target status makes the
+	// response count the timelogs that actually changed.
+	BillableType TimelogBillableType `json:"billableType,omitempty"`
+
+	// InvoicedType restricts the update to timelogs that have or have not been
+	// added to an invoice. Use the TimelogInvoicedType constants. The endpoint
+	// defaults to all, so invoiced timelogs are changed too unless this is set
+	// to TimelogInvoicedTypeNonInvoiced.
+	InvoicedType TimelogInvoicedType `json:"invoicedType,omitempty"`
+
+	// TagIDs restricts the update to timelogs carrying these tags.
+	TagIDs LegacyNumericList `json:"tagIds,omitempty"`
+
+	// TaskTagIDs restricts the update to timelogs whose task carries these
+	// tags.
+	TaskTagIDs LegacyNumericList `json:"taskTagIds,omitempty"`
+
+	// MatchAllTags requires a timelog to carry every tag in TagIDs rather than
+	// any one of them. The endpoint defaults to false.
+	MatchAllTags *bool `json:"matchAllTags,omitempty"`
+}
+
+// TimelogBulkBillableUpdateRequest represents the request body for setting the
+// billable status of every timelog matching a filter in a single request,
+// through PUT /time_entries.json.
+//
+// The endpoint selects timelogs by filter, not by ID, and billable status is
+// the only attribute it changes. Only site administrators who belong to the
+// site owner's company may call it; anyone else is answered 403. When no
+// timelog matches the filters it answers 422 and changes nothing.
+type TimelogBulkBillableUpdateRequest struct {
+	// Billable is the status every matching timelog is given.
+	Billable bool `json:"isBillable"`
+
+	// Filters selects the timelogs to change.
+	TimelogBulkBillableUpdateFilters
+}
+
+// NewTimelogBulkBillableUpdateRequest creates a new
+// TimelogBulkBillableUpdateRequest that sets the billable status of the
+// timelogs in the given projects. Narrow it further with the other filters.
+func NewTimelogBulkBillableUpdateRequest(billable bool, projectIDs ...int64) TimelogBulkBillableUpdateRequest {
+	return TimelogBulkBillableUpdateRequest{
+		Billable: billable,
+		TimelogBulkBillableUpdateFilters: TimelogBulkBillableUpdateFilters{
+			ProjectIDs: projectIDs,
+		},
+	}
+}
+
+// HTTPRequest creates an HTTP request for the TimelogBulkBillableUpdateRequest.
+func (t TimelogBulkBillableUpdateRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
+	uri := server + "/time_entries.json"
+
+	// no envelope on this endpoint, the parameters are read from the top level
+	var body bytes.Buffer
+	if err := json.NewEncoder(&body).Encode(t); err != nil {
+		return nil, fmt.Errorf("failed to encode bulk billable update request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPut, uri, &body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	return req, nil
+}
+
+// TimelogBulkBillableUpdateResponse represents the response for setting the
+// billable status of the timelogs matching a filter.
+type TimelogBulkBillableUpdateResponse struct {
+	// Count is the number of timelogs the filters matched, all of which now
+	// have the requested status. The endpoint reports it in the `count`
+	// response header; it is nil when the header is missing.
+	Count *int64 `json:"-"`
+}
+
+// HandleHTTPResponse handles the HTTP response for the
+// TimelogBulkBillableUpdateResponse. If some unexpected HTTP status code is
+// returned by the API, a twapi.HTTPError is returned.
+func (t *TimelogBulkBillableUpdateResponse) HandleHTTPResponse(resp *http.Response) error {
+	if resp.StatusCode != http.StatusOK {
+		return twapi.NewHTTPError(resp, "failed to bulk update timelogs billable status")
+	}
+	if header := resp.Header.Get("count"); header != "" {
+		count, err := strconv.ParseInt(strings.TrimSpace(header), 10, 64)
+		if err != nil {
+			return fmt.Errorf("failed to parse count header of bulk billable update response: %w", err)
+		}
+		t.Count = &count
+	}
+	return nil
+}
+
+// TimelogBulkBillableUpdate sets the billable status of every timelog matching
+// the request's filters in a single request, and returns how many matched.
+func TimelogBulkBillableUpdate(
+	ctx context.Context,
+	engine *twapi.Engine,
+	req TimelogBulkBillableUpdateRequest,
+) (*TimelogBulkBillableUpdateResponse, error) {
+	return twapi.Execute[TimelogBulkBillableUpdateRequest, *TimelogBulkBillableUpdateResponse](ctx, engine, req)
 }
 
 // TimelogDeleteRequestPath contains the path parameters for deleting a
