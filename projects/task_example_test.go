@@ -102,6 +102,32 @@ func ExampleTaskComplete() {
 	// Output: task completed!
 }
 
+func ExampleTaskBulkComplete() {
+	address, stop, err := startTaskServer() // mock server for demonstration purposes
+	if err != nil {
+		fmt.Printf("failed to start server: %s", err)
+		return
+	}
+	defer stop()
+
+	ctx := context.Background()
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
+
+	taskIDs := []int64{12345, 12346}
+	response, err := projects.TaskBulkComplete(ctx, engine, projects.NewTaskBulkCompleteRequest(taskIDs))
+	if err != nil {
+		fmt.Printf("failed to complete tasks: %s", err)
+		return
+	}
+	fmt.Printf("completed tasks %v\n", response.CompletedTaskIDs)
+	for _, failure := range response.Failed {
+		fmt.Printf("task %d failed: %s\n", taskIDs[failure.Index], failure.Errors[0].Detail)
+	}
+
+	// Output: completed tasks [12345]
+	// task 12346 failed: task 12346 not found
+}
+
 func ExampleTaskUncomplete() {
 	address, stop, err := startTaskServer() // mock server for demonstration purposes
 	if err != nil {
@@ -291,6 +317,16 @@ func startTaskServer() (string, func(), error) {
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = fmt.Fprintln(w, `{"STATUS":"OK"}`)
+	})
+	mux.HandleFunc("POST /projects/api/v3/tasks/bulk/complete", func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Content-Type") != "application/json" {
+			http.Error(w, "Unsupported Media Type", http.StatusUnsupportedMediaType)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = fmt.Fprintln(w, `{"completedTaskIds":[12345],"affected":{"taskIds":[12345]},`+
+			`"failed":[{"index":1,"errors":[{"title":"not found","detail":"task 12346 not found"}]}]}`)
 	})
 	mux.HandleFunc("PUT /tasks/{id}/uncomplete", func(w http.ResponseWriter, r *http.Request) {
 		if r.PathValue("id") != "12345" {
