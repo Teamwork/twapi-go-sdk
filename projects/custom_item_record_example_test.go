@@ -107,6 +107,39 @@ func ExampleCustomItemRecordBulkDelete() {
 	// Output: custom item records deleted!
 }
 
+func ExampleCustomItemRecordBulkCreate() {
+	address, stop, err := startCustomItemRecordServer()
+	if err != nil {
+		fmt.Printf("failed to start server: %s", err)
+		return
+	}
+	defer stop()
+
+	ctx := context.Background()
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
+
+	request := projects.NewCustomItemRecordBulkCreateRequest(12345, []projects.CustomItemRecordBulkCreateRecord{
+		{Name: "Acme Inc Contract"},
+		{Name: ""},
+	})
+	request.Options.PartialSuccess = new(true)
+
+	response, err := projects.CustomItemRecordBulkCreate(ctx, engine, request)
+	if err != nil {
+		fmt.Printf("failed to bulk create custom item records: %s", err)
+		return
+	}
+	for _, record := range response.CustomItemRecords {
+		fmt.Printf("created custom item record with identifier %d\n", record.ID)
+	}
+	for _, failure := range response.Failed {
+		fmt.Printf("record %d failed: %s\n", failure.Index, failure.Errors[0].Detail)
+	}
+
+	// Output: created custom item record with identifier 99001
+	// record 1 failed: name is required
+}
+
 func ExampleCustomItemRecordGet() {
 	address, stop, err := startCustomItemRecordServer()
 	if err != nil {
@@ -163,6 +196,18 @@ func startCustomItemRecordServer() (string, func(), error) {
 	}
 
 	mux := http.NewServeMux()
+	mux.HandleFunc("POST /projects/api/v3/customitems/{customItemId}/records/bulk",
+		func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("Content-Type") != "application/json" {
+				http.Error(w, "Unsupported Media Type", http.StatusUnsupportedMediaType)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusCreated)
+			_, _ = fmt.Fprintln(w, `{"customItemRecords":[{"id":99001,"name":"Acme Inc Contract",`+
+				`"state":"active"}],"failed":[{"index":1,"errors":[{"title":"invalid payload",`+
+				`"detail":"name is required"}]}],"meta":{}}`)
+		})
 	mux.HandleFunc("POST /projects/api/v3/customitems/{customItemId}/records/bulk/delete",
 		func(w http.ResponseWriter, r *http.Request) {
 			if r.Header.Get("Content-Type") != "application/json" {
