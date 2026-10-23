@@ -16,6 +16,8 @@ import (
 var (
 	_ twapi.HTTPRequester = (*CompanyCreateRequest)(nil)
 	_ twapi.HTTPResponser = (*CompanyCreateResponse)(nil)
+	_ twapi.HTTPRequester = (*CompanyBulkCreateRequest)(nil)
+	_ twapi.HTTPResponser = (*CompanyBulkCreateResponse)(nil)
 	_ twapi.HTTPRequester = (*CompanyUpdateRequest)(nil)
 	_ twapi.HTTPResponser = (*CompanyUpdateResponse)(nil)
 	_ twapi.HTTPRequester = (*CompanyDeleteRequest)(nil)
@@ -228,6 +230,168 @@ func CompanyCreate(
 	req CompanyCreateRequest,
 ) (*CompanyCreateResponse, error) {
 	return twapi.Execute[CompanyCreateRequest, *CompanyCreateResponse](ctx, engine, req)
+}
+
+// CompanyBulkCreateRequest represents the request body for creating many
+// clients/companies in a single call, through
+// POST /projects/api/v3/companies/bulk.json.
+//
+// Each company takes the same fields as a single create. A company whose name
+// is already used by an existing company (compared case-insensitively, ignoring
+// surrounding spaces) is not created again: the endpoint answers with the
+// existing company in its place, and the same applies to a name repeated within
+// one request.
+type CompanyBulkCreateRequest struct {
+	// Companies are the companies to create, in order. At least one is
+	// required.
+	Companies []CompanyCreateRequest `json:"companies"`
+
+	// PartialSuccess selects how a company that cannot be created is handled.
+	//
+	// When false, the endpoint's default, the request is all-or-nothing: the
+	// first company that fails aborts it, nothing is created, and the endpoint
+	// answers with an error status (400, 403, 404, 409 or 422) whose errors
+	// carry the failing company's position under meta.index.
+	//
+	// When true, every company that can be created is, and each one that cannot
+	// is reported in CompanyBulkCreateResponse.Failed by its position in
+	// Companies. If none can be created the endpoint answers 403 when every
+	// company was refused for permissions, and 400 otherwise, each error again
+	// carrying its position under meta.index.
+	PartialSuccess bool `json:"-"`
+}
+
+// NewCompanyBulkCreateRequest creates a new CompanyBulkCreateRequest with the
+// provided companies.
+func NewCompanyBulkCreateRequest(companies ...CompanyCreateRequest) CompanyBulkCreateRequest {
+	return CompanyBulkCreateRequest{
+		Companies: companies,
+	}
+}
+
+// HTTPRequest creates an HTTP request for the CompanyBulkCreateRequest.
+func (c CompanyBulkCreateRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
+	if len(c.Companies) == 0 {
+		return nil, fmt.Errorf("at least one company is required to bulk create companies")
+	}
+	uri := server + "/projects/api/v3/companies/bulk.json"
+
+	type options struct {
+		PartialSuccess bool `json:"partialSuccess"`
+	}
+	payload := struct {
+		Companies []CompanyCreateRequest `json:"companies"`
+		Options   *options               `json:"options,omitempty"`
+	}{Companies: c.Companies}
+	if c.PartialSuccess {
+		payload.Options = &options{PartialSuccess: true}
+	}
+
+	var body bytes.Buffer
+	if err := json.NewEncoder(&body).Encode(payload); err != nil {
+		return nil, fmt.Errorf("failed to encode bulk create companies request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, uri, &body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	return req, nil
+}
+
+// CompanyBulkCreateError describes one reason a company of a bulk create could
+// not be created.
+type CompanyBulkCreateError struct {
+	// Title is a short summary of the problem, such as "invalid payload",
+	// "forbidden action" or "conflict".
+	Title string `json:"title"`
+
+	// Detail explains this occurrence of the problem.
+	Detail string `json:"detail"`
+
+	// Code is an application-specific error code, when there is one.
+	Code string `json:"code,omitempty"`
+
+	// Meta carries extra context about the error, when there is any.
+	Meta map[string]any `json:"meta,omitempty"`
+}
+
+// CompanyBulkCreateFailure reports a company of a bulk create that could not be
+// created.
+type CompanyBulkCreateFailure struct {
+	// Index is the company's position in CompanyBulkCreateRequest.Companies,
+	// starting at zero.
+	Index int `json:"index"`
+
+	// Errors are the reasons the company could not be created.
+	Errors []CompanyBulkCreateError `json:"errors"`
+}
+
+// CompanyBulkCreateResponse represents the response body for creating many
+// clients/companies in a single call.
+type CompanyBulkCreateResponse struct {
+	// Companies holds one entry for every company of the request that did not
+	// fail, in request order. An entry may be a company that existed before
+	// the call, when the request named it (see CompanyBulkCreateRequest). Use
+	// CompanyIndexes to pair each entry with its position in the request.
+	Companies []Company `json:"companies"`
+
+	// Failed lists the companies that could not be created, by their position
+	// in the request. It is only ever populated when the request set
+	// PartialSuccess.
+	Failed []CompanyBulkCreateFailure `json:"failed"`
+}
+
+// HandleHTTPResponse handles the HTTP response for the
+// CompanyBulkCreateResponse. If some unexpected HTTP status code is returned by
+// the API, a twapi.HTTPError is returned.
+func (c *CompanyBulkCreateResponse) HandleHTTPResponse(resp *http.Response) error {
+	if resp.StatusCode != http.StatusCreated {
+		return twapi.NewHTTPError(resp, "failed to bulk create companies")
+	}
+	if err := json.NewDecoder(resp.Body).Decode(c); err != nil {
+		return fmt.Errorf("failed to decode bulk create companies response: %w", err)
+	}
+	return nil
+}
+
+// CompanyIndexes returns, for each entry of Companies, its position in the
+// request's Companies. requested is the number of companies the request sent.
+// The endpoint answers the companies in request order and leaves out the
+// failed ones, so the positions are those not listed in Failed. An error is
+// returned when the response does not account for every requested company.
+func (c CompanyBulkCreateResponse) CompanyIndexes(requested int) ([]int, error) {
+	failed := make(map[int]struct{}, len(c.Failed))
+	for _, failure := range c.Failed {
+		if failure.Index < 0 || failure.Index >= requested {
+			return nil, fmt.Errorf("bulk create companies response reports a failure at position %d of %d",
+				failure.Index, requested)
+		}
+		failed[failure.Index] = struct{}{}
+	}
+	if len(c.Companies)+len(failed) != requested {
+		return nil, fmt.Errorf("bulk create companies response holds %d companies and %d failures for %d requested",
+			len(c.Companies), len(failed), requested)
+	}
+	indexes := make([]int, 0, len(c.Companies))
+	for i := range requested {
+		if _, ok := failed[i]; !ok {
+			indexes = append(indexes, i)
+		}
+	}
+	return indexes, nil
+}
+
+// CompanyBulkCreate creates many clients/companies in a single call using the
+// provided request and returns the response.
+func CompanyBulkCreate(
+	ctx context.Context,
+	engine *twapi.Engine,
+	req CompanyBulkCreateRequest,
+) (*CompanyBulkCreateResponse, error) {
+	return twapi.Execute[CompanyBulkCreateRequest, *CompanyBulkCreateResponse](ctx, engine, req)
 }
 
 // CompanyUpdateRequestPath contains the path parameters for updating a
