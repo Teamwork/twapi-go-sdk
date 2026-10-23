@@ -128,6 +128,54 @@ func ExampleTimelogList() {
 	// retrieved timelog with identifier 12346
 }
 
+func ExampleTimelogBulkMove() {
+	address, stop, err := startTimelogServer() // mock server for demonstration purposes
+	if err != nil {
+		fmt.Printf("failed to start server: %s", err)
+		return
+	}
+	defer stop()
+
+	ctx := context.Background()
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
+
+	moveRequest := projects.NewTimelogBulkMoveRequest(777, 778, []int64{12345, 12346})
+	moveResponse, err := projects.TimelogBulkMove(ctx, engine, moveRequest)
+	if err != nil {
+		fmt.Printf("failed to move timelogs: %s", err)
+	} else {
+		fmt.Printf("moved %d timelogs\n", moveResponse.MovedCount)
+	}
+
+	// Output: moved 2 timelogs
+}
+
+func ExampleTimelogBulkBillableUpdate() {
+	address, stop, err := startTimelogServer() // mock server for demonstration purposes
+	if err != nil {
+		fmt.Printf("failed to start server: %s", err)
+		return
+	}
+	defer stop()
+
+	ctx := context.Background()
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
+
+	// make the non-billable, not yet invoiced timelogs of project 777 billable
+	updateRequest := projects.NewTimelogBulkBillableUpdateRequest(true, 777)
+	updateRequest.BillableType = projects.TimelogBillableTypeNonBillable
+	updateRequest.InvoicedType = projects.TimelogInvoicedTypeNonInvoiced
+
+	updateResponse, err := projects.TimelogBulkBillableUpdate(ctx, engine, updateRequest)
+	if err != nil {
+		fmt.Printf("failed to update timelogs: %s", err)
+	} else if updateResponse.Count != nil {
+		fmt.Printf("%d timelogs are now billable\n", *updateResponse.Count)
+	}
+
+	// Output: 3 timelogs are now billable
+}
+
 func startTimelogServer() (string, func(), error) {
 	ln, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
@@ -181,6 +229,30 @@ func startTimelogServer() (string, func(), error) {
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = fmt.Fprintln(w, `{"timelogs":[{"id":12345},{"id":12346}]}`)
+	})
+
+	mux.HandleFunc("PUT /projects/{id}/time_entries/move", func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Content-Type") != "application/json" {
+			http.Error(w, "Unsupported Media Type", http.StatusUnsupportedMediaType)
+			return
+		}
+		if r.PathValue("id") != "777" {
+			http.Error(w, "Not Found", http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = fmt.Fprintln(w, `{"STATUS":"OK","numberOfMovedTimelogs":"2"}`)
+	})
+	mux.HandleFunc("PUT /time_entries", func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Content-Type") != "application/json" {
+			http.Error(w, "Unsupported Media Type", http.StatusUnsupportedMediaType)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("count", "3")
+		w.WriteHeader(http.StatusOK)
+		_, _ = fmt.Fprintln(w, `{"STATUS":"OK"}`)
 	})
 
 	server := &http.Server{
