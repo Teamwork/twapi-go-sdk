@@ -15,6 +15,8 @@ import (
 var (
 	_ twapi.HTTPRequester = (*AllocationCreateRequest)(nil)
 	_ twapi.HTTPResponser = (*AllocationCreateResponse)(nil)
+	_ twapi.HTTPRequester = (*AllocationBulkCreateRequest)(nil)
+	_ twapi.HTTPResponser = (*AllocationBulkCreateResponse)(nil)
 	_ twapi.HTTPRequester = (*AllocationUpdateRequest)(nil)
 	_ twapi.HTTPResponser = (*AllocationUpdateResponse)(nil)
 	_ twapi.HTTPRequester = (*AllocationDeleteRequest)(nil)
@@ -449,6 +451,130 @@ func AllocationCreate(
 	req AllocationCreateRequest,
 ) (*AllocationCreateResponse, error) {
 	return twapi.Execute[AllocationCreateRequest, *AllocationCreateResponse](ctx, engine, req)
+}
+
+// AllocationBulkCreateRequest represents the request body for creating several
+// allocations in one request.
+//
+// The batch is all or nothing: the API validates and writes the allocations in
+// the order given, and when any of them is rejected none of them is created.
+// The rejection names the first offending item only — the API stops there — so
+// a corrected batch can still fail on a later item.
+//
+// Each item takes the same attributes and has the same requirements as
+// AllocationCreateRequest.Allocation.
+type AllocationBulkCreateRequest struct {
+	// Allocations are the allocations to create, in order. At least one is
+	// required.
+	Allocations []AllocationUpsert
+}
+
+// NewAllocationBulkCreateRequest creates a new AllocationBulkCreateRequest
+// for the provided allocations.
+func NewAllocationBulkCreateRequest(allocations ...AllocationUpsert) AllocationBulkCreateRequest {
+	return AllocationBulkCreateRequest{
+		Allocations: allocations,
+	}
+}
+
+// HTTPRequest creates an HTTP request for the AllocationBulkCreateRequest.
+func (a AllocationBulkCreateRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
+	if len(a.Allocations) == 0 {
+		return nil, fmt.Errorf("at least one allocation is required to bulk create allocations")
+	}
+	uri := server + "/projects/api/v3/allocations/bulk.json"
+
+	payload := struct {
+		Allocations []AllocationUpsert `json:"allocations"`
+	}{Allocations: a.Allocations}
+
+	var body bytes.Buffer
+	if err := json.NewEncoder(&body).Encode(payload); err != nil {
+		return nil, fmt.Errorf("failed to encode bulk create allocations request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, uri, &body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	return req, nil
+}
+
+// AllocationBulkCreateResponse represents the response body for creating
+// several allocations in one request.
+type AllocationBulkCreateResponse struct {
+	// Allocations are the created allocations, in the order they were requested.
+	Allocations []Allocation `json:"allocations"`
+}
+
+// HandleHTTPResponse handles the HTTP response for the
+// AllocationBulkCreateResponse. If some unexpected HTTP status code is returned
+// by the API, a twapi.HTTPError is returned; when the API names the item that
+// was rejected, it is wrapped in an AllocationBulkCreateError.
+func (a *AllocationBulkCreateResponse) HandleHTTPResponse(resp *http.Response) error {
+	if resp.StatusCode != http.StatusCreated {
+		httpErr := twapi.NewHTTPError(resp, "failed to bulk create allocations")
+		if index, ok := allocationBulkCreateErrorIndex(httpErr.Details); ok {
+			return &AllocationBulkCreateError{HTTPError: httpErr, Index: index}
+		}
+		return httpErr
+	}
+	if err := json.NewDecoder(resp.Body).Decode(a); err != nil {
+		return fmt.Errorf("failed to decode bulk create allocations response: %w", err)
+	}
+	for i, allocation := range a.Allocations {
+		if allocation.ID == 0 {
+			return fmt.Errorf("bulk create allocations response item %d does not contain a valid identifier", i)
+		}
+	}
+	return nil
+}
+
+// AllocationBulkCreateError is the error AllocationBulkCreate returns when the
+// API rejects the batch and names the item responsible. Nothing in the batch
+// was created. It wraps the twapi.HTTPError carrying the status and the API's
+// error body, so errors.As with *twapi.HTTPError still matches.
+type AllocationBulkCreateError struct {
+	*twapi.HTTPError
+
+	// Index is the zero-based position, in
+	// AllocationBulkCreateRequest.Allocations, of the item the API rejected.
+	Index int
+}
+
+// Unwrap returns the underlying twapi.HTTPError.
+func (e *AllocationBulkCreateError) Unwrap() error {
+	return e.HTTPError
+}
+
+// allocationBulkCreateErrorIndex reads the position of the rejected item from
+// an error body. The API reports it as meta.index on the entries of its errors
+// array: {"errors":[{"title":…,"detail":…,"meta":{"index":2}}]}.
+func allocationBulkCreateErrorIndex(body string) (int, bool) {
+	var payload struct {
+		Errors []twapi.V3Error `json:"errors"`
+	}
+	if err := json.Unmarshal([]byte(body), &payload); err != nil {
+		return 0, false
+	}
+	for _, entry := range payload.Errors {
+		if index, ok := entry.Meta["index"].(float64); ok {
+			return int(index), true
+		}
+	}
+	return 0, false
+}
+
+// AllocationBulkCreate creates several allocations in one request and returns
+// the response. The batch is all or nothing; see AllocationBulkCreateRequest.
+func AllocationBulkCreate(
+	ctx context.Context,
+	engine *twapi.Engine,
+	req AllocationBulkCreateRequest,
+) (*AllocationBulkCreateResponse, error) {
+	return twapi.Execute[AllocationBulkCreateRequest, *AllocationBulkCreateResponse](ctx, engine, req)
 }
 
 // AllocationUpdateRequestPath contains the path parameters for updating an

@@ -35,6 +35,39 @@ func ExampleUserCreate() {
 	// Output: created user with identifier 12345
 }
 
+func ExampleUserBulkCreate() {
+	address, stop, err := startUserServer() // mock server for demonstration purposes
+	if err != nil {
+		fmt.Printf("failed to start server: %s", err)
+		return
+	}
+	defer stop()
+
+	ctx := context.Background()
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
+
+	// No invitation email is sent unless an entry sets SendInvite.
+	usersRequest := projects.NewUserBulkCreateRequest([]projects.UserBulkCreateRequestUser{
+		{FirstName: "John", LastName: "Doe", Email: "johndoe@example.com"},
+		{FirstName: "Jane", LastName: "Doe", Email: "janedoe@example.com"},
+	})
+
+	usersResponse, err := projects.UserBulkCreate(ctx, engine, usersRequest)
+	if err != nil {
+		fmt.Printf("failed to bulk create users: %s", err)
+		return
+	}
+	for _, user := range usersResponse.Users {
+		fmt.Printf("created user with identifier %d\n", user.ID)
+	}
+	for _, failure := range usersResponse.Failed {
+		fmt.Printf("user %d not created: %s\n", failure.Index, failure.Errors[0].Detail)
+	}
+
+	// Output: created user with identifier 12345
+	// user 1 not created: email is already in use
+}
+
 func ExampleUserUpdate() {
 	address, stop, err := startUserServer() // mock server for demonstration purposes
 	if err != nil {
@@ -164,6 +197,16 @@ func startUserServer() (string, func(), error) {
 		w.WriteHeader(http.StatusCreated)
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = fmt.Fprintln(w, `{"STATUS":"OK","id":"12345"}`)
+	})
+	mux.HandleFunc("POST /projects/api/v3/people/bulk", func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Content-Type") != "application/json" {
+			http.Error(w, "Unsupported Media Type", http.StatusUnsupportedMediaType)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
+		_, _ = fmt.Fprintln(w, `{"people":[{"id":12345}],`+
+			`"failed":[{"index":1,"errors":[{"title":"invalid payload","detail":"email is already in use"}]}]}`)
 	})
 	mux.HandleFunc("PUT /people/{id}", func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Content-Type") != "application/json" {

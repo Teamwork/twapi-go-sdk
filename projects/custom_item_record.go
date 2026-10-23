@@ -22,6 +22,8 @@ var (
 	_ twapi.HTTPResponser = (*CustomItemRecordDeleteResponse)(nil)
 	_ twapi.HTTPRequester = (*CustomItemRecordBulkDeleteRequest)(nil)
 	_ twapi.HTTPResponser = (*CustomItemRecordBulkDeleteResponse)(nil)
+	_ twapi.HTTPRequester = (*CustomItemRecordBulkCreateRequest)(nil)
+	_ twapi.HTTPResponser = (*CustomItemRecordBulkCreateResponse)(nil)
 	_ twapi.HTTPRequester = (*CustomItemRecordGetRequest)(nil)
 	_ twapi.HTTPResponser = (*CustomItemRecordGetResponse)(nil)
 	_ twapi.HTTPRequester = (*CustomItemRecordListRequest)(nil)
@@ -509,6 +511,169 @@ func CustomItemRecordBulkDelete(
 	req CustomItemRecordBulkDeleteRequest,
 ) (*CustomItemRecordBulkDeleteResponse, error) {
 	return twapi.Execute[CustomItemRecordBulkDeleteRequest, *CustomItemRecordBulkDeleteResponse](ctx, engine, req)
+}
+
+// CustomItemRecordBulkCreateRequestPath contains the path parameters for
+// creating many custom item records in a single call.
+type CustomItemRecordBulkCreateRequestPath struct {
+	// CustomItemID is the unique identifier of the custom item type that
+	// will own the new records.
+	CustomItemID int64
+}
+
+// CustomItemRecordBulkCreateRecord is one record of a
+// CustomItemRecordBulkCreateRequest.
+type CustomItemRecordBulkCreateRecord struct {
+	// Name is the display name of the record. This field is required.
+	Name string `json:"name"`
+
+	// SectionID places the record in the given section. It takes precedence
+	// over SectionName when both are set.
+	SectionID *int64 `json:"sectionId,omitempty"`
+
+	// SectionName places the record in the section with this name, matched
+	// case-insensitively, creating the section when the custom item type has
+	// none by that name.
+	SectionName *string `json:"sectionName,omitempty"`
+
+	// PositionAfterID places the new record after the record with the given
+	// ID. Nil appends to the end of the section.
+	PositionAfterID *int64 `json:"positionAfterId,omitempty"`
+
+	// FieldValues are the custom-field values for the record, keyed by
+	// field TwID.
+	FieldValues CustomItemRecordFieldValues `json:"fieldValues,omitempty"`
+
+	// AssigneeEmails sets user fields by email address instead of user ID,
+	// keyed by field TwID. Each address is resolved to a user by the API; an
+	// address that matches no user is ignored, and a field none of whose
+	// addresses match is left unset.
+	AssigneeEmails map[string][]string `json:"assigneeEmails,omitempty"`
+}
+
+// CustomItemRecordBulkCreateOptions controls the side effects of a bulk
+// create and how it handles a record that cannot be created.
+type CustomItemRecordBulkCreateOptions struct {
+	// UseNotifyViaTWIM controls whether notifications are sent via Teamwork
+	// Instant Messenger as part of this change.
+	UseNotifyViaTWIM *bool `json:"useNotifyViaTWIM,omitempty"`
+
+	// FireWebhook controls whether webhooks are fired as part of this change.
+	FireWebhook *bool `json:"fireWebhook,omitempty"`
+
+	// PartialSuccess, when true, creates each record independently: the valid
+	// records are created and each failure is reported in
+	// CustomItemRecordBulkCreateResponse.Failed. When false or unset the
+	// batch is all-or-nothing: the first record that cannot be created fails
+	// the whole request, nothing is created, and the error's meta.index names
+	// that record.
+	PartialSuccess *bool `json:"partialSuccess,omitempty"`
+}
+
+// CustomItemRecordBulkCreateRequest represents the request body for creating
+// many records on a custom item type in a single call.
+type CustomItemRecordBulkCreateRequest struct {
+	// Path contains the path parameters for the request.
+	Path CustomItemRecordBulkCreateRequestPath `json:"-"`
+
+	// Records are the records to create, in order. Failures are reported by
+	// their index in this list.
+	Records []CustomItemRecordBulkCreateRecord `json:"records"`
+
+	// Options controls side effects and partial success for the whole batch.
+	Options CustomItemRecordBulkCreateOptions `json:"options"`
+}
+
+// NewCustomItemRecordBulkCreateRequest creates a new
+// CustomItemRecordBulkCreateRequest with the given custom item ID and records
+// populated.
+func NewCustomItemRecordBulkCreateRequest(
+	customItemID int64,
+	records []CustomItemRecordBulkCreateRecord,
+) CustomItemRecordBulkCreateRequest {
+	return CustomItemRecordBulkCreateRequest{
+		Path:    CustomItemRecordBulkCreateRequestPath{CustomItemID: customItemID},
+		Records: records,
+	}
+}
+
+// HTTPRequest creates an HTTP request for the
+// CustomItemRecordBulkCreateRequest.
+func (c CustomItemRecordBulkCreateRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
+	if c.Path.CustomItemID == 0 {
+		return nil, fmt.Errorf("a custom item ID is required to bulk create custom item records")
+	}
+	if len(c.Records) == 0 {
+		return nil, fmt.Errorf("at least one record is required to bulk create custom item records")
+	}
+	uri := fmt.Sprintf("%s/projects/api/v3/customitems/%d/records/bulk.json", server, c.Path.CustomItemID)
+
+	var body bytes.Buffer
+	if err := json.NewEncoder(&body).Encode(c); err != nil {
+		return nil, fmt.Errorf("failed to encode bulk create custom item records request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, uri, &body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	return req, nil
+}
+
+// CustomItemRecordBulkCreateFailure describes a record of the request that
+// could not be created.
+type CustomItemRecordBulkCreateFailure struct {
+	// Index is the record's position in
+	// CustomItemRecordBulkCreateRequest.Records, starting at zero.
+	Index int `json:"index"`
+
+	// Errors are the reasons the record could not be created.
+	Errors []twapi.V3Error `json:"errors"`
+}
+
+// CustomItemRecordBulkCreateResponse represents the response body for
+// creating many custom item records.
+type CustomItemRecordBulkCreateResponse struct {
+	// CustomItemRecords are the records that were created, in the order of
+	// the request. With partial success a record that failed has no entry
+	// here, so match records to requests through the indexes in Failed.
+	CustomItemRecords []CustomItemRecord `json:"customItemRecords"`
+
+	// Failed lists the records that could not be created. It is only ever
+	// populated when CustomItemRecordBulkCreateOptions.PartialSuccess is true
+	// and at least one record was created; when none could be, the API answers
+	// with an error status instead (403 when every record was forbidden, 400
+	// otherwise), each error carrying its record's index under meta.index.
+	//
+	// With partial success each record is committed as it is created, so a
+	// server error (5xx) part way through can leave the records before it in
+	// place.
+	Failed []CustomItemRecordBulkCreateFailure `json:"failed,omitempty"`
+}
+
+// HandleHTTPResponse handles the HTTP response for the
+// CustomItemRecordBulkCreateResponse.
+func (c *CustomItemRecordBulkCreateResponse) HandleHTTPResponse(resp *http.Response) error {
+	if resp.StatusCode != http.StatusCreated {
+		return twapi.NewHTTPError(resp, "failed to bulk create custom item records")
+	}
+	if err := json.NewDecoder(resp.Body).Decode(c); err != nil {
+		return fmt.Errorf("failed to decode bulk create custom item records response: %w", err)
+	}
+	return nil
+}
+
+// CustomItemRecordBulkCreate creates many custom item records in a single API
+// call. Set Options.PartialSuccess to create the valid records even when some
+// fail.
+func CustomItemRecordBulkCreate(
+	ctx context.Context,
+	engine *twapi.Engine,
+	req CustomItemRecordBulkCreateRequest,
+) (*CustomItemRecordBulkCreateResponse, error) {
+	return twapi.Execute[CustomItemRecordBulkCreateRequest, *CustomItemRecordBulkCreateResponse](ctx, engine, req)
 }
 
 // CustomItemRecordGetRequestPath contains the path parameters for loading a

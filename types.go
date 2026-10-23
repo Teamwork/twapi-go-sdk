@@ -41,6 +41,25 @@ func (e *HTTPError) Error() string {
 	return fmt.Sprintf("%s (%d): %s", e.Message, e.StatusCode, e.Details)
 }
 
+// V3Error is one entry of the errors array a v3 endpoint returns, either as
+// the whole error body ({"errors":[…]}) or, on bulk endpoints, for each item
+// that could not be processed.
+type V3Error struct {
+	// Title is a short summary of the problem, such as "invalid payload",
+	// "forbidden action" or "conflict".
+	Title string `json:"title"`
+
+	// Detail explains this occurrence of the problem.
+	Detail string `json:"detail"`
+
+	// Code is an application-specific error code, when there is one.
+	Code string `json:"code,omitempty"`
+
+	// Meta carries extra context about the error, such as the field it refers
+	// to or, on bulk endpoints, the item's position under "index".
+	Meta map[string]any `json:"meta,omitempty"`
+}
+
 // Relationship describes the relation between the main entity and a sideload type.
 type Relationship struct {
 	ID   int64          `json:"id"`

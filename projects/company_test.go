@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"slices"
 	"testing"
 	"time"
 
@@ -65,6 +66,106 @@ func TestCompanyCreate(t *testing.T) {
 				t.Errorf("unexpected error: %s", err)
 			} else if company.Company.ID == 0 {
 				t.Error("expected a valid company ID but got 0")
+			}
+		})
+	}
+}
+
+func TestCompanyBulkCreate(t *testing.T) {
+	if engine == nil {
+		t.Skip("Skipping test because the engine is not initialized")
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	t.Cleanup(cancel)
+
+	req := projects.NewCompanyBulkCreateRequest(
+		projects.NewCompanyCreateRequest(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100))),
+		projects.NewCompanyCreateRequest(""), // rejected: a company needs a name
+		projects.NewCompanyCreateRequest(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100))),
+	)
+	req.PartialSuccess = true
+
+	response, err := projects.CompanyBulkCreate(ctx, engine, req)
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+	t.Cleanup(func() {
+		ctx := context.Background() // t.Context is always canceled in cleanup
+		for _, company := range response.Companies {
+			_, err := projects.CompanyDelete(ctx, engine, projects.NewCompanyDeleteRequest(company.ID))
+			if err != nil {
+				t.Errorf("failed to delete company after test: %s", err)
+			}
+		}
+	})
+
+	indexes, err := response.CompanyIndexes(len(req.Companies))
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+	if !slices.Equal(indexes, []int{0, 2}) {
+		t.Errorf("expected companies at positions [0 2], got %v", indexes)
+	}
+	for _, company := range response.Companies {
+		if company.ID == 0 {
+			t.Error("expected a valid company ID but got 0")
+		}
+	}
+	if len(response.Failed) != 1 || response.Failed[0].Index != 1 || len(response.Failed[0].Errors) == 0 {
+		t.Errorf("expected position 1 to fail with a reason, got %+v", response.Failed)
+	}
+}
+
+func TestCompanyBulkCreateResponseCompanyIndexes(t *testing.T) {
+	tests := []struct {
+		name      string
+		response  projects.CompanyBulkCreateResponse
+		requested int
+		want      []int
+		wantErr   bool
+	}{{
+		name:      "every company created",
+		response:  projects.CompanyBulkCreateResponse{Companies: make([]projects.Company, 3)},
+		requested: 3,
+		want:      []int{0, 1, 2},
+	}, {
+		name: "failures are skipped",
+		response: projects.CompanyBulkCreateResponse{
+			Companies: make([]projects.Company, 2),
+			Failed:    []projects.CompanyBulkCreateFailure{{Index: 0}, {Index: 2}},
+		},
+		requested: 4,
+		want:      []int{1, 3},
+	}, {
+		name:      "a company unaccounted for",
+		response:  projects.CompanyBulkCreateResponse{Companies: make([]projects.Company, 1)},
+		requested: 2,
+		wantErr:   true,
+	}, {
+		name: "a failure outside the request",
+		response: projects.CompanyBulkCreateResponse{
+			Companies: make([]projects.Company, 1),
+			Failed:    []projects.CompanyBulkCreateFailure{{Index: 5}},
+		},
+		requested: 2,
+		wantErr:   true,
+	}}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tt.response.CompanyIndexes(tt.requested)
+			if tt.wantErr {
+				if err == nil {
+					t.Errorf("expected an error, got %v", got)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+			if !slices.Equal(got, tt.want) {
+				t.Errorf("expected %v, got %v", tt.want, got)
 			}
 		})
 	}

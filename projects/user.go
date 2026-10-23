@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -15,6 +16,8 @@ import (
 var (
 	_ twapi.HTTPRequester = (*UserCreateRequest)(nil)
 	_ twapi.HTTPResponser = (*UserCreateResponse)(nil)
+	_ twapi.HTTPRequester = (*UserBulkCreateRequest)(nil)
+	_ twapi.HTTPResponser = (*UserBulkCreateResponse)(nil)
 	_ twapi.HTTPRequester = (*UserUpdateRequest)(nil)
 	_ twapi.HTTPResponser = (*UserUpdateResponse)(nil)
 	_ twapi.HTTPRequester = (*UserDeleteRequest)(nil)
@@ -223,6 +226,176 @@ func UserCreate(
 	req UserCreateRequest,
 ) (*UserCreateResponse, error) {
 	return twapi.Execute[UserCreateRequest, *UserCreateResponse](ctx, engine, req)
+}
+
+// UserBulkCreateRequestUser is one user to create in a UserBulkCreateRequest.
+type UserBulkCreateRequestUser struct {
+	// FirstName is the first name of the user.
+	FirstName string `json:"firstName"`
+
+	// LastName is the last name of the user.
+	LastName string `json:"lastName"`
+
+	// Email is the email address of the user.
+	Email string `json:"email"`
+
+	// Title is the title of the user (e.g. "Senior Developer").
+	Title *string `json:"title,omitempty"`
+
+	// Admin indicates whether the user is an administrator. By default it is
+	// false.
+	Admin *bool `json:"isAdmin,omitempty"`
+
+	// Type is the type of user. Use the UserType constants. By default it is
+	// "account".
+	Type *UserType `json:"userType,omitempty"`
+
+	// CompanyID is the client/company the user belongs to. By default it is the
+	// company of the logged user creating the new user.
+	CompanyID *int64 `json:"companyId,omitempty"`
+
+	// SendInvite sends the user an invitation email when true. The field is
+	// always sent, so the zero value creates the user without emailing them.
+	// The API invites every user whose entry omits the field, which is why it
+	// is not optional here.
+	SendInvite bool `json:"sendInvite"`
+}
+
+// UserBulkCreateRequest represents the request body for creating many users
+// in a single call, through POST /projects/api/v3/people/bulk.json.
+type UserBulkCreateRequest struct {
+	// Users is the list of users to create. The index of each entry is the
+	// index the API uses to report a failure.
+	Users []UserBulkCreateRequestUser `json:"people"`
+
+	// PartialSuccess controls what happens when some entries cannot be
+	// created. When true, the valid entries are created and each failure is
+	// reported by index in UserBulkCreateResponse.Failed. When false, one bad
+	// entry aborts the whole request and nothing is created. Set it explicitly
+	// rather than relying on the API's default for an unset value.
+	PartialSuccess *bool `json:"-"`
+}
+
+// NewUserBulkCreateRequest creates a new UserBulkCreateRequest for the
+// provided users, with partial success enabled. No invitation email is sent
+// unless an entry sets SendInvite.
+func NewUserBulkCreateRequest(users []UserBulkCreateRequestUser) UserBulkCreateRequest {
+	return UserBulkCreateRequest{
+		Users:          users,
+		PartialSuccess: new(true),
+	}
+}
+
+// HTTPRequest creates an HTTP request for the UserBulkCreateRequest.
+func (u UserBulkCreateRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
+	if len(u.Users) == 0 {
+		return nil, fmt.Errorf("at least one user is required to bulk create users")
+	}
+	uri := server + "/projects/api/v3/people/bulk.json"
+
+	type options struct {
+		PartialSuccess *bool `json:"partialSuccess,omitempty"`
+	}
+	payload := struct {
+		Users   []UserBulkCreateRequestUser `json:"people"`
+		Options *options                    `json:"options,omitempty"`
+	}{Users: u.Users}
+	if u.PartialSuccess != nil {
+		payload.Options = &options{PartialSuccess: u.PartialSuccess}
+	}
+
+	var body bytes.Buffer
+	if err := json.NewEncoder(&body).Encode(payload); err != nil {
+		return nil, fmt.Errorf("failed to encode bulk create users request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, uri, &body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	return req, nil
+}
+
+// UserBulkCreateFailure reports an entry of a UserBulkCreateRequest that was
+// not created.
+type UserBulkCreateFailure struct {
+	// Index is the position of the entry in UserBulkCreateRequest.Users.
+	Index int `json:"index"`
+
+	// Errors are the reasons the entry was not created.
+	Errors []twapi.V3Error `json:"errors"`
+}
+
+// UserBulkCreateResponse represents the response body for creating many
+// users in a single call.
+type UserBulkCreateResponse struct {
+	// Users are the created users, in the order of their entries in the
+	// request. Entries reported in Failed are skipped.
+	Users []User `json:"people"`
+
+	// Failed lists the entries that were not created, by request index. It is
+	// only populated when partial success is enabled.
+	Failed []UserBulkCreateFailure `json:"failed"`
+}
+
+// HandleHTTPResponse handles the HTTP response for the UserBulkCreateResponse.
+// The API answers 201 when at least one user was created. When nothing was
+// created it answers with an error status, returned as a twapi.HTTPError;
+// UserBulkCreateFailures extracts the failed entries from it.
+func (u *UserBulkCreateResponse) HandleHTTPResponse(resp *http.Response) error {
+	if resp.StatusCode != http.StatusCreated {
+		return twapi.NewHTTPError(resp, "failed to bulk create users")
+	}
+	if err := json.NewDecoder(resp.Body).Decode(u); err != nil {
+		return fmt.Errorf("failed to decode bulk create users response: %w", err)
+	}
+	return nil
+}
+
+// UserBulkCreateFailures extracts the failed entries from an error returned by
+// UserBulkCreate when nothing was created. Each error the API reports for an
+// entry carries the entry's index in meta.index; errors are grouped by that
+// index, in the order the API returned them. It returns nil when err is not an
+// API error or does not reference any entry.
+func UserBulkCreateFailures(err error) []UserBulkCreateFailure {
+	var httpErr *twapi.HTTPError
+	if !errors.As(err, &httpErr) {
+		return nil
+	}
+	var body struct {
+		Errors []twapi.V3Error `json:"errors"`
+	}
+	if json.Unmarshal([]byte(httpErr.Details), &body) != nil {
+		return nil
+	}
+
+	var failures []UserBulkCreateFailure
+	position := make(map[int]int)
+	for _, e := range body.Errors {
+		rawIndex, ok := e.Meta["index"].(float64)
+		if !ok {
+			continue
+		}
+		index := int(rawIndex)
+		if _, seen := position[index]; !seen {
+			position[index] = len(failures)
+			failures = append(failures, UserBulkCreateFailure{Index: index})
+		}
+		failures[position[index]].Errors = append(failures[position[index]].Errors, e)
+	}
+	return failures
+}
+
+// UserBulkCreate creates many users in a single API call. Invitation emails
+// are only sent for entries that set SendInvite.
+func UserBulkCreate(
+	ctx context.Context,
+	engine *twapi.Engine,
+	req UserBulkCreateRequest,
+) (*UserBulkCreateResponse, error) {
+	return twapi.Execute[UserBulkCreateRequest, *UserBulkCreateResponse](ctx, engine, req)
 }
 
 // UserUpdateRequestPath contains the path parameters for updating a user.
