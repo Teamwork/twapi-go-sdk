@@ -301,23 +301,6 @@ func (c CompanyBulkCreateRequest) HTTPRequest(ctx context.Context, server string
 	return req, nil
 }
 
-// CompanyBulkCreateError describes one reason a company of a bulk create could
-// not be created.
-type CompanyBulkCreateError struct {
-	// Title is a short summary of the problem, such as "invalid payload",
-	// "forbidden action" or "conflict".
-	Title string `json:"title"`
-
-	// Detail explains this occurrence of the problem.
-	Detail string `json:"detail"`
-
-	// Code is an application-specific error code, when there is one.
-	Code string `json:"code,omitempty"`
-
-	// Meta carries extra context about the error, when there is any.
-	Meta map[string]any `json:"meta,omitempty"`
-}
-
 // CompanyBulkCreateFailure reports a company of a bulk create that could not be
 // created.
 type CompanyBulkCreateFailure struct {
@@ -326,7 +309,7 @@ type CompanyBulkCreateFailure struct {
 	Index int `json:"index"`
 
 	// Errors are the reasons the company could not be created.
-	Errors []CompanyBulkCreateError `json:"errors"`
+	Errors []twapi.V3Error `json:"errors"`
 }
 
 // CompanyBulkCreateResponse represents the response body for creating many

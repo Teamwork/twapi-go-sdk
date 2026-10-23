@@ -622,24 +622,6 @@ func (c CustomItemRecordBulkCreateRequest) HTTPRequest(ctx context.Context, serv
 	return req, nil
 }
 
-// CustomItemRecordBulkCreateError is one error reported for a record that
-// could not be created.
-type CustomItemRecordBulkCreateError struct {
-	// Title is a short summary of the problem, such as "invalid payload" or
-	// "forbidden action".
-	Title string `json:"title"`
-
-	// Code is an application-specific error code, when there is one.
-	Code string `json:"code,omitempty"`
-
-	// Detail explains this occurrence of the problem.
-	Detail string `json:"detail"`
-
-	// Meta carries extra information about the error, such as the field it
-	// refers to.
-	Meta map[string]any `json:"meta,omitempty"`
-}
-
 // CustomItemRecordBulkCreateFailure describes a record of the request that
 // could not be created.
 type CustomItemRecordBulkCreateFailure struct {
@@ -648,7 +630,7 @@ type CustomItemRecordBulkCreateFailure struct {
 	Index int `json:"index"`
 
 	// Errors are the reasons the record could not be created.
-	Errors []CustomItemRecordBulkCreateError `json:"errors"`
+	Errors []twapi.V3Error `json:"errors"`
 }
 
 // CustomItemRecordBulkCreateResponse represents the response body for

@@ -554,18 +554,14 @@ func (e *AllocationBulkCreateError) Unwrap() error {
 // array: {"errors":[{"title":…,"detail":…,"meta":{"index":2}}]}.
 func allocationBulkCreateErrorIndex(body string) (int, bool) {
 	var payload struct {
-		Errors []struct {
-			Meta struct {
-				Index *int `json:"index"`
-			} `json:"meta"`
-		} `json:"errors"`
+		Errors []twapi.V3Error `json:"errors"`
 	}
 	if err := json.Unmarshal([]byte(body), &payload); err != nil {
 		return 0, false
 	}
 	for _, entry := range payload.Errors {
-		if entry.Meta.Index != nil {
-			return *entry.Meta.Index, true
+		if index, ok := entry.Meta["index"].(float64); ok {
+			return int(index), true
 		}
 	}
 	return 0, false

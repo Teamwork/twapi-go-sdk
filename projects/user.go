@@ -318,18 +318,6 @@ func (u UserBulkCreateRequest) HTTPRequest(ctx context.Context, server string) (
 	return req, nil
 }
 
-// UserBulkCreateError is one reason an entry of a bulk user creation failed.
-type UserBulkCreateError struct {
-	// Title is a short classification of the error (e.g. "invalid payload").
-	Title string `json:"title"`
-
-	// Detail is the human-readable reason.
-	Detail string `json:"detail"`
-
-	// Meta carries extra context about the error, when the API provides it.
-	Meta map[string]any `json:"meta,omitempty"`
-}
-
 // UserBulkCreateFailure reports an entry of a UserBulkCreateRequest that was
 // not created.
 type UserBulkCreateFailure struct {
@@ -337,7 +325,7 @@ type UserBulkCreateFailure struct {
 	Index int `json:"index"`
 
 	// Errors are the reasons the entry was not created.
-	Errors []UserBulkCreateError `json:"errors"`
+	Errors []twapi.V3Error `json:"errors"`
 }
 
 // UserBulkCreateResponse represents the response body for creating many
@@ -377,7 +365,7 @@ func UserBulkCreateFailures(err error) []UserBulkCreateFailure {
 		return nil
 	}
 	var body struct {
-		Errors []UserBulkCreateError `json:"errors"`
+		Errors []twapi.V3Error `json:"errors"`
 	}
 	if json.Unmarshal([]byte(httpErr.Details), &body) != nil {
 		return nil
