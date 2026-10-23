@@ -2,6 +2,7 @@ package projects_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -39,6 +40,42 @@ func ExampleAllocationCreate() {
 	}
 
 	// Output: created allocation with identifier 12345
+}
+
+func ExampleAllocationBulkCreate() {
+	address, stop, err := startAllocationServer() // mock server for demonstration purposes
+	if err != nil {
+		fmt.Printf("failed to start server: %s", err)
+		return
+	}
+	defer stop()
+
+	ctx := context.Background()
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
+
+	start := twapi.Date(time.Date(2026, time.September, 1, 0, 0, 0, 0, time.UTC))
+	end := twapi.Date(time.Date(2026, time.September, 30, 0, 0, 0, 0, time.UTC))
+
+	// each item takes the same attributes as a single create
+	design := projects.NewAllocationCreateRequest(777, 456, "Design phase", start, end, 4*60*60, "#3c8f7c")
+	review := projects.NewAllocationCreateRequest(777, 457, "Design review", start, end, 1*60*60, "#3c8f7c")
+
+	allocationResponse, err := projects.AllocationBulkCreate(ctx, engine,
+		projects.NewAllocationBulkCreateRequest(design.Allocation, review.Allocation))
+	if bulkErr, ok := errors.AsType[*projects.AllocationBulkCreateError](err); ok {
+		// the batch is all or nothing, so nothing was created
+		fmt.Printf("allocation %d was rejected: %s", bulkErr.Index, bulkErr)
+	} else if err != nil {
+		fmt.Printf("failed to create allocations: %s", err)
+	} else {
+		for _, allocation := range allocationResponse.Allocations {
+			fmt.Printf("created allocation with identifier %d\n", allocation.ID)
+		}
+	}
+
+	// Output:
+	// created allocation with identifier 12345
+	// created allocation with identifier 12346
 }
 
 func ExampleAllocationUpdate() {
@@ -225,6 +262,15 @@ func startAllocationServer() (string, func(), error) {
 		w.WriteHeader(http.StatusCreated)
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = fmt.Fprintln(w, `{"allocation":{"id":12345}}`)
+	})
+	mux.HandleFunc("POST /projects/api/v3/allocations/bulk", func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Content-Type") != "application/json" {
+			http.Error(w, "Unsupported Media Type", http.StatusUnsupportedMediaType)
+			return
+		}
+		w.WriteHeader(http.StatusCreated)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprintln(w, `{"allocations":[{"id":12345},{"id":12346}]}`)
 	})
 	mux.HandleFunc("PATCH /projects/api/v3/allocations/{id}", func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Content-Type") != "application/json" {

@@ -3,9 +3,12 @@ package projects_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand"
+	"net/http"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -523,6 +526,166 @@ func TestAllocationIncludesAreOneCommaSeparatedParam(t *testing.T) {
 			}
 			if want := "include=projects%2Cassignee%2Cassignee.jobRoles"; !strings.Contains(raw, want) {
 				t.Errorf("expected %s in the query, got %q", want, raw)
+			}
+		})
+	}
+}
+
+func TestAllocationBulkCreate(t *testing.T) {
+	if engine == nil {
+		t.Skip("Skipping test because the engine is not initialized")
+	}
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	t.Cleanup(cancel)
+
+	start := twapi.Date(time.Now())
+	end := twapi.Date(time.Now().Add(48 * time.Hour))
+	first := projects.NewAllocationCreateRequest(testResources.ProjectID, testResources.UserID,
+		allocationTitle(), start, end, 60*60, "#3c8f7c").Allocation
+	second := projects.NewAllocationCreateRequest(testResources.ProjectID, testResources.UserID,
+		allocationTitle(), start, end, 30*60, "#3c8f7c").Allocation
+	second.IgnoreCollisions = new(true)
+
+	response, err := projects.AllocationBulkCreate(ctx, engine,
+		projects.NewAllocationBulkCreateRequest(first, second))
+	t.Cleanup(func() {
+		if err != nil {
+			return
+		}
+		for _, allocation := range response.Allocations {
+			deleteRequest := projects.NewAllocationDeleteRequest(allocation.ID)
+			deleteRequest.HardDelete = true
+			if _, err := projects.AllocationDelete(context.Background(), engine, deleteRequest); err != nil {
+				t.Errorf("failed to delete allocation %d after test: %s", allocation.ID, err)
+			}
+		}
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+	if len(response.Allocations) != 2 {
+		t.Fatalf("expected 2 allocations, got %d", len(response.Allocations))
+	}
+}
+
+// TestAllocationBulkCreateRequestBody pins the route and the body: one POST
+// carrying every allocation under the "allocations" key, each in the shape the
+// single create sends under "allocation".
+func TestAllocationBulkCreateRequestBody(t *testing.T) {
+	start := twapi.Date(time.Date(2026, time.September, 1, 0, 0, 0, 0, time.UTC))
+	end := twapi.Date(time.Date(2026, time.September, 30, 0, 0, 0, 0, time.UTC))
+	first := projects.NewAllocationCreateRequest(777, 456, "Design", start, end, 14400, "#3c8f7c").Allocation
+	second := projects.NewAllocationCreateRequest(778, 457, "Build", start, end, 7200, "3c8f7c").Allocation
+	second.LinkedTaskIDs = []int64{12345}
+
+	request := projects.NewAllocationBulkCreateRequest(first, second)
+	httpRequest, err := request.HTTPRequest(t.Context(), "https://test.teamwork.com")
+	if err != nil {
+		t.Fatalf("unexpected error building the request: %s", err)
+	}
+	if httpRequest.Method != http.MethodPost {
+		t.Errorf("expected method POST, got %s", httpRequest.Method)
+	}
+	if want := "/projects/api/v3/allocations/bulk.json"; httpRequest.URL.Path != want {
+		t.Errorf("expected path %q, got %q", want, httpRequest.URL.Path)
+	}
+
+	body, err := io.ReadAll(httpRequest.Body)
+	if err != nil {
+		t.Fatalf("failed to read the request body: %s", err)
+	}
+	want := `{"allocations":[` +
+		`{"projectId":777,"assignedUserID":456,"title":"Design","startedAt":"2026-09-01","endedAt":"2026-09-30",` +
+		`"secondsPerDay":14400,"color":"#3c8f7c"},` +
+		`{"projectId":778,"assignedUserID":457,"title":"Build","startedAt":"2026-09-01","endedAt":"2026-09-30",` +
+		`"secondsPerDay":7200,"color":"3c8f7c","linkedTaskIDs":[12345]}]}`
+	if got := strings.TrimSpace(string(body)); got != want {
+		t.Errorf("expected body\n%s\ngot\n%s", want, got)
+	}
+}
+
+// TestAllocationBulkCreateRequiresAnAllocation rejects an empty batch before it
+// is sent; the endpoint would answer it with a 400.
+func TestAllocationBulkCreateRequiresAnAllocation(t *testing.T) {
+	if _, err := projects.NewAllocationBulkCreateRequest().HTTPRequest(t.Context(),
+		"https://test.teamwork.com"); err == nil {
+		t.Error("expected an empty batch to be rejected before the request is sent")
+	}
+}
+
+// TestAllocationBulkCreateResponse covers the three outcomes a caller has to
+// tell apart: every allocation created, the batch rejected with the offending
+// item named, and the batch rejected without one.
+func TestAllocationBulkCreateResponse(t *testing.T) {
+	tests := []struct {
+		name      string
+		status    int
+		body      string
+		wantIDs   []int64
+		wantIndex int // -1 when no AllocationBulkCreateError is expected
+		wantErr   bool
+	}{{
+		name:      "created",
+		status:    http.StatusCreated,
+		body:      `{"allocations":[{"id":12345},{"id":12346}]}`,
+		wantIDs:   []int64{12345, 12346},
+		wantIndex: -1,
+	}, {
+		name:   "rejected item",
+		status: http.StatusBadRequest,
+		body: `{"errors":[{"title":"invalid payload","detail":"start date after end date",` +
+			`"meta":{"index":1}}]}`,
+		wantIndex: 1,
+		wantErr:   true,
+	}, {
+		name:      "rejected batch",
+		status:    http.StatusForbidden,
+		body:      `{"errors":[{"title":"forbidden action","detail":"access denied"}]}`,
+		wantIndex: -1,
+		wantErr:   true,
+	}, {
+		name:      "created without an identifier",
+		status:    http.StatusCreated,
+		body:      `{"allocations":[{"id":12345},{}]}`,
+		wantIndex: -1,
+		wantErr:   true,
+	}}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var response projects.AllocationBulkCreateResponse
+			err := response.HandleHTTPResponse(&http.Response{
+				StatusCode: tt.status,
+				Body:       io.NopCloser(strings.NewReader(tt.body)),
+			})
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("expected error %v, got %v", tt.wantErr, err)
+			}
+
+			bulkErr, isBulkErr := errors.AsType[*projects.AllocationBulkCreateError](err)
+			switch {
+			case tt.wantIndex >= 0 && !isBulkErr:
+				t.Errorf("expected an AllocationBulkCreateError, got %T: %v", err, err)
+			case tt.wantIndex >= 0 && bulkErr.Index != tt.wantIndex:
+				t.Errorf("expected index %d, got %d", tt.wantIndex, bulkErr.Index)
+			case tt.wantIndex < 0 && isBulkErr:
+				t.Errorf("expected no AllocationBulkCreateError, got index %d", bulkErr.Index)
+			}
+			if tt.status != http.StatusCreated {
+				if httpErr, ok := errors.AsType[*twapi.HTTPError](err); !ok || httpErr.StatusCode != tt.status {
+					t.Errorf("expected a twapi.HTTPError with status %d, got %v", tt.status, err)
+				}
+			}
+
+			if !tt.wantErr {
+				ids := make([]int64, len(response.Allocations))
+				for i, allocation := range response.Allocations {
+					ids[i] = allocation.ID
+				}
+				if !slices.Equal(ids, tt.wantIDs) {
+					t.Errorf("expected identifiers %v, got %v", tt.wantIDs, ids)
+				}
 			}
 		})
 	}
