@@ -2,6 +2,7 @@ package projects_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -34,6 +35,46 @@ func ExampleCompanyCreate() {
 	}
 
 	// Output: created company with identifier 12345
+}
+
+func ExampleCompanyBulkCreate() {
+	address, stop, err := startCompanyServer() // mock server for demonstration purposes
+	if err != nil {
+		fmt.Printf("failed to start server: %s", err)
+		return
+	}
+	defer stop()
+
+	ctx := context.Background()
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
+
+	request := projects.NewCompanyBulkCreateRequest(
+		projects.NewCompanyCreateRequest("First Company"),
+		projects.NewCompanyCreateRequest(""),
+		projects.NewCompanyCreateRequest("Third Company"),
+	)
+	request.PartialSuccess = true // create what can be created, report the rest
+
+	response, err := projects.CompanyBulkCreate(ctx, engine, request)
+	if err != nil {
+		fmt.Printf("failed to bulk create companies: %s", err)
+		return
+	}
+	indexes, err := response.CompanyIndexes(len(request.Companies))
+	if err != nil {
+		fmt.Printf("failed to pair companies with the request: %s", err)
+		return
+	}
+	for i, company := range response.Companies {
+		fmt.Printf("company %d has identifier %d\n", indexes[i], company.ID)
+	}
+	for _, failure := range response.Failed {
+		fmt.Printf("company %d failed: %s\n", failure.Index, failure.Errors[0].Detail)
+	}
+
+	// Output: company 0 has identifier 12345
+	// company 2 has identifier 12346
+	// company 1 failed: name is required
 }
 
 func ExampleCompanyUpdate() {
@@ -144,6 +185,29 @@ func startCompanyServer() (string, func(), error) {
 		w.WriteHeader(http.StatusCreated)
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = fmt.Fprintln(w, `{"company":{"id":12345}}`)
+	})
+	mux.HandleFunc("POST /projects/api/v3/companies/bulk", func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Content-Type") != "application/json" {
+			http.Error(w, "Unsupported Media Type", http.StatusUnsupportedMediaType)
+			return
+		}
+		var body struct {
+			Companies []struct {
+				Name string `json:"name"`
+			} `json:"companies"`
+			Options struct {
+				PartialSuccess bool `json:"partialSuccess"`
+			} `json:"options"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil || len(body.Companies) != 3 ||
+			!body.Options.PartialSuccess {
+			http.Error(w, "Bad Request", http.StatusBadRequest)
+			return
+		}
+		w.WriteHeader(http.StatusCreated)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprintln(w, `{"companies":[{"id":12345},{"id":12346}],`+
+			`"failed":[{"index":1,"errors":[{"title":"invalid payload","detail":"name is required"}]}]}`)
 	})
 	mux.HandleFunc("PATCH /projects/api/v3/companies/{id}", func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Content-Type") != "application/json" {
