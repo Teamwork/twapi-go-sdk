@@ -1140,6 +1140,8 @@ func TestTaskGetFieldsApply(t *testing.T) {
 		Task:              []TaskField{TaskFieldID},
 		CustomFields:      []CustomFieldField{CustomFieldFieldOptions},
 		CustomFieldValues: []CustomFieldValueField{CustomFieldValueFieldID},
+		Projects:          []ProjectField{ProjectFieldID},
+		Tasklists:         []TasklistField{TasklistFieldID},
 	}
 	query := url.Values{}
 	fields.apply(query)
@@ -1147,6 +1149,8 @@ func TestTaskGetFieldsApply(t *testing.T) {
 		"fields[tasks]":            "id",
 		"fields[customfields]":     "options",
 		"fields[customfieldTasks]": "id",
+		"fields[projects]":         "id",
+		"fields[tasklists]":        "id",
 	}
 	for key, want := range checks {
 		if got := query.Get(key); got != want {
@@ -1175,6 +1179,8 @@ func TestTaskListFieldsApply(t *testing.T) {
 		Tasks:             []TaskField{TaskFieldID},
 		CustomFields:      []CustomFieldField{CustomFieldFieldOptions},
 		CustomFieldValues: []CustomFieldValueField{CustomFieldValueFieldID},
+		Projects:          []ProjectField{ProjectFieldID},
+		Tasklists:         []TasklistField{TasklistFieldID},
 	}
 	query := url.Values{}
 	fields.apply(query)
@@ -1182,6 +1188,8 @@ func TestTaskListFieldsApply(t *testing.T) {
 		"fields[tasks]":            "id",
 		"fields[customfields]":     "options",
 		"fields[customfieldTasks]": "id",
+		"fields[projects]":         "id",
+		"fields[tasklists]":        "id",
 	}
 	for key, want := range checks {
 		if got := query.Get(key); got != want {

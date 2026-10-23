@@ -1249,6 +1249,10 @@ type TaskGetFields struct {
 	CustomFields []CustomFieldField
 	// CustomFieldValues controls fields[customfieldTasks]=… on the response.
 	CustomFieldValues []CustomFieldValueField
+	// Projects controls fields[projects]=… on the response.
+	Projects []ProjectField
+	// Tasklists controls fields[tasklists]=… on the response.
+	Tasklists []TasklistField
 }
 
 // apply writes every populated slot to query as a fields[entity]=… parameter.
@@ -1256,6 +1260,8 @@ func (f TaskGetFields) apply(query url.Values) {
 	twapi.ApplySparseFields(query, "tasks", f.Task)
 	twapi.ApplySparseFields(query, "customfields", f.CustomFields)
 	twapi.ApplySparseFields(query, "customfieldTasks", f.CustomFieldValues)
+	twapi.ApplySparseFields(query, "projects", f.Projects)
+	twapi.ApplySparseFields(query, "tasklists", f.Tasklists)
 }
 
 // TaskListFields selects sparse-fields slots for TaskListResponse. Leave a slot empty to receive the
@@ -1267,6 +1273,10 @@ type TaskListFields struct {
 	CustomFields []CustomFieldField
 	// CustomFieldValues controls fields[customfieldTasks]=… on the response.
 	CustomFieldValues []CustomFieldValueField
+	// Projects controls fields[projects]=… on the response.
+	Projects []ProjectField
+	// Tasklists controls fields[tasklists]=… on the response.
+	Tasklists []TasklistField
 }
 
 // apply writes every populated slot to query as a fields[entity]=… parameter.
@@ -1274,6 +1284,8 @@ func (f TaskListFields) apply(query url.Values) {
 	twapi.ApplySparseFields(query, "tasks", f.Tasks)
 	twapi.ApplySparseFields(query, "customfields", f.CustomFields)
 	twapi.ApplySparseFields(query, "customfieldTasks", f.CustomFieldValues)
+	twapi.ApplySparseFields(query, "projects", f.Projects)
+	twapi.ApplySparseFields(query, "tasklists", f.Tasklists)
 }
 
 // TasklistBudgetListFields selects sparse-fields slots for TasklistBudgetListResponse. Leave a slot empty to receive the
