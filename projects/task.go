@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -22,6 +23,8 @@ var (
 	_ twapi.HTTPResponser = (*TaskDeleteResponse)(nil)
 	_ twapi.HTTPRequester = (*TaskCompleteRequest)(nil)
 	_ twapi.HTTPResponser = (*TaskCompleteResponse)(nil)
+	_ twapi.HTTPRequester = (*TaskBulkCompleteRequest)(nil)
+	_ twapi.HTTPResponser = (*TaskBulkCompleteResponse)(nil)
 	_ twapi.HTTPRequester = (*TaskUncompleteRequest)(nil)
 	_ twapi.HTTPResponser = (*TaskUncompleteResponse)(nil)
 	_ twapi.HTTPRequester = (*TaskMoveRequest)(nil)
@@ -718,6 +721,158 @@ func TaskComplete(
 	req TaskCompleteRequest,
 ) (*TaskCompleteResponse, error) {
 	return twapi.Execute[TaskCompleteRequest, *TaskCompleteResponse](ctx, engine, req)
+}
+
+// TaskBulkCompleteRequest represents the request body for completing many
+// tasks in a single call.
+//
+// Each task is completed on its own: a task that cannot be completed (not
+// found, forbidden, or waiting on an incomplete predecessor) is reported in
+// TaskBulkCompleteResponse.Failed and does not stop the others.
+type TaskBulkCompleteRequest struct {
+	// IDs is the list of task IDs to complete. The failures in the response
+	// refer to tasks by their index in this list.
+	IDs []int64 `json:"taskIds"`
+}
+
+// NewTaskBulkCompleteRequest creates a new TaskBulkCompleteRequest with the
+// provided task IDs. At least one ID is required.
+func NewTaskBulkCompleteRequest(taskIDs []int64) TaskBulkCompleteRequest {
+	return TaskBulkCompleteRequest{
+		IDs: taskIDs,
+	}
+}
+
+// HTTPRequest creates an HTTP request for the TaskBulkCompleteRequest.
+func (t TaskBulkCompleteRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
+	if len(t.IDs) == 0 {
+		return nil, fmt.Errorf("at least one task ID is required to bulk complete tasks")
+	}
+	uri := server + "/projects/api/v3/tasks/bulk/complete.json"
+
+	var body bytes.Buffer
+	if err := json.NewEncoder(&body).Encode(t); err != nil {
+		return nil, fmt.Errorf("failed to encode bulk complete tasks request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, uri, &body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	return req, nil
+}
+
+// TaskBulkCompleteError describes why a task could not be completed.
+type TaskBulkCompleteError struct {
+	// Title is the kind of failure, such as "not found", "forbidden action" or
+	// "unprocessable entity".
+	Title string `json:"title"`
+
+	// Detail explains the failure.
+	Detail string `json:"detail"`
+}
+
+// TaskBulkCompleteFailure describes a requested task that could not be
+// completed.
+type TaskBulkCompleteFailure struct {
+	// Index is the position of the task in TaskBulkCompleteRequest.IDs.
+	Index int `json:"index"`
+
+	// Errors lists why the task could not be completed.
+	Errors []TaskBulkCompleteError `json:"errors"`
+}
+
+// TaskBulkCompleteResponse represents the response body for completing many
+// tasks in a single call.
+//
+// A call where some tasks fail still succeeds: check Failed for the tasks that
+// were not completed. A call where no task could be completed is also returned
+// as a response, with every task in Failed and CompletedTaskIDs empty, so the
+// reason for each task is not lost.
+type TaskBulkCompleteResponse struct {
+	// CompletedTaskIDs lists the requested tasks that are now complete,
+	// including any that were already complete.
+	CompletedTaskIDs []int64 `json:"completedTaskIds"`
+
+	// Affected holds the tasks affected by the completions, such as
+	// dependents.
+	Affected struct {
+		TaskIDs []int64 `json:"taskIds"`
+	} `json:"affected"`
+
+	// Failed lists the requested tasks that could not be completed.
+	Failed []TaskBulkCompleteFailure `json:"failed"`
+}
+
+// HandleHTTPResponse handles the HTTP response for the
+// TaskBulkCompleteResponse. When no task could be completed the API answers
+// 400 or 403 with one error per task; those are returned as Failed entries
+// rather than as an error. Any other unexpected HTTP status code returns a
+// twapi.HTTPError.
+func (t *TaskBulkCompleteResponse) HandleHTTPResponse(resp *http.Response) error {
+	switch resp.StatusCode {
+	case http.StatusOK:
+		if err := json.NewDecoder(resp.Body).Decode(t); err != nil {
+			return fmt.Errorf("failed to decode bulk complete tasks response: %w", err)
+		}
+		return nil
+
+	case http.StatusBadRequest, http.StatusForbidden:
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("failed to read bulk complete tasks response: %w", err)
+		}
+		if failed, ok := taskBulkCompleteFailures(body); ok {
+			t.CompletedTaskIDs = []int64{}
+			t.Failed = failed
+			return nil
+		}
+		resp.Body = io.NopCloser(bytes.NewReader(body))
+	}
+	return twapi.NewHTTPError(resp, "failed to bulk complete tasks")
+}
+
+// taskBulkCompleteFailures groups the errors of a response where no task could
+// be completed by the task they refer to. ok is false when any error does not
+// identify its task, as for a request the API rejected as a whole.
+func taskBulkCompleteFailures(body []byte) (failed []TaskBulkCompleteFailure, ok bool) {
+	var errorResponse struct {
+		Errors []struct {
+			TaskBulkCompleteError
+			Meta struct {
+				Index *int `json:"index"`
+			} `json:"meta"`
+		} `json:"errors"`
+	}
+	if err := json.Unmarshal(body, &errorResponse); err != nil || len(errorResponse.Errors) == 0 {
+		return nil, false
+	}
+	position := make(map[int]int)
+	for _, e := range errorResponse.Errors {
+		if e.Meta.Index == nil {
+			return nil, false
+		}
+		i, seen := position[*e.Meta.Index]
+		if !seen {
+			i = len(failed)
+			position[*e.Meta.Index] = i
+			failed = append(failed, TaskBulkCompleteFailure{Index: *e.Meta.Index})
+		}
+		failed[i].Errors = append(failed[i].Errors, e.TaskBulkCompleteError)
+	}
+	return failed, true
+}
+
+// TaskBulkComplete marks many tasks as complete in a single API call. Tasks
+// that could not be completed are reported in the response's Failed list.
+func TaskBulkComplete(
+	ctx context.Context,
+	engine *twapi.Engine,
+	req TaskBulkCompleteRequest,
+) (*TaskBulkCompleteResponse, error) {
+	return twapi.Execute[TaskBulkCompleteRequest, *TaskBulkCompleteResponse](ctx, engine, req)
 }
 
 // TaskUncompleteRequestPath contains the path parameters for reopening a task.
