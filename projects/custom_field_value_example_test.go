@@ -56,6 +56,31 @@ func ExampleCustomFieldValueUpdate() {
 	// Output: custom field value updated!
 }
 
+func ExampleCustomFieldValueBulkUpdate() {
+	address, stop, err := startCustomFieldValueServer()
+	if err != nil {
+		fmt.Printf("failed to start server: %s", err)
+		return
+	}
+	defer stop()
+
+	ctx := context.Background()
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
+
+	response, err := projects.CustomFieldValueBulkUpdate(ctx, engine,
+		projects.NewTaskCustomFieldValueBulkUpdateRequest(777, []projects.CustomFieldValueBulkUpdateItem{
+			{ID: 12345, CustomFieldID: 555, Value: "done"},
+			{ID: 12346, CustomFieldID: 556, Value: nil}, // nil clears the field
+		}))
+	if err != nil {
+		fmt.Printf("failed to bulk update custom field values: %s", err)
+	} else {
+		fmt.Printf("updated %d custom field values\n", len(response.CustomFieldValues))
+	}
+
+	// Output: updated 2 custom field values
+}
+
 func ExampleCustomFieldValueDelete() {
 	address, stop, err := startCustomFieldValueServer()
 	if err != nil {
@@ -158,6 +183,21 @@ func startCustomFieldValueServer() (string, func(), error) {
 			w.WriteHeader(http.StatusOK)
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = fmt.Fprintln(w, `{"customfieldTask":{"id":12345,"customfieldId":555}}`)
+		},
+	)
+	mux.HandleFunc("POST /projects/api/v3/tasks/{taskId}/customfields/bulk/update",
+		func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("Content-Type") != "application/json" {
+				http.Error(w, "Unsupported Media Type", http.StatusUnsupportedMediaType)
+				return
+			}
+			if r.PathValue("taskId") != "777" {
+				http.Error(w, "Not Found", http.StatusNotFound)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = fmt.Fprintln(w, `{"customfieldTasks":[{"id":12345,"customfieldId":555},{"id":12346,"customfieldId":556}]}`)
 		},
 	)
 	mux.HandleFunc("DELETE /projects/api/v3/tasks/{taskId}/customfields/{customFieldId}",

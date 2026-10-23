@@ -18,6 +18,8 @@ var (
 	_ twapi.HTTPResponser = (*CustomFieldValueCreateResponse)(nil)
 	_ twapi.HTTPRequester = (*CustomFieldValueUpdateRequest)(nil)
 	_ twapi.HTTPResponser = (*CustomFieldValueUpdateResponse)(nil)
+	_ twapi.HTTPRequester = (*CustomFieldValueBulkUpdateRequest)(nil)
+	_ twapi.HTTPResponser = (*CustomFieldValueBulkUpdateResponse)(nil)
 	_ twapi.HTTPRequester = (*CustomFieldValueDeleteRequest)(nil)
 	_ twapi.HTTPResponser = (*CustomFieldValueDeleteResponse)(nil)
 	_ twapi.HTTPRequester = (*CustomFieldValueGetRequest)(nil)
@@ -368,6 +370,168 @@ func CustomFieldValueUpdate(
 	req CustomFieldValueUpdateRequest,
 ) (*CustomFieldValueUpdateResponse, error) {
 	return twapi.Execute[CustomFieldValueUpdateRequest, *CustomFieldValueUpdateResponse](ctx, engine, req)
+}
+
+// CustomFieldValueBulkUpdateRequestPath contains the path parameters for
+// updating many custom field values of one task, project or company at once.
+type CustomFieldValueBulkUpdateRequestPath struct {
+	// Owner is the entity (task, project or company) every value belongs to.
+	// It is populated by the NewTask…/NewProject…/NewCompany… request
+	// constructors.
+	Owner CustomFieldValueOwner
+}
+
+// CustomFieldValueBulkUpdateItem is one value of a bulk update. It addresses
+// a value that already exists on the entity by its ID.
+type CustomFieldValueBulkUpdateItem struct {
+	// ID is the unique identifier of the custom field value entry to update,
+	// as reported by CustomFieldValueList.
+	ID int64 `json:"id"`
+
+	// CustomFieldID is the unique identifier of the custom field the value
+	// belongs to. The endpoint reads the field's type from it to parse Value,
+	// so it is required and must be the value's own field.
+	CustomFieldID int64 `json:"customfieldId"`
+
+	// Value is the new value of the custom field. The concrete type depends on
+	// the custom field definition: strings for text fields, numbers for number
+	// fields, booleans for checkboxes, choice strings for dropdown fields (an
+	// array for a multiselect field, which replaces the whole selection),
+	// ISO-8601 dates for date fields, etc. A nil Value clears the field.
+	Value any `json:"value"`
+}
+
+// CustomFieldValueBulkUpdateRequest represents the request body for updating
+// many custom field values of one task, project or company in a single
+// request.
+//
+// The endpoint is all-or-nothing: every value is validated before anything is
+// written, and when one is rejected none of them is updated. It answers 404
+// when a value ID does not exist or is listed twice, and 400 when a value
+// belongs to another entity or does not fit its field. The error does not say
+// which value caused it.
+//
+// https://apidocs.teamwork.com/docs/teamwork/v3/custom-fields/post-projects-api-v3-tasks-task-id-customfields-bulk-update-json
+// https://apidocs.teamwork.com/docs/teamwork/v3/custom-fields/post-projects-api-v3-projects-project-id-customfields-bulk-update-json
+// https://apidocs.teamwork.com/docs/teamwork/v3/custom-fields/post-projects-api-v3-companies-company-id-customfields-bulk-update-json
+//
+//nolint:lll
+type CustomFieldValueBulkUpdateRequest struct {
+	// Path contains the path parameters for the request.
+	Path CustomFieldValueBulkUpdateRequestPath `json:"-"`
+
+	// Values is the list of values to update. All of them must belong to the
+	// entity in Path.
+	Values []CustomFieldValueBulkUpdateItem `json:"-"`
+}
+
+// NewTaskCustomFieldValueBulkUpdateRequest creates a new
+// CustomFieldValueBulkUpdateRequest for the values of one task.
+func NewTaskCustomFieldValueBulkUpdateRequest(
+	taskID int64,
+	values []CustomFieldValueBulkUpdateItem,
+) CustomFieldValueBulkUpdateRequest {
+	return CustomFieldValueBulkUpdateRequest{
+		Path:   CustomFieldValueBulkUpdateRequestPath{Owner: taskCustomFieldValueOwner{taskID: taskID}},
+		Values: values,
+	}
+}
+
+// NewProjectCustomFieldValueBulkUpdateRequest creates a new
+// CustomFieldValueBulkUpdateRequest for the values of one project.
+func NewProjectCustomFieldValueBulkUpdateRequest(
+	projectID int64,
+	values []CustomFieldValueBulkUpdateItem,
+) CustomFieldValueBulkUpdateRequest {
+	return CustomFieldValueBulkUpdateRequest{
+		Path:   CustomFieldValueBulkUpdateRequestPath{Owner: projectCustomFieldValueOwner{projectID: projectID}},
+		Values: values,
+	}
+}
+
+// NewCompanyCustomFieldValueBulkUpdateRequest creates a new
+// CustomFieldValueBulkUpdateRequest for the values of one company.
+func NewCompanyCustomFieldValueBulkUpdateRequest(
+	companyID int64,
+	values []CustomFieldValueBulkUpdateItem,
+) CustomFieldValueBulkUpdateRequest {
+	return CustomFieldValueBulkUpdateRequest{
+		Path:   CustomFieldValueBulkUpdateRequestPath{Owner: companyCustomFieldValueOwner{companyID: companyID}},
+		Values: values,
+	}
+}
+
+// HTTPRequest creates an HTTP request for the
+// CustomFieldValueBulkUpdateRequest.
+func (c CustomFieldValueBulkUpdateRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
+	if c.Path.Owner == nil {
+		return nil, fmt.Errorf("a task, project or company owner is required for a custom field value")
+	}
+	if len(c.Values) == 0 {
+		return nil, fmt.Errorf("at least one value is required to bulk update custom field values")
+	}
+	uri := fmt.Sprintf("%s/projects/api/v3/%s/%d/customfields/bulk/update.json",
+		server, c.Path.Owner.label(), c.Path.Owner.id())
+
+	payload := map[string][]CustomFieldValueBulkUpdateItem{
+		c.Path.Owner.listField(): c.Values,
+	}
+
+	var body bytes.Buffer
+	if err := json.NewEncoder(&body).Encode(payload); err != nil {
+		return nil, fmt.Errorf("failed to encode bulk update custom field values request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, uri, &body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	return req, nil
+}
+
+// CustomFieldValueBulkUpdateResponse represents the response body for
+// updating many custom field values at once.
+type CustomFieldValueBulkUpdateResponse struct {
+	// CustomFieldValues is the list of updated custom field values, regardless
+	// of the underlying entity type.
+	CustomFieldValues []CustomFieldValue
+}
+
+// UnmarshalJSON decodes the response into the CustomFieldValues slice
+// regardless of the entity-specific wrapper key returned by the API.
+func (c *CustomFieldValueBulkUpdateResponse) UnmarshalJSON(data []byte) error {
+	var list CustomFieldValueListResponse
+	if err := json.Unmarshal(data, &list); err != nil {
+		return err
+	}
+	c.CustomFieldValues = list.CustomFieldValues
+	return nil
+}
+
+// HandleHTTPResponse handles the HTTP response for the
+// CustomFieldValueBulkUpdateResponse. If some unexpected HTTP status code is
+// returned by the API, a twapi.HTTPError is returned.
+func (c *CustomFieldValueBulkUpdateResponse) HandleHTTPResponse(resp *http.Response) error {
+	if resp.StatusCode != http.StatusOK {
+		return twapi.NewHTTPError(resp, "failed to bulk update custom field values")
+	}
+	if err := json.NewDecoder(resp.Body).Decode(c); err != nil {
+		return fmt.Errorf("failed to decode bulk update custom field values response: %w", err)
+	}
+	return nil
+}
+
+// CustomFieldValueBulkUpdate updates many custom field values of one task,
+// project or company in a single request. Either every value is updated or
+// none is.
+func CustomFieldValueBulkUpdate(
+	ctx context.Context,
+	engine *twapi.Engine,
+	req CustomFieldValueBulkUpdateRequest,
+) (*CustomFieldValueBulkUpdateResponse, error) {
+	return twapi.Execute[CustomFieldValueBulkUpdateRequest, *CustomFieldValueBulkUpdateResponse](ctx, engine, req)
 }
 
 // CustomFieldValueDeleteRequestPath contains the path parameters for deleting a
@@ -802,6 +966,7 @@ type CustomFieldValueOwner interface {
 	id() int64
 	label() string
 	responseField() string
+	listField() string
 }
 
 type taskCustomFieldValueOwner struct{ taskID int64 }
@@ -809,18 +974,21 @@ type taskCustomFieldValueOwner struct{ taskID int64 }
 func (o taskCustomFieldValueOwner) id() int64             { return o.taskID }
 func (o taskCustomFieldValueOwner) label() string         { return "tasks" }
 func (o taskCustomFieldValueOwner) responseField() string { return "customfieldTask" }
+func (o taskCustomFieldValueOwner) listField() string     { return "customfieldTasks" }
 
 type projectCustomFieldValueOwner struct{ projectID int64 }
 
 func (o projectCustomFieldValueOwner) id() int64             { return o.projectID }
 func (o projectCustomFieldValueOwner) label() string         { return "projects" }
 func (o projectCustomFieldValueOwner) responseField() string { return "customfieldProject" }
+func (o projectCustomFieldValueOwner) listField() string     { return "customfieldProjects" }
 
 type companyCustomFieldValueOwner struct{ companyID int64 }
 
 func (o companyCustomFieldValueOwner) id() int64             { return o.companyID }
 func (o companyCustomFieldValueOwner) label() string         { return "companies" }
 func (o companyCustomFieldValueOwner) responseField() string { return "customfieldCompany" }
+func (o companyCustomFieldValueOwner) listField() string     { return "customfieldCompanies" }
 
 // decodeCustomFieldValue decodes a single custom field value response into the
 // provided CustomFieldValue, looking for the entity-specific wrapper key

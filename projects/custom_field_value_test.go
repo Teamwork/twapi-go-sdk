@@ -2,6 +2,7 @@ package projects_test
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
@@ -89,6 +90,138 @@ func TestCustomFieldValueUpdate(t *testing.T) {
 	if _, err := projects.CustomFieldValueUpdate(ctx, engine, request); err != nil {
 		t.Errorf("unexpected error: %s", err)
 	}
+}
+
+func TestCustomFieldValueBulkUpdate(t *testing.T) {
+	if engine == nil {
+		t.Skip("Skipping test because the engine is not initialized")
+	}
+
+	customFieldID, customFieldCleanup, err := createCustomField(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(customFieldCleanup)
+
+	valueID, valueCleanup, err := createTaskCustomFieldValue(t, testResources.TaskID, customFieldID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(valueCleanup)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	t.Cleanup(cancel)
+
+	request := projects.NewTaskCustomFieldValueBulkUpdateRequest(testResources.TaskID,
+		[]projects.CustomFieldValueBulkUpdateItem{{
+			ID:            valueID,
+			CustomFieldID: customFieldID,
+			Value:         "bulk updated value",
+		}},
+	)
+	response, err := projects.CustomFieldValueBulkUpdate(ctx, engine, request)
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+	if len(response.CustomFieldValues) != 1 || response.CustomFieldValues[0].ID != valueID {
+		t.Errorf("expected the updated value %d back, got %+v", valueID, response.CustomFieldValues)
+	}
+}
+
+// TestCustomFieldValueBulkUpdateRequest pins the route and the
+// entity-specific wrapper key for each owner, and that a nil value is sent as
+// null (which clears the field) rather than omitted.
+func TestCustomFieldValueBulkUpdateRequest(t *testing.T) {
+	values := []projects.CustomFieldValueBulkUpdateItem{
+		{ID: 12345, CustomFieldID: 555, Value: "done"},
+		{ID: 12346, CustomFieldID: 556, Value: nil},
+	}
+	const items = `[{"id":12345,"customfieldId":555,"value":"done"},{"id":12346,"customfieldId":556,"value":null}]`
+
+	tests := []struct {
+		name     string
+		request  projects.CustomFieldValueBulkUpdateRequest
+		wantPath string
+		wantBody string
+	}{{
+		name:     "task",
+		request:  projects.NewTaskCustomFieldValueBulkUpdateRequest(777, values),
+		wantPath: "/projects/api/v3/tasks/777/customfields/bulk/update.json",
+		wantBody: `{"customfieldTasks":` + items + `}`,
+	}, {
+		name:     "project",
+		request:  projects.NewProjectCustomFieldValueBulkUpdateRequest(777, values),
+		wantPath: "/projects/api/v3/projects/777/customfields/bulk/update.json",
+		wantBody: `{"customfieldProjects":` + items + `}`,
+	}, {
+		name:     "company",
+		request:  projects.NewCompanyCustomFieldValueBulkUpdateRequest(777, values),
+		wantPath: "/projects/api/v3/companies/777/customfields/bulk/update.json",
+		wantBody: `{"customfieldCompanies":` + items + `}`,
+	}}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, err := tt.request.HTTPRequest(t.Context(), "https://example.teamwork.com")
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+			if req.Method != http.MethodPost {
+				t.Errorf("expected method POST, got %s", req.Method)
+			}
+			if req.URL.Path != tt.wantPath {
+				t.Errorf("expected path %s, got %s", tt.wantPath, req.URL.Path)
+			}
+			body, err := io.ReadAll(req.Body)
+			if err != nil {
+				t.Fatalf("failed to read body: %s", err)
+			}
+			if got := strings.TrimSpace(string(body)); got != tt.wantBody {
+				t.Errorf("expected body %s, got %s", tt.wantBody, got)
+			}
+		})
+	}
+
+	t.Run("no values", func(t *testing.T) {
+		request := projects.NewTaskCustomFieldValueBulkUpdateRequest(777, nil)
+		if _, err := request.HTTPRequest(t.Context(), "https://example.teamwork.com"); err == nil {
+			t.Error("expected an error for an empty list of values")
+		}
+	})
+}
+
+// TestCustomFieldValueBulkUpdateResponse covers the decoder for every
+// entity-specific wrapper key, and that a rejected batch surfaces as an
+// HTTPError.
+func TestCustomFieldValueBulkUpdateResponse(t *testing.T) {
+	for _, key := range []string{"customfieldTasks", "customfieldProjects", "customfieldCompanies"} {
+		t.Run(key, func(t *testing.T) {
+			var response projects.CustomFieldValueBulkUpdateResponse
+			httpResp := &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader(`{"` + key + `":[{"id":12345},{"id":12346}]}`)),
+			}
+			if err := response.HandleHTTPResponse(httpResp); err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+			if len(response.CustomFieldValues) != 2 {
+				t.Errorf("expected 2 values, got %d", len(response.CustomFieldValues))
+			}
+		})
+	}
+
+	t.Run("rejected batch", func(t *testing.T) {
+		var response projects.CustomFieldValueBulkUpdateResponse
+		httpResp := &http.Response{
+			StatusCode: http.StatusNotFound,
+			Body:       io.NopCloser(strings.NewReader(`{"errors":[{"title":"not found"}]}`)),
+		}
+		err := response.HandleHTTPResponse(httpResp)
+		var httpErr *twapi.HTTPError
+		if !errors.As(err, &httpErr) || httpErr.StatusCode != http.StatusNotFound {
+			t.Errorf("expected a 404 HTTPError, got %v", err)
+		}
+	})
 }
 
 func TestCustomFieldValueDelete(t *testing.T) {
