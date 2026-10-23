@@ -320,6 +320,12 @@ func TestTaskBulkComplete(t *testing.T) {
 	// the last ID does not exist, so it is reported as failed
 	request := projects.NewTaskBulkCompleteRequest(append(slices.Clone(taskIDs), math.MaxInt32))
 	response, err := projects.TaskBulkComplete(ctx, engine, request)
+	// a site that does not serve the route yet answers 404 or 405
+	var httpErr *twapi.HTTPError
+	if errors.As(err, &httpErr) &&
+		(httpErr.StatusCode == http.StatusNotFound || httpErr.StatusCode == http.StatusMethodNotAllowed) {
+		t.Skipf("Skipping test because the site does not serve the bulk complete route: %s", err)
+	}
 	if err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
