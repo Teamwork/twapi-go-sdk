@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -576,6 +577,39 @@ func TestTaskGet(t *testing.T) {
 
 	if _, err = projects.TaskGet(ctx, engine, projects.NewTaskGetRequest(taskID)); err != nil {
 		t.Errorf("unexpected error: %s", err)
+	}
+}
+
+func TestTaskGetSideloadsTasklistAndProject(t *testing.T) {
+	if engine == nil {
+		t.Skip("Skipping test because the engine is not initialized")
+	}
+
+	taskID, taskCleanup, err := createTask(t, testResources.TasklistID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(taskCleanup)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	t.Cleanup(cancel)
+
+	req := projects.NewTaskGetRequest(taskID)
+	req.Filters.Include = []projects.TaskRequestSideload{
+		projects.TaskRequestSideloadTasklists,
+		projects.TaskRequestSideloadProjects,
+	}
+	resp, err := projects.TaskGet(ctx, engine, req)
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	tasklist, ok := resp.Included.Tasklists[strconv.FormatInt(resp.Task.Tasklist.ID, 10)]
+	if !ok {
+		t.Fatalf("expected tasklist %d to be sideloaded but got %v", resp.Task.Tasklist.ID, resp.Included.Tasklists)
+	}
+	if _, ok := resp.Included.Projects[strconv.FormatInt(tasklist.Project.ID, 10)]; !ok {
+		t.Errorf("expected project %d to be sideloaded but got %v", tasklist.Project.ID, resp.Included.Projects)
 	}
 }
 

@@ -894,6 +894,8 @@ type TaskRequestSideload string
 const (
 	TaskRequestSideloadCustomFields      TaskRequestSideload = "customfields"
 	TaskRequestSideloadCustomFieldValues TaskRequestSideload = "customfieldtasks"
+	TaskRequestSideloadProjects          TaskRequestSideload = "projects"
+	TaskRequestSideloadTasklists         TaskRequestSideload = "tasklists"
 )
 
 // TaskRequestFilters contains the filters for loading tasks.
@@ -1026,6 +1028,14 @@ type TaskGetResponse struct {
 		//
 		// The key is the string representation of the custom field value ID.
 		CustomFieldValues map[string]CustomFieldValue `json:"customfieldTasks,omitempty"`
+		// Projects contains the project the task's tasklist belongs to.
+		//
+		// The key is the string representation of Tasklist.Project's ID.
+		Projects map[string]Project `json:"projects,omitempty"`
+		// Tasklists contains the tasklist the task belongs to.
+		//
+		// The key is the string representation of Task.Tasklist's ID.
+		Tasklists map[string]Tasklist `json:"tasklists,omitempty"`
 	} `json:"included"`
 }
 
@@ -1437,6 +1447,16 @@ type TaskListResponse struct {
 		//
 		// The key is the string representation of the custom field value ID.
 		CustomFieldValues map[string]CustomFieldValue `json:"customfieldTasks,omitempty"`
+		// Projects contains the projects the tasks' tasklists belong to, once per
+		// project across the page.
+		//
+		// The key is the string representation of Tasklist.Project's ID.
+		Projects map[string]Project `json:"projects,omitempty"`
+		// Tasklists contains the tasklists the tasks belong to, once per
+		// tasklist across the page.
+		//
+		// The key is the string representation of Task.Tasklist's ID.
+		Tasklists map[string]Tasklist `json:"tasklists,omitempty"`
 	} `json:"included"`
 }
 
