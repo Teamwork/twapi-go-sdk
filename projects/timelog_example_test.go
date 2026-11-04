@@ -128,6 +128,33 @@ func ExampleTimelogList() {
 	// retrieved timelog with identifier 12346
 }
 
+func ExampleTimelogBulkCreate() {
+	address, stop, err := startTimelogServer() // mock server for demonstration purposes
+	if err != nil {
+		fmt.Printf("failed to start server: %s", err)
+		return
+	}
+	defer stop()
+
+	ctx := context.Background()
+	engine := twapi.NewEngine(session.NewBearerToken("your_token", fmt.Sprintf("http://%s", address)))
+
+	now := time.Now()
+	createRequest := projects.NewTimelogBulkCreateRequest([]projects.TimelogBulkCreateRequestTimelog{
+		{TaskID: new(int64(777)), Date: twapi.Date(now), Time: twapi.Time(now), IsUTC: true, Minutes: 30},
+		{ProjectID: new(int64(777)), Date: twapi.Date(now), Time: twapi.Time(now), IsUTC: true, Hours: 1},
+	})
+
+	createResponse, err := projects.TimelogBulkCreate(ctx, engine, createRequest)
+	if err != nil {
+		fmt.Printf("failed to create timelogs: %s", err)
+	} else {
+		fmt.Printf("created %d timelogs, %d failed\n", len(createResponse.Timelogs), len(createResponse.Failed))
+	}
+
+	// Output: created 2 timelogs, 0 failed
+}
+
 func ExampleTimelogBulkMove() {
 	address, stop, err := startTimelogServer() // mock server for demonstration purposes
 	if err != nil {
@@ -228,6 +255,16 @@ func startTimelogServer() (string, func(), error) {
 	mux.HandleFunc("GET /projects/api/v3/time", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
+		_, _ = fmt.Fprintln(w, `{"timelogs":[{"id":12345},{"id":12346}]}`)
+	})
+
+	mux.HandleFunc("POST /projects/api/v3/time/bulk", func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Content-Type") != "application/json" {
+			http.Error(w, "Unsupported Media Type", http.StatusUnsupportedMediaType)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusCreated)
 		_, _ = fmt.Fprintln(w, `{"timelogs":[{"id":12345},{"id":12346}]}`)
 	})
 
