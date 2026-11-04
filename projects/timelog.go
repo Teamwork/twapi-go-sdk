@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -17,6 +18,8 @@ import (
 var (
 	_ twapi.HTTPRequester = (*TimelogCreateRequest)(nil)
 	_ twapi.HTTPResponser = (*TimelogCreateResponse)(nil)
+	_ twapi.HTTPRequester = (*TimelogBulkCreateRequest)(nil)
+	_ twapi.HTTPResponser = (*TimelogBulkCreateResponse)(nil)
 	_ twapi.HTTPRequester = (*TimelogUpdateRequest)(nil)
 	_ twapi.HTTPResponser = (*TimelogUpdateResponse)(nil)
 	_ twapi.HTTPRequester = (*TimelogBulkMoveRequest)(nil)
@@ -256,6 +259,190 @@ func TimelogCreate(
 	req TimelogCreateRequest,
 ) (*TimelogCreateResponse, error) {
 	return twapi.Execute[TimelogCreateRequest, *TimelogCreateResponse](ctx, engine, req)
+}
+
+// TimelogBulkCreateRequestTimelog is one timelog to create in a
+// TimelogBulkCreateRequest. Each entry names its own project or task.
+type TimelogBulkCreateRequestTimelog struct {
+	// ProjectID is the project the timelog is logged against. Set it or TaskID.
+	ProjectID *int64 `json:"projectId,omitempty"`
+
+	// TaskID is the task the timelog is logged against. The project is taken
+	// from the task. Set it or ProjectID.
+	TaskID *int64 `json:"taskId,omitempty"`
+
+	// Description is an optional description of the timelog.
+	Description *string `json:"description,omitempty"`
+
+	// Date is the date when the timelog was logged.
+	Date twapi.Date `json:"date"`
+
+	// Time is the time when the timelog was logged. It can be in local time or
+	// UTC.
+	Time twapi.Time `json:"time"`
+
+	// IsUTC indicates whether the time is in UTC. When false, it will consider
+	// the timezone configured for the logged user.
+	IsUTC bool `json:"isUTC"`
+
+	// Hours is the number of hours logged. It is summed with Minutes.
+	Hours int64 `json:"hours"`
+
+	// Minutes is the number of minutes logged. It is summed with Hours.
+	Minutes int64 `json:"minutes"`
+
+	// Billable indicates whether the timelog is billable or not. When not
+	// provided, it will default to the tasklist or project settings.
+	Billable *bool `json:"isBillable,omitempty"`
+
+	// UserID is the user the timelog is logged for. Defaults to the user making
+	// the request.
+	UserID *int64 `json:"userId,omitempty"`
+
+	// TagIDs is an optional list of tag IDs to associate with the timelog.
+	TagIDs []int64 `json:"tagIds,omitempty"`
+}
+
+// TimelogBulkCreateRequest represents the request body for creating many
+// timelogs in a single call, through POST /projects/api/v3/time/bulk.json.
+// The request counts once against the rate limit, whatever its size.
+type TimelogBulkCreateRequest struct {
+	// Timelogs is the list of timelogs to create. The index of each entry is
+	// the index the API uses to report a failure.
+	Timelogs []TimelogBulkCreateRequestTimelog
+
+	// PartialSuccess controls what happens when some entries cannot be
+	// created. When true, the valid entries are created and each failure is
+	// reported by index in TimelogBulkCreateResponse.Failed. When false, one
+	// bad entry aborts the whole request and nothing is created.
+	PartialSuccess *bool
+}
+
+// NewTimelogBulkCreateRequest creates a new TimelogBulkCreateRequest for the
+// provided timelogs, with partial success enabled.
+func NewTimelogBulkCreateRequest(timelogs []TimelogBulkCreateRequestTimelog) TimelogBulkCreateRequest {
+	return TimelogBulkCreateRequest{
+		Timelogs:       timelogs,
+		PartialSuccess: new(true),
+	}
+}
+
+// HTTPRequest creates an HTTP request for the TimelogBulkCreateRequest.
+func (t TimelogBulkCreateRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
+	if len(t.Timelogs) == 0 {
+		return nil, fmt.Errorf("at least one timelog is required to bulk create timelogs")
+	}
+	uri := server + "/projects/api/v3/time/bulk.json"
+
+	type entry struct {
+		Timelog TimelogBulkCreateRequestTimelog `json:"timelog"`
+	}
+	type options struct {
+		PartialSuccess *bool `json:"partialSuccess,omitempty"`
+	}
+	payload := struct {
+		Timelogs []entry  `json:"timelogs"`
+		Options  *options `json:"timelogOptions,omitempty"`
+	}{Timelogs: make([]entry, len(t.Timelogs))}
+	for i, timelog := range t.Timelogs {
+		payload.Timelogs[i] = entry{Timelog: timelog}
+	}
+	if t.PartialSuccess != nil {
+		payload.Options = &options{PartialSuccess: t.PartialSuccess}
+	}
+
+	var body bytes.Buffer
+	if err := json.NewEncoder(&body).Encode(payload); err != nil {
+		return nil, fmt.Errorf("failed to encode bulk create timelogs request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, uri, &body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	return req, nil
+}
+
+// TimelogBulkCreateFailure reports an entry of a TimelogBulkCreateRequest that
+// was not created.
+type TimelogBulkCreateFailure struct {
+	// Index is the position of the entry in TimelogBulkCreateRequest.Timelogs.
+	Index int `json:"index"`
+
+	// Errors are the reasons the entry was not created.
+	Errors []twapi.V3Error `json:"errors"`
+}
+
+// TimelogBulkCreateResponse represents the response body for creating many
+// timelogs in a single call.
+type TimelogBulkCreateResponse struct {
+	// Timelogs are the created timelogs, in the order of their entries in the
+	// request. Entries reported in Failed are skipped.
+	Timelogs []Timelog `json:"timelogs"`
+
+	// Failed lists the entries that were not created, by request index. It is
+	// only populated when partial success is enabled.
+	Failed []TimelogBulkCreateFailure `json:"failed"`
+}
+
+// HandleHTTPResponse handles the HTTP response for the
+// TimelogBulkCreateResponse. The API answers 201 when at least one timelog was
+// created. When nothing was created it answers with an error status, returned
+// as a twapi.HTTPError; TimelogBulkCreateFailures extracts the failed entries
+// from it.
+func (t *TimelogBulkCreateResponse) HandleHTTPResponse(resp *http.Response) error {
+	if resp.StatusCode != http.StatusCreated {
+		return twapi.NewHTTPError(resp, "failed to bulk create timelogs")
+	}
+	if err := json.NewDecoder(resp.Body).Decode(t); err != nil {
+		return fmt.Errorf("failed to decode bulk create timelogs response: %w", err)
+	}
+	return nil
+}
+
+// TimelogBulkCreateFailures extracts the failed entries from an error returned
+// by TimelogBulkCreate when nothing was created: 403 when every entry was
+// forbidden, 400 otherwise. Each error carries its entry's index in meta.index;
+// errors are grouped by that index, in the order the API returned them. It
+// returns nil when err is not an API error or does not reference any entry.
+func TimelogBulkCreateFailures(err error) []TimelogBulkCreateFailure {
+	var httpErr *twapi.HTTPError
+	if !errors.As(err, &httpErr) {
+		return nil
+	}
+	var body struct {
+		Errors []twapi.V3Error `json:"errors"`
+	}
+	if json.Unmarshal([]byte(httpErr.Details), &body) != nil {
+		return nil
+	}
+
+	var failures []TimelogBulkCreateFailure
+	position := make(map[int]int)
+	for _, e := range body.Errors {
+		rawIndex, ok := e.Meta["index"].(float64)
+		if !ok {
+			continue
+		}
+		index := int(rawIndex)
+		if _, seen := position[index]; !seen {
+			position[index] = len(failures)
+			failures = append(failures, TimelogBulkCreateFailure{Index: index})
+		}
+		failures[position[index]].Errors = append(failures[position[index]].Errors, e)
+	}
+	return failures
+}
+
+// TimelogBulkCreate creates many timelogs in a single API call.
+func TimelogBulkCreate(
+	ctx context.Context,
+	engine *twapi.Engine,
+	req TimelogBulkCreateRequest,
+) (*TimelogBulkCreateResponse, error) {
+	return twapi.Execute[TimelogBulkCreateRequest, *TimelogBulkCreateResponse](ctx, engine, req)
 }
 
 // TimelogUpdateRequestPath contains the path parameters for updating a
