@@ -6,12 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"reflect"
 	"slices"
 	"strconv"
 	"strings"
@@ -317,23 +315,17 @@ func TestTaskBulkComplete(t *testing.T) {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	t.Cleanup(cancel)
 
-	// the last ID does not exist, so it is reported as failed
-	request := projects.NewTaskBulkCompleteRequest(append(slices.Clone(taskIDs), math.MaxInt32))
-	response, err := projects.TaskBulkComplete(ctx, engine, request)
-	// a site that does not serve the route yet answers 404 or 405
-	var httpErr *twapi.HTTPError
-	if errors.As(err, &httpErr) &&
-		(httpErr.StatusCode == http.StatusNotFound || httpErr.StatusCode == http.StatusMethodNotAllowed) {
-		t.Skipf("Skipping test because the site does not serve the bulk complete route: %s", err)
-	}
-	if err != nil {
+	if _, err := projects.TaskBulkComplete(ctx, engine, projects.NewTaskBulkCompleteRequest(taskIDs)); err != nil {
 		t.Fatalf("unexpected error: %s", err)
 	}
-	if !slices.Equal(response.CompletedTaskIDs, taskIDs) {
-		t.Errorf("expected completed tasks %v, got %v", taskIDs, response.CompletedTaskIDs)
-	}
-	if len(response.Failed) != 1 || response.Failed[0].Index != 2 {
-		t.Errorf("expected the missing task to be reported at index 2, got %+v", response.Failed)
+	for _, taskID := range taskIDs {
+		task, err := projects.TaskGet(ctx, engine, projects.NewTaskGetRequest(taskID))
+		if err != nil {
+			t.Fatalf("unexpected error getting task %d: %s", taskID, err)
+		}
+		if task.Task.Status != "completed" {
+			t.Errorf("expected task %d to be completed, got status %q", taskID, task.Task.Status)
+		}
 	}
 }
 
@@ -343,61 +335,39 @@ func TestTaskBulkComplete_responses(t *testing.T) {
 		taskIDs       []int64
 		status        int
 		body          string
-		wantCompleted []int64
-		wantFailed    []projects.TaskBulkCompleteFailure
+		wantAffected  []int64
 		wantErrStatus int
 	}{
 		{
-			name:          "every task is completed",
+			name:         "every task is completed",
+			taskIDs:      []int64{10, 11},
+			status:       http.StatusOK,
+			body:         `{"affectedTaskIds":"10,11","STATUS":"OK"}`,
+			wantAffected: []int64{10, 11},
+		},
+		{
+			name:         "no affected tasks reported",
+			taskIDs:      []int64{10},
+			status:       http.StatusOK,
+			body:         `{"STATUS":"OK"}`,
+			wantAffected: nil,
+		},
+		{
+			name:          "a task fails",
 			taskIDs:       []int64{10, 11},
-			status:        http.StatusOK,
-			body:          `{"completedTaskIds":[10,11],"affected":{"taskIds":[10,11]}}`,
-			wantCompleted: []int64{10, 11},
-		},
-		{
-			name:    "some tasks fail",
-			taskIDs: []int64{10, 11, 12},
-			status:  http.StatusOK,
-			body: `{"completedTaskIds":[10],"affected":{"taskIds":[10]},"failed":[` +
-				`{"index":1,"errors":[{"title":"not found","detail":"task 11 not found"}]},` +
-				`{"index":2,"errors":[{"title":"unprocessable entity","detail":"dependencies exist"}]}]}`,
-			wantCompleted: []int64{10},
-			wantFailed: []projects.TaskBulkCompleteFailure{
-				{Index: 1, Errors: []projects.TaskBulkCompleteError{{Title: "not found", Detail: "task 11 not found"}}},
-				{Index: 2, Errors: []projects.TaskBulkCompleteError{
-					{Title: "unprocessable entity", Detail: "dependencies exist"},
-				}},
-			},
-		},
-		{
-			name:    "no task is completed",
-			taskIDs: []int64{10, 11},
-			status:  http.StatusForbidden,
-			body: `{"errors":[` +
-				`{"title":"forbidden action","detail":"no permission","meta":{"index":0}},` +
-				`{"title":"forbidden action","detail":"no permission","meta":{"index":1}}]}`,
-			wantCompleted: []int64{},
-			wantFailed: []projects.TaskBulkCompleteFailure{
-				{Index: 0, Errors: []projects.TaskBulkCompleteError{{Title: "forbidden action", Detail: "no permission"}}},
-				{Index: 1, Errors: []projects.TaskBulkCompleteError{{Title: "forbidden action", Detail: "no permission"}}},
-			},
-		},
-		{
-			name:          "the request is rejected as a whole",
-			taskIDs:       []int64{10},
-			status:        http.StatusBadRequest,
-			body:          `{"errors":[{"title":"invalid data","detail":"bad request"}]}`,
-			wantErrStatus: http.StatusBadRequest,
+			status:        http.StatusNotFound,
+			body:          `{"MESSAGE":"Not Found","STATUS":"Error"}`,
+			wantErrStatus: http.StatusNotFound,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var sentIDs []int64
+			var sentIDs string
 			mux := http.NewServeMux()
-			mux.HandleFunc("POST /projects/api/v3/tasks/bulk/complete.json", func(w http.ResponseWriter, r *http.Request) {
+			mux.HandleFunc("PUT /tasks/complete.json", func(w http.ResponseWriter, r *http.Request) {
 				var body struct {
-					TaskIDs []int64 `json:"taskIds"`
+					TaskIDs string `json:"taskIds"`
 				}
 				if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 					http.Error(w, "Bad Request", http.StatusBadRequest)
@@ -411,12 +381,16 @@ func TestTaskBulkComplete_responses(t *testing.T) {
 			server := httptest.NewServer(mux)
 			t.Cleanup(server.Close)
 
-			testEngine := twapi.NewEngine(session.NewBearerToken("your_token", server.URL))
+			testEngine := twapi.NewEngine(session.NewBearerToken("token", server.URL))
 			response, err := projects.TaskBulkComplete(t.Context(), testEngine,
 				projects.NewTaskBulkCompleteRequest(tt.taskIDs))
 
-			if !slices.Equal(sentIDs, tt.taskIDs) {
-				t.Errorf("expected the request to carry %v, got %v", tt.taskIDs, sentIDs)
+			wantSent := make([]string, len(tt.taskIDs))
+			for i, id := range tt.taskIDs {
+				wantSent[i] = strconv.FormatInt(id, 10)
+			}
+			if want := strings.Join(wantSent, ","); sentIDs != want {
+				t.Errorf("expected the request to carry %q, got %q", want, sentIDs)
 			}
 			if tt.wantErrStatus != 0 {
 				var httpErr *twapi.HTTPError
@@ -428,11 +402,8 @@ func TestTaskBulkComplete_responses(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %s", err)
 			}
-			if !slices.Equal(response.CompletedTaskIDs, tt.wantCompleted) {
-				t.Errorf("expected completed tasks %v, got %v", tt.wantCompleted, response.CompletedTaskIDs)
-			}
-			if !reflect.DeepEqual(response.Failed, tt.wantFailed) {
-				t.Errorf("expected failures %+v, got %+v", tt.wantFailed, response.Failed)
+			if !slices.Equal(response.AffectedTaskIDs, tt.wantAffected) {
+				t.Errorf("expected affected tasks %v, got %v", tt.wantAffected, response.AffectedTaskIDs)
 			}
 		})
 	}

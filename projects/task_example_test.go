@@ -119,13 +119,9 @@ func ExampleTaskBulkComplete() {
 		fmt.Printf("failed to complete tasks: %s", err)
 		return
 	}
-	fmt.Printf("completed tasks %v\n", response.CompletedTaskIDs)
-	for _, failure := range response.Failed {
-		fmt.Printf("task %d failed: %s\n", taskIDs[failure.Index], failure.Errors[0].Detail)
-	}
+	fmt.Printf("completed tasks, affecting %v\n", response.AffectedTaskIDs)
 
-	// Output: completed tasks [12345]
-	// task 12346 failed: task 12346 not found
+	// Output: completed tasks, affecting [12345 12346]
 }
 
 func ExampleTaskUncomplete() {
@@ -318,15 +314,14 @@ func startTaskServer() (string, func(), error) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = fmt.Fprintln(w, `{"STATUS":"OK"}`)
 	})
-	mux.HandleFunc("POST /projects/api/v3/tasks/bulk/complete", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("PUT /tasks/complete", func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Content-Type") != "application/json" {
 			http.Error(w, "Unsupported Media Type", http.StatusUnsupportedMediaType)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		_, _ = fmt.Fprintln(w, `{"completedTaskIds":[12345],"affected":{"taskIds":[12345]},`+
-			`"failed":[{"index":1,"errors":[{"title":"not found","detail":"task 12346 not found"}]}]}`)
+		_, _ = fmt.Fprintln(w, `{"affectedTaskIds":"12345,12346","STATUS":"OK"}`)
 	})
 	mux.HandleFunc("PUT /tasks/{id}/uncomplete", func(w http.ResponseWriter, r *http.Request) {
 		if r.PathValue("id") != "12345" {
