@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math/rand"
+	"net/http"
 	"os"
 	"strings"
 	"testing"
@@ -202,7 +203,44 @@ func startEngine() *twapi.Engine {
 	if server == "" || token == "" {
 		return nil
 	}
-	return twapi.NewEngine(session.NewBearerToken(token, server))
+	return twapi.NewEngine(session.NewBearerToken(token, server), twapi.WithMiddleware(retryDelete))
+}
+
+// If delete attempts fail with a 404 or server error, it might be because the
+// tests are creating then deleting too fast, before the replica can catch up.
+// So allow up to 2 retries to help avoid flaky tests.
+func retryDelete(next twapi.HTTPClient) twapi.HTTPClient {
+	return twapi.HTTPClientFunc(func(req *http.Request) (*http.Response, error) {
+		for attempt := 1; ; attempt++ {
+			resp, err := next.Do(req)
+			if err != nil || req.Method != http.MethodDelete || attempt == 3 {
+				return resp, err
+			}
+			if resp.StatusCode != http.StatusNotFound && resp.StatusCode < http.StatusInternalServerError {
+				return resp, nil
+			}
+
+			retry := req.Clone(req.Context())
+			if req.Body != nil && req.Body != http.NoBody {
+				if req.GetBody == nil {
+					return resp, nil
+				}
+				body, err := req.GetBody()
+				if err != nil {
+					return resp, nil
+				}
+				retry.Body = body
+			}
+			_ = resp.Body.Close()
+
+			select {
+			case <-req.Context().Done():
+				return nil, req.Context().Err()
+			case <-time.After(time.Duration(attempt) * 500 * time.Millisecond):
+			}
+			req = retry
+		}
+	})
 }
 
 func createProject(t testEngine) (int64, func(), error) {
