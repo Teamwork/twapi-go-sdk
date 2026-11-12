@@ -223,3 +223,90 @@ func TestTimelogBulkBillableUpdateNothingMatched(t *testing.T) {
 		t.Errorf("expected status 422, got %d", httpErr.StatusCode)
 	}
 }
+
+func TestTimelogBulkCreateRequest(t *testing.T) {
+	engine, recorder := startBulkServer(t, http.StatusCreated, nil, `{
+		"timelogs":[{"id":12345},{"id":12346}],
+		"failed":[{"index":1,"errors":[{"title":"invalid payload","detail":"task is required"}]}]
+	}`)
+
+	loggedAt := time.Date(2026, 10, 20, 9, 30, 0, 0, time.UTC)
+	request := projects.NewTimelogBulkCreateRequest([]projects.TimelogBulkCreateRequestTimelog{
+		{ProjectID: new(int64(777)), Date: twapi.Date(loggedAt), Time: twapi.Time(loggedAt), IsUTC: true, Hours: 1},
+		{ProjectID: new(int64(777)), Date: twapi.Date(loggedAt), Time: twapi.Time(loggedAt), Minutes: 30},
+		{TaskID: new(int64(12345)), Date: twapi.Date(loggedAt), Time: twapi.Time(loggedAt), Minutes: 15,
+			Billable: new(false), TagIDs: []int64{1, 2}},
+	})
+	response, err := projects.TimelogBulkCreate(t.Context(), engine, request)
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	if recorder.method != http.MethodPost || recorder.path != "/projects/api/v3/time/bulk.json" {
+		t.Errorf("unexpected request %s %s", recorder.method, recorder.path)
+	}
+	options, _ := recorder.body["timelogOptions"].(map[string]any)
+	if options["partialSuccess"] != true {
+		t.Errorf("expected timelogOptions.partialSuccess to be true, got %v", recorder.body["timelogOptions"])
+	}
+	entries, _ := recorder.body["timelogs"].([]any)
+	if len(entries) != 3 {
+		t.Fatalf("expected 3 entries, got %v", recorder.body["timelogs"])
+	}
+	first := entries[0].(map[string]any)["timelog"].(map[string]any)
+	if first["projectId"] != float64(777) || first["date"] != "2026-10-20" || first["time"] != "09:30:00" {
+		t.Errorf("unexpected first entry: %v", first)
+	}
+	if _, ok := first["taskId"]; ok {
+		t.Errorf("expected no taskId on a project entry, got %v", first)
+	}
+	third := entries[2].(map[string]any)["timelog"].(map[string]any)
+	if third["taskId"] != float64(12345) || third["isBillable"] != false || len(third["tagIds"].([]any)) != 2 {
+		t.Errorf("unexpected third entry: %v", third)
+	}
+	if _, ok := third["projectId"]; ok {
+		t.Errorf("expected no projectId on a task entry, got %v", third)
+	}
+
+	if len(response.Timelogs) != 2 || response.Timelogs[0].ID != 12345 || response.Timelogs[1].ID != 12346 {
+		t.Errorf("unexpected timelogs: %+v", response.Timelogs)
+	}
+	if len(response.Failed) != 1 || response.Failed[0].Index != 1 ||
+		response.Failed[0].Errors[0].Detail != "task is required" {
+		t.Errorf("unexpected failures: %+v", response.Failed)
+	}
+}
+
+func TestTimelogBulkCreateFailures(t *testing.T) {
+	engine, _ := startBulkServer(t, http.StatusBadRequest, nil, `{"errors":[
+		{"title":"invalid payload","detail":"project not found","meta":{"index":0}},
+		{"title":"invalid payload","detail":"minutes must be positive","meta":{"index":0}},
+		{"title":"invalid payload","detail":"task is required","meta":{"index":1}}
+	]}`)
+
+	loggedAt := time.Date(2026, 10, 20, 9, 30, 0, 0, time.UTC)
+	_, err := projects.TimelogBulkCreate(t.Context(), engine, projects.NewTimelogBulkCreateRequest(
+		[]projects.TimelogBulkCreateRequestTimelog{
+			{ProjectID: new(int64(1)), Date: twapi.Date(loggedAt), Time: twapi.Time(loggedAt)},
+			{ProjectID: new(int64(777)), Date: twapi.Date(loggedAt), Time: twapi.Time(loggedAt), Hours: 1},
+		}))
+	if err == nil {
+		t.Fatal("expected an error")
+	}
+
+	failures := projects.TimelogBulkCreateFailures(err)
+	if len(failures) != 2 || failures[0].Index != 0 || len(failures[0].Errors) != 2 ||
+		failures[1].Index != 1 || failures[1].Errors[0].Detail != "task is required" {
+		t.Errorf("unexpected failures: %+v", failures)
+	}
+	if projects.TimelogBulkCreateFailures(errors.New("not an API error")) != nil {
+		t.Error("expected no failures for an error that is not an API error")
+	}
+}
+
+func TestTimelogBulkCreateEmpty(t *testing.T) {
+	engine := twapi.NewEngine(session.NewBearerToken("token", "https://test.teamwork.com"))
+	if _, err := projects.TimelogBulkCreate(t.Context(), engine, projects.NewTimelogBulkCreateRequest(nil)); err == nil {
+		t.Error("expected an error for an empty list")
+	}
+}
