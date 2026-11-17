@@ -156,7 +156,7 @@ func (o *OAuth2) handshake(ctx context.Context) error {
 		return fmt.Errorf("failed to get oauth2 server info: %w", err)
 	}
 
-	codeChallenge, err := o.generateCodeChallenge()
+	codeVerifier, codeChallenge, err := generatePKCE()
 	if err != nil {
 		return fmt.Errorf("failed to generate code challenge: %w", err)
 	}
@@ -166,7 +166,7 @@ func (o *OAuth2) handshake(ctx context.Context) error {
 		return fmt.Errorf("failed to retrieve authorization code: %w", err)
 	}
 
-	if err := o.retrieveToken(ctx, serverInfo, redirectURL, codeChallenge, code); err != nil {
+	if err := o.retrieveToken(ctx, serverInfo, redirectURL, codeVerifier, code); err != nil {
 		return fmt.Errorf("failed to retrieve access token: %w", err)
 	}
 
@@ -281,7 +281,7 @@ func (o *OAuth2) retrieveCode(
 func (o *OAuth2) retrieveToken(
 	ctx context.Context,
 	serverInfo *oauth2ServerInfo,
-	redirectURL, codeChallenge, code string,
+	redirectURL, codeVerifier, code string,
 ) error {
 	if !slices.Contains(serverInfo.TokenEndpointAuthMethodsSupported, "client_secret_post") {
 		return fmt.Errorf("unsupported token endpoint authentication methods: %v",
@@ -294,7 +294,7 @@ func (o *OAuth2) retrieveToken(
 	form.Add("client_id", o.clientID)
 	form.Add("client_secret", o.clientSecret)
 	form.Add("redirect_uri", redirectURL)
-	form.Add("code_verifier", codeChallenge)
+	form.Add("code_verifier", codeVerifier)
 
 	body := bytes.NewBufferString(form.Encode())
 
@@ -382,13 +382,19 @@ func (o *OAuth2) serverInfo(ctx context.Context) (*oauth2ServerInfo, error) {
 	return &info, nil
 }
 
-func (o *OAuth2) generateCodeChallenge() (string, error) {
-	verifier := make([]byte, 32)
-	if _, err := rand.Read(verifier); err != nil {
-		return "", fmt.Errorf("failed to generate random bytes: %w", err)
+// generatePKCE returns a PKCE code verifier and its S256 code challenge, as
+// defined by RFC 7636. The challenge is sent with the authorization request and
+// the verifier, which must stay secret until then, with the token request.
+//
+// https://datatracker.ietf.org/doc/html/rfc7636#section-4.1
+func generatePKCE() (verifier, challenge string, err error) {
+	random := make([]byte, 32)
+	if _, err := rand.Read(random); err != nil {
+		return "", "", fmt.Errorf("failed to generate random bytes: %w", err)
 	}
-	challenge := sha256.Sum256(verifier)
-	return base64.RawURLEncoding.EncodeToString(challenge[:]), nil
+	verifier = base64.RawURLEncoding.EncodeToString(random)
+	sum := sha256.Sum256([]byte(verifier))
+	return verifier, base64.RawURLEncoding.EncodeToString(sum[:]), nil
 }
 
 type oauth2ServerInfo struct {
