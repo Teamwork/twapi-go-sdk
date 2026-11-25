@@ -8,6 +8,8 @@ import (
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"strconv"
 	"testing"
 	"time"
 
@@ -262,13 +264,15 @@ func TestUserUpdate(t *testing.T) {
 			Path: projects.UserUpdateRequestPath{
 				ID: userID,
 			},
-			FirstName: new(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100))),
-			LastName:  new(fmt.Sprintf("user%d%d", time.Now().UnixNano(), rand.Intn(100))),
-			Title:     new("Test User"),
-			Email:     new(fmt.Sprintf("email%d%d@example.com", time.Now().UnixNano(), rand.Intn(100))),
-			Admin:     new(true),
-			Type:      new("account"),
-			CompanyID: &testResources.CompanyID,
+			FirstName:    new(fmt.Sprintf("test%d%d", time.Now().UnixNano(), rand.Intn(100))),
+			LastName:     new(fmt.Sprintf("user%d%d", time.Now().UnixNano(), rand.Intn(100))),
+			Title:        new("Test User"),
+			Email:        new(fmt.Sprintf("email%d%d@example.com", time.Now().UnixNano(), rand.Intn(100))),
+			Admin:        new(true),
+			Type:         new("account"),
+			CompanyID:    &testResources.CompanyID,
+			Profile:      new("Public notes"),
+			PrivateNotes: new("Private notes"),
 		},
 	}}
 
@@ -321,6 +325,234 @@ func TestUserGet(t *testing.T) {
 
 	if _, err = projects.UserGet(ctx, engine, projects.NewUserGetRequest(userID)); err != nil {
 		t.Errorf("unexpected error: %s", err)
+	}
+}
+
+func TestUserGetFullProfile(t *testing.T) {
+	if engine == nil {
+		t.Skip("Skipping test because the engine is not initialized")
+	}
+
+	userID, userCleanup, err := createUser(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(userCleanup)
+
+	ctx := t.Context()
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	t.Cleanup(cancel)
+
+	update := projects.NewUserUpdateRequest(userID)
+	update.Profile = new("Public notes")
+	if _, err = projects.UserUpdate(ctx, engine, update); err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	request := projects.NewUserGetRequest(userID)
+	request.Filters.FullProfile = true
+	response, err := projects.UserGet(ctx, engine, request)
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+	if response.User.Profile == nil || *response.User.Profile != "Public notes" {
+		t.Errorf("expected the public notes to be read back, got %v", response.User.Profile)
+	}
+}
+
+// userServer answers one route with the given body and records the request
+// body it received.
+func userServer(t *testing.T, pattern, responseBody string) (*twapi.Engine, *[]byte) {
+	t.Helper()
+
+	var received []byte
+	mux := http.NewServeMux()
+	mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
+		received, _ = io.ReadAll(r.Body)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, responseBody)
+	})
+	server := httptest.NewServer(mux)
+	t.Cleanup(server.Close)
+
+	return twapi.NewEngine(session.NewBearerToken("token", server.URL)), &received
+}
+
+func TestUserNotesReachTheWire(t *testing.T) {
+	t.Run("update", func(t *testing.T) {
+		testEngine, received := userServer(t, "PUT /people/777.json", `{"STATUS":"OK"}`)
+
+		request := projects.NewUserUpdateRequest(777)
+		request.Profile = new("Public")
+		request.PrivateNotes = new("")
+		if _, err := projects.UserUpdate(t.Context(), testEngine, request); err != nil {
+			t.Fatalf("unexpected error: %s", err)
+		}
+
+		var body struct {
+			Person map[string]any `json:"person"`
+		}
+		if err := json.Unmarshal(*received, &body); err != nil {
+			t.Fatalf("failed to decode the request body: %s", err)
+		}
+		// An empty string clears the notes, so it must be sent.
+		if body.Person["profile"] != "Public" || body.Person["privateNotes"] != "" {
+			t.Errorf("unexpected notes in the request: %v", body.Person)
+		}
+	})
+
+	t.Run("update without notes", func(t *testing.T) {
+		testEngine, received := userServer(t, "PUT /people/777.json", `{"STATUS":"OK"}`)
+
+		request := projects.NewUserUpdateRequest(777)
+		request.Title = new("Developer")
+		if _, err := projects.UserUpdate(t.Context(), testEngine, request); err != nil {
+			t.Fatalf("unexpected error: %s", err)
+		}
+
+		var body struct {
+			Person map[string]any `json:"person"`
+		}
+		if err := json.Unmarshal(*received, &body); err != nil {
+			t.Fatalf("failed to decode the request body: %s", err)
+		}
+		for _, key := range []string{"profile", "privateNotes"} {
+			if _, ok := body.Person[key]; ok {
+				t.Errorf("expected %q to be omitted, got %v", key, body.Person)
+			}
+		}
+	})
+
+	t.Run("create", func(t *testing.T) {
+		testEngine, received := userServer(t, "POST /people.json", `{"STATUS":"OK","id":"12345"}`)
+
+		request := projects.NewUserCreateRequest("First", "User", "john@example.com")
+		request.Profile = new("Public")
+		request.PrivateNotes = new("Private")
+		// The mock answers 200, which the create rejects; only the body matters.
+		_, _ = projects.UserCreate(t.Context(), testEngine, request)
+
+		var body struct {
+			Person map[string]any `json:"person"`
+		}
+		if err := json.Unmarshal(*received, &body); err != nil {
+			t.Fatalf("failed to decode the request body: %s", err)
+		}
+		if body.Person["profile"] != "Public" || body.Person["privateNotes"] != "Private" {
+			t.Errorf("unexpected notes in the request: %v", body.Person)
+		}
+	})
+
+	t.Run("bulk create", func(t *testing.T) {
+		testEngine, received := bulkCreateServer(t, http.StatusCreated, `{"people":[{"id":12345}]}`)
+
+		request := projects.NewUserBulkCreateRequest([]projects.UserBulkCreateRequestUser{{
+			FirstName:    "First",
+			LastName:     "User",
+			Email:        "john@example.com",
+			Profile:      new("Public"),
+			PrivateNotes: new("Private"),
+		}})
+		if _, err := projects.UserBulkCreate(t.Context(), testEngine, request); err != nil {
+			t.Fatalf("unexpected error: %s", err)
+		}
+
+		var body struct {
+			People []map[string]any `json:"people"`
+		}
+		if err := json.Unmarshal(*received, &body); err != nil {
+			t.Fatalf("failed to decode the request body: %s", err)
+		}
+		if body.People[0]["profile"] != "Public" || body.People[0]["privateNotes"] != "Private" {
+			t.Errorf("unexpected notes in the request: %v", body.People[0])
+		}
+	})
+}
+
+func TestUserGetFullProfileReachesTheWire(t *testing.T) {
+	tests := []struct {
+		name        string
+		fullProfile bool
+		body        string
+		wantQuery   string
+		wantPrivate *string
+	}{{
+		name:        "owner company",
+		fullProfile: true,
+		body:        `{"person":{"id":777,"profileText":"Public","privateNotesText":""}}`,
+		wantQuery:   "fullProfile=true",
+		wantPrivate: new(""),
+	}, {
+		// The API leaves the private notes out for anyone outside the owner
+		// company.
+		name:        "other company",
+		fullProfile: true,
+		body:        `{"person":{"id":777,"profileText":"Public"}}`,
+		wantQuery:   "fullProfile=true",
+	}, {
+		name: "not asked for",
+		body: `{"person":{"id":777}}`,
+	}}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var query string
+			mux := http.NewServeMux()
+			mux.HandleFunc("GET /projects/api/v3/people/777.json", func(w http.ResponseWriter, r *http.Request) {
+				query = r.URL.RawQuery
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = io.WriteString(w, tt.body)
+			})
+			server := httptest.NewServer(mux)
+			t.Cleanup(server.Close)
+			testEngine := twapi.NewEngine(session.NewBearerToken("token", server.URL))
+
+			request := projects.NewUserGetRequest(777)
+			request.Filters.FullProfile = tt.fullProfile
+			response, err := projects.UserGet(t.Context(), testEngine, request)
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+			if query != tt.wantQuery {
+				t.Errorf("expected query %q, got %q", tt.wantQuery, query)
+			}
+			if tt.fullProfile && (response.User.Profile == nil || *response.User.Profile != "Public") {
+				t.Errorf("expected the profile, got %v", response.User.Profile)
+			}
+			switch {
+			case tt.wantPrivate == nil && response.User.PrivateNotes != nil:
+				t.Errorf("expected no private notes, got %q", *response.User.PrivateNotes)
+			case tt.wantPrivate != nil && (response.User.PrivateNotes == nil ||
+				*response.User.PrivateNotes != *tt.wantPrivate):
+				t.Errorf("expected private notes %q, got %v", *tt.wantPrivate, response.User.PrivateNotes)
+			}
+		})
+	}
+}
+
+func TestUserListFullProfileReachesTheWire(t *testing.T) {
+	for _, fullProfile := range []bool{true, false} {
+		t.Run(strconv.FormatBool(fullProfile), func(t *testing.T) {
+			var query url.Values
+			mux := http.NewServeMux()
+			mux.HandleFunc("GET /projects/api/v3/people.json", func(w http.ResponseWriter, r *http.Request) {
+				query = r.URL.Query()
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = io.WriteString(w, `{"people":[{"id":777,"profileText":"Public"}]}`)
+			})
+			server := httptest.NewServer(mux)
+			t.Cleanup(server.Close)
+			testEngine := twapi.NewEngine(session.NewBearerToken("token", server.URL))
+
+			request := projects.NewUserListRequest()
+			request.Filters.FullProfile = fullProfile
+			if _, err := projects.UserList(t.Context(), testEngine, request); err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+			if got := query.Has("fullProfile"); got != fullProfile {
+				t.Errorf("expected fullProfile sent %t, got %t: %s", fullProfile, got, query.Encode())
+			}
+		})
 	}
 }
 
