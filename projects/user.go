@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -116,6 +117,15 @@ type User struct {
 
 	// UpdatedAt is the date and time when the user was last updated.
 	UpdatedAt *time.Time `json:"updatedAt"`
+
+	// Profile is the user's public notes, as stored. It is only returned when
+	// the request sets FullProfile in its filters.
+	Profile *string `json:"profileText,omitempty"`
+
+	// PrivateNotes is the user's private notes, as stored. It is only returned
+	// when the request sets FullProfile in its filters, and only to members of
+	// the site owner's company.
+	PrivateNotes *string `json:"privateNotesText,omitempty"`
 }
 
 // UserMe represents an special type for the logged user.
@@ -159,6 +169,14 @@ type UserCreateRequest struct {
 	// Company is the client/company the user belongs to. By default is the same
 	// from the logged user creating the new user.
 	CompanyID *int64 `json:"company-id,omitempty"`
+
+	// Profile is the user's public notes, in Markdown. Everyone who can see the
+	// user can read it.
+	Profile *string `json:"profile,omitempty"`
+
+	// PrivateNotes is the user's private notes, in Markdown. Only people in the
+	// site owner's company can read them.
+	PrivateNotes *string `json:"privateNotes,omitempty"`
 }
 
 // NewUserCreateRequest creates a new UserCreateRequest with the
@@ -253,6 +271,15 @@ type UserBulkCreateRequestUser struct {
 	// CompanyID is the client/company the user belongs to. By default it is the
 	// company of the logged user creating the new user.
 	CompanyID *int64 `json:"companyId,omitempty"`
+
+	// Profile is the user's public notes, in Markdown. Everyone who can see the
+	// user can read it.
+	Profile *string `json:"profile,omitempty"`
+
+	// PrivateNotes is the user's private notes, in Markdown. Only people in the
+	// site owner's company can read them. The API ignores the value, without an
+	// error, unless the caller is in the site owner's company.
+	PrivateNotes *string `json:"privateNotes,omitempty"`
 
 	// SendInvite sends the user an invitation email when true. The field is
 	// always sent, so the zero value creates the user without emailing them.
@@ -436,6 +463,16 @@ type UserUpdateRequest struct {
 	// Company is the client/company the user belongs to. By default is the same
 	// from the logged user creating the new user.
 	CompanyID *int64 `json:"company-id,omitempty"`
+
+	// Profile is the user's public notes, in Markdown. Everyone who can see the
+	// user can read it. An empty string clears it.
+	Profile *string `json:"profile,omitempty"`
+
+	// PrivateNotes is the user's private notes, in Markdown. Only people in the
+	// site owner's company can read them. The API ignores the value, without an
+	// error, unless the caller is a site administrator, can manage people or is
+	// in the site owner's company. An empty string clears the notes.
+	PrivateNotes *string `json:"privateNotes,omitempty"`
 }
 
 // NewUserUpdateRequest creates a new UserUpdateRequest with the
@@ -568,12 +605,28 @@ type UserGetRequestPath struct {
 	ID int64 `json:"id"`
 }
 
+// UserGetRequestFilters contains the filters for loading a single user.
+type UserGetRequestFilters struct {
+	// FullProfile also returns the user's profile and, to members of the site
+	// owner's company only, their private notes.
+	FullProfile bool
+}
+
+func (u UserGetRequestFilters) apply(query url.Values) {
+	if u.FullProfile {
+		query.Set("fullProfile", "true")
+	}
+}
+
 // UserGetRequest represents the request body for loading a single user.
 //
 // https://apidocs.teamwork.com/docs/teamwork/v3/person/get-projects-api-v3-people-person-id-json
 type UserGetRequest struct {
 	// Path contains the path parameters for the request.
 	Path UserGetRequestPath
+
+	// Filters contains the filters for loading a single user.
+	Filters UserGetRequestFilters
 
 	// Fields restricts the attributes returned for the user. Each slot of
 	// UserGetFields is a separate `fields[entity]=…` selection; populated
@@ -602,6 +655,7 @@ func (u UserGetRequest) HTTPRequest(ctx context.Context, server string) (*http.R
 	}
 
 	query := req.URL.Query()
+	u.Filters.apply(query)
 	u.Fields.apply(query)
 	req.URL.RawQuery = query.Encode()
 
@@ -736,6 +790,10 @@ type UserListRequestFilters struct {
 	// the UserType constants.
 	Type UserType
 
+	// FullProfile also returns each user's profile and, to members of the site
+	// owner's company only, their private notes.
+	FullProfile bool
+
 	// Page is the page number to retrieve. Defaults to 1.
 	Page int64
 
@@ -762,6 +820,9 @@ func (u UserListRequestFilters) apply(req *http.Request) {
 	}
 	if u.Type != "" {
 		query.Set("userType", string(u.Type))
+	}
+	if u.FullProfile {
+		query.Set("fullProfile", "true")
 	}
 	if u.OrderBy != "" {
 		query.Set("orderBy", string(u.OrderBy))
