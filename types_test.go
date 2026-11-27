@@ -2,6 +2,7 @@ package twapi_test
 
 import (
 	"encoding/json"
+	"net/http"
 	"testing"
 	"time"
 
@@ -245,6 +246,25 @@ func TestOptionalHexColorRoundTrip(t *testing.T) {
 			}
 			if string(encoded) != tt.want {
 				t.Errorf("expected %s to encode as %s but got %s", tt.in, tt.want, encoded)
+			}
+		})
+	}
+}
+
+func TestHTTPErrorNotFound(t *testing.T) {
+	tests := []struct {
+		name string
+		err  *twapi.HTTPError
+		want bool
+	}{
+		{name: "404", err: &twapi.HTTPError{StatusCode: http.StatusNotFound}, want: true},
+		{name: "403", err: &twapi.HTTPError{StatusCode: http.StatusForbidden}},
+		{name: "nil", err: nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.err.NotFound(); got != tt.want {
+				t.Errorf("expected %t, got %t", tt.want, got)
 			}
 		})
 	}

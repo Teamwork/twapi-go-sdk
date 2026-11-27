@@ -41,6 +41,15 @@ func (e *HTTPError) Error() string {
 	return fmt.Sprintf("%s (%d): %s", e.Message, e.StatusCode, e.Details)
 }
 
+// NotFound reports whether the API answered 404. It is false on a nil error,
+// so it can follow errors.AsType directly:
+//
+//	httpErr, _ := errors.AsType[*twapi.HTTPError](err)
+//	if httpErr.NotFound() { … }
+func (e *HTTPError) NotFound() bool {
+	return e != nil && e.StatusCode == http.StatusNotFound
+}
+
 // V3Error is one entry of the errors array a v3 endpoint returns, either as
 // the whole error body ({"errors":[…]}) or, on bulk endpoints, for each item
 // that could not be processed.

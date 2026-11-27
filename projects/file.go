@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -17,6 +18,8 @@ import (
 var (
 	_ twapi.HTTPRequester = (*FileCreateRequest)(nil)
 	_ twapi.HTTPResponser = (*FileCreateResponse)(nil)
+	_ twapi.HTTPRequester = (*FileUpdateRequest)(nil)
+	_ twapi.HTTPResponser = (*FileUpdateResponse)(nil)
 	_ twapi.HTTPRequester = (*FileDeleteRequest)(nil)
 	_ twapi.HTTPResponser = (*FileDeleteResponse)(nil)
 	_ twapi.HTTPRequester = (*FileGetRequest)(nil)
@@ -24,6 +27,10 @@ var (
 	_ twapi.HTTPRequester = (*FileListRequest)(nil)
 	_ twapi.HTTPResponser = (*FileListResponse)(nil)
 	_ twapi.HTTPRequester = (*FileDownloadRequest)(nil)
+	_ twapi.HTTPRequester = (*FileVersionCreateRequest)(nil)
+	_ twapi.HTTPResponser = (*FileVersionCreateResponse)(nil)
+	_ twapi.HTTPRequester = (*FileVersionGetRequest)(nil)
+	_ twapi.HTTPResponser = (*FileVersionGetResponse)(nil)
 )
 
 // FileStatus is the storage state of a file.
@@ -100,6 +107,37 @@ type FileVersion struct {
 
 	// UploadedAt is when the version was uploaded.
 	UploadedAt time.Time `json:"uploadedAt"`
+}
+
+// UnmarshalJSON reads uploadedBy as a bare ID (a file's version list) or as a
+// relationship object (the single-version endpoint).
+func (v *FileVersion) UnmarshalJSON(data []byte) error {
+	type alias FileVersion
+	var raw struct {
+		alias
+		UploadedBy json.RawMessage `json:"uploadedBy"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	*v = FileVersion(raw.alias)
+	v.UploadedBy = 0
+
+	uploadedBy := bytes.TrimSpace(raw.UploadedBy)
+	switch {
+	case len(uploadedBy) == 0, bytes.Equal(uploadedBy, []byte("null")):
+	case uploadedBy[0] == '{':
+		var relationship twapi.Relationship
+		if err := json.Unmarshal(uploadedBy, &relationship); err != nil {
+			return fmt.Errorf("failed to decode uploadedBy: %w", err)
+		}
+		v.UploadedBy = relationship.ID
+	default:
+		if err := json.Unmarshal(uploadedBy, &v.UploadedBy); err != nil {
+			return fmt.Errorf("failed to decode uploadedBy: %w", err)
+		}
+	}
+	return nil
 }
 
 // FileRelatedItems lists the items a file is attached to.
@@ -265,7 +303,9 @@ type FileCreateRequest struct {
 	TagIDs LegacyNumericList `json:"tagIds,omitempty"`
 
 	// AutoNewVersion stores the upload as a new version of an existing file with
-	// the same name in the project, instead of creating a separate file.
+	// the same name in the project, instead of creating a separate file. When
+	// several files share the name, the one with the newest version is chosen.
+	// The endpoint also saves the value as the project's default.
 	AutoNewVersion *bool `json:"autoNewVersion,omitempty"`
 
 	// NotifyCurrentUser indicates whether the user adding the file should be
@@ -318,8 +358,13 @@ func (f FileCreateRequest) HTTPRequest(ctx context.Context, server string) (*htt
 //
 // https://apidocs.teamwork.com/docs/teamwork/v1/files/post-projects-id-files-json
 type FileCreateResponse struct {
-	// ID is the unique identifier of the created file.
+	// ID is the unique identifier of the file that holds the upload: a new file,
+	// or the existing one that got a new version.
 	ID LegacyNumber `json:"id"`
+
+	// VersionID is the unique identifier of the new version when the upload was
+	// stored as a new version of an existing file, and zero otherwise.
+	VersionID int64 `json:"versionId,omitempty"`
 }
 
 // HandleHTTPResponse handles the HTTP response for the FileCreateResponse. If
@@ -350,12 +395,335 @@ func (f *FileCreateResponse) HandleHTTPResponse(resp *http.Response) error {
 
 // FileCreate adds a file to a project's files area using the provided request
 // and returns the response.
+//
+// With AutoNewVersion set, the endpoint answers with the file ID when it
+// creates a file but with the version ID when it adds a version, and nothing in
+// the answer tells the two apart. FileCreate then makes up to two more requests
+// to find the file. If they fail, the upload is already stored: the response is
+// returned with the endpoint's ID together with the error.
 func FileCreate(
 	ctx context.Context,
 	engine *twapi.Engine,
 	req FileCreateRequest,
 ) (*FileCreateResponse, error) {
-	return twapi.Execute[FileCreateRequest, *FileCreateResponse](ctx, engine, req)
+	resp, err := twapi.Execute[FileCreateRequest, *FileCreateResponse](ctx, engine, req)
+	if err != nil || req.AutoNewVersion == nil || !*req.AutoNewVersion {
+		return resp, err
+	}
+	if err := resolveFileCreateVersion(ctx, engine, req.Path.ProjectID, resp); err != nil {
+		return resp, fmt.Errorf("file stored with ID %d, but failed to tell whether it is a "+
+			"file or a version: %w", resp.ID, err)
+	}
+	return resp, nil
+}
+
+// resolveFileCreateVersion decides whether the ID a create with AutoNewVersion
+// returned is a new file or a new version, and fixes resp when it is a version.
+func resolveFileCreateVersion(
+	ctx context.Context,
+	engine *twapi.Engine,
+	projectID int64,
+	resp *FileCreateResponse,
+) error {
+	id := int64(resp.ID)
+
+	version, err := FileVersionGet(ctx, engine, NewFileVersionGetRequest(id))
+	switch httpErr, _ := errors.AsType[*twapi.HTTPError](err); {
+	case httpErr.NotFound():
+		return nil
+	case err != nil:
+		return err
+	case version.FileVersion.VersionNo < 2, version.FileVersion.Project.ID != projectID:
+		// A new version is never the first, and it stays in the request's project.
+		return nil
+	}
+
+	// The ID can still be a new file that shares its number with an older
+	// version. A new file's own version is created after the file, so it has a
+	// higher ID; a new version is the newest one, so a file with its number
+	// cannot have a higher one.
+	file, err := FileGet(ctx, engine, NewFileGetRequest(id))
+	switch httpErr, _ := errors.AsType[*twapi.HTTPError](err); {
+	case httpErr.NotFound():
+	case err != nil:
+		return err
+	case file.File.Version.ID > id:
+		return nil
+	}
+
+	resp.ID = LegacyNumber(version.FileVersion.File.ID)
+	resp.VersionID = id
+	return nil
+}
+
+// FileVersionCreateRequestPath contains the path parameters for adding a
+// version to a file.
+type FileVersionCreateRequestPath struct {
+	// FileID is the unique identifier of the file that gets the new version.
+	FileID int64
+}
+
+// FileVersionCreateRequest adds an uploaded file as the newest version of an
+// existing file. Unlike FileCreateRequest.AutoNewVersion, the caller names the
+// file, so no name match is involved. The upload may have a different name and
+// type than the file, and the file then shows the new name.
+//
+// The endpoint answers 404 both for a file it cannot find and for a pending file
+// reference that is unknown or already used.
+//
+// https://apidocs.teamwork.com/docs/teamwork/v3/files/post-projects-api-v3-files-file-id-json
+type FileVersionCreateRequest struct {
+	// Path contains the path parameters for the request.
+	Path FileVersionCreateRequestPath `json:"-"`
+
+	// PendingFileRef is the reference of a file uploaded with PendingFileCreate.
+	// It can only be used once.
+	PendingFileRef PendingFileRef `json:"pendingFileRef"`
+
+	// Description is an optional description of the version.
+	Description *string `json:"description,omitempty"`
+
+	// NotifyCurrentUser indicates whether the user adding the version should be
+	// notified about it.
+	NotifyCurrentUser *bool `json:"notifyCurrentUser,omitempty"`
+}
+
+// NewFileVersionCreateRequest creates a new FileVersionCreateRequest with the
+// provided required fields.
+func NewFileVersionCreateRequest(fileID int64, pendingFileRef PendingFileRef) FileVersionCreateRequest {
+	return FileVersionCreateRequest{
+		Path: FileVersionCreateRequestPath{
+			FileID: fileID,
+		},
+		PendingFileRef: pendingFileRef,
+	}
+}
+
+// HTTPRequest creates an HTTP request for the FileVersionCreateRequest.
+func (f FileVersionCreateRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
+	switch {
+	case f.Path.FileID <= 0:
+		return nil, fmt.Errorf("file version requires a file")
+	case f.PendingFileRef == "":
+		return nil, fmt.Errorf("file version requires a pending file reference")
+	}
+
+	uri := server + "/projects/api/v3/files/" + strconv.FormatInt(f.Path.FileID, 10) + ".json"
+
+	payload := struct {
+		FileVersion FileVersionCreateRequest `json:"fileversion"`
+	}{FileVersion: f}
+
+	var body bytes.Buffer
+	if err := json.NewEncoder(&body).Encode(payload); err != nil {
+		return nil, fmt.Errorf("failed to encode create file version request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, uri, &body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	return req, nil
+}
+
+// FileVersionCreateResponse contains the version that was added.
+//
+// https://apidocs.teamwork.com/docs/teamwork/v3/files/post-projects-api-v3-files-file-id-json
+type FileVersionCreateResponse struct {
+	FileVersion FileVersion `json:"fileversion"`
+}
+
+// HandleHTTPResponse handles the HTTP response for the
+// FileVersionCreateResponse. If some unexpected HTTP status code is returned
+// by the API, a twapi.HTTPError is returned.
+func (f *FileVersionCreateResponse) HandleHTTPResponse(resp *http.Response) error {
+	if resp.StatusCode != http.StatusCreated {
+		return twapi.NewHTTPError(resp, "failed to create file version")
+	}
+	if err := json.NewDecoder(resp.Body).Decode(f); err != nil {
+		return fmt.Errorf("failed to decode create file version response: %w", err)
+	}
+	return nil
+}
+
+// FileVersionCreate adds a version to a file using the provided request and
+// returns the response.
+func FileVersionCreate(
+	ctx context.Context,
+	engine *twapi.Engine,
+	req FileVersionCreateRequest,
+) (*FileVersionCreateResponse, error) {
+	return twapi.Execute[FileVersionCreateRequest, *FileVersionCreateResponse](ctx, engine, req)
+}
+
+// FileVersionGetRequestPath contains the path parameters for loading a file
+// version.
+type FileVersionGetRequestPath struct {
+	// ID is the unique identifier of the version to be retrieved.
+	ID int64
+}
+
+// FileVersionGetRequest represents the request for loading a single file
+// version.
+//
+// https://apidocs.teamwork.com/docs/teamwork/v3/files/get-projects-api-v3-fileversions-version-id-json
+type FileVersionGetRequest struct {
+	// Path contains the path parameters for the request.
+	Path FileVersionGetRequestPath
+}
+
+// NewFileVersionGetRequest creates a new FileVersionGetRequest with the
+// provided version ID.
+func NewFileVersionGetRequest(versionID int64) FileVersionGetRequest {
+	return FileVersionGetRequest{
+		Path: FileVersionGetRequestPath{
+			ID: versionID,
+		},
+	}
+}
+
+// HTTPRequest creates an HTTP request for the FileVersionGetRequest.
+func (f FileVersionGetRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
+	uri := server + "/projects/api/v3/fileversions/" + strconv.FormatInt(f.Path.ID, 10) + ".json"
+	return http.NewRequestWithContext(ctx, http.MethodGet, uri, nil)
+}
+
+// FileVersionGetResponse contains the information related to a file version.
+//
+// https://apidocs.teamwork.com/docs/teamwork/v3/files/get-projects-api-v3-fileversions-version-id-json
+type FileVersionGetResponse struct {
+	FileVersion FileVersion `json:"fileversion"`
+}
+
+// HandleHTTPResponse handles the HTTP response for the FileVersionGetResponse.
+// If some unexpected HTTP status code is returned by the API, a twapi.HTTPError
+// is returned.
+func (f *FileVersionGetResponse) HandleHTTPResponse(resp *http.Response) error {
+	if resp.StatusCode != http.StatusOK {
+		return twapi.NewHTTPError(resp, "failed to retrieve file version")
+	}
+	if err := json.NewDecoder(resp.Body).Decode(f); err != nil {
+		return fmt.Errorf("failed to decode retrieve file version response: %w", err)
+	}
+	return nil
+}
+
+// FileVersionGet retrieves a single file version using the provided request
+// and returns the response.
+func FileVersionGet(
+	ctx context.Context,
+	engine *twapi.Engine,
+	req FileVersionGetRequest,
+) (*FileVersionGetResponse, error) {
+	return twapi.Execute[FileVersionGetRequest, *FileVersionGetResponse](ctx, engine, req)
+}
+
+// FileUpdateRequestPath contains the path parameters for updating a file.
+type FileUpdateRequestPath struct {
+	// ID is the unique identifier of the file to be updated.
+	ID int64
+}
+
+// FileUpdateRequest changes a file's details. Omitted fields are left as they
+// are, with one exception: Description without Name resets the version's name
+// to the name it was uploaded with, so send the current Name alongside it to
+// keep a rename.
+//
+// https://apidocs.teamwork.com/docs/teamwork/v3/files/patch-projects-api-v3-files-file-id-json
+type FileUpdateRequest struct {
+	// Path contains the path parameters for the request.
+	Path FileUpdateRequestPath `json:"-"`
+
+	// VersionID selects the version whose Name and Description change. Zero
+	// selects the latest version, whose name is the file's.
+	VersionID *int64 `json:"versionId,omitempty"`
+
+	// Name renames the selected version. An empty name is ignored.
+	Name *string `json:"name,omitempty"`
+
+	// Description replaces the selected version's description. See the type's
+	// comment about its effect on Name.
+	Description *string `json:"description,omitempty"`
+
+	// CategoryID moves the file to another file category of its project. The
+	// endpoint answers 500 for zero or an unknown category, so a category
+	// cannot be removed.
+	CategoryID *int64 `json:"categoryId,omitempty"`
+
+	// TagIDs replaces the file's tags. A pointer to an empty slice removes them
+	// all.
+	TagIDs *[]int64 `json:"tagIds,omitempty"`
+
+	// Private hides the file from client users.
+	Private *bool `json:"private,omitempty"`
+}
+
+// NewFileUpdateRequest creates a new FileUpdateRequest with the provided file
+// ID.
+func NewFileUpdateRequest(fileID int64) FileUpdateRequest {
+	return FileUpdateRequest{
+		Path: FileUpdateRequestPath{
+			ID: fileID,
+		},
+	}
+}
+
+// HTTPRequest creates an HTTP request for the FileUpdateRequest.
+func (f FileUpdateRequest) HTTPRequest(ctx context.Context, server string) (*http.Request, error) {
+	if f.Path.ID <= 0 {
+		return nil, fmt.Errorf("file update requires a file")
+	}
+
+	uri := server + "/projects/api/v3/files/" + strconv.FormatInt(f.Path.ID, 10) + ".json"
+
+	payload := struct {
+		File FileUpdateRequest `json:"file"`
+	}{File: f}
+
+	var body bytes.Buffer
+	if err := json.NewEncoder(&body).Encode(payload); err != nil {
+		return nil, fmt.Errorf("failed to encode update file request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPatch, uri, &body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	return req, nil
+}
+
+// FileUpdateResponse contains the file after the update.
+//
+// https://apidocs.teamwork.com/docs/teamwork/v3/files/patch-projects-api-v3-files-file-id-json
+type FileUpdateResponse struct {
+	File File `json:"file"`
+}
+
+// HandleHTTPResponse handles the HTTP response for the FileUpdateResponse. If
+// some unexpected HTTP status code is returned by the API, a twapi.HTTPError is
+// returned.
+func (f *FileUpdateResponse) HandleHTTPResponse(resp *http.Response) error {
+	if resp.StatusCode != http.StatusOK {
+		return twapi.NewHTTPError(resp, "failed to update file")
+	}
+	if err := json.NewDecoder(resp.Body).Decode(f); err != nil {
+		return fmt.Errorf("failed to decode update file response: %w", err)
+	}
+	return nil
+}
+
+// FileUpdate changes a file's details using the provided request and returns
+// the response.
+func FileUpdate(
+	ctx context.Context,
+	engine *twapi.Engine,
+	req FileUpdateRequest,
+) (*FileUpdateResponse, error) {
+	return twapi.Execute[FileUpdateRequest, *FileUpdateResponse](ctx, engine, req)
 }
 
 // FileDeleteRequestPath contains the path parameters for deleting a file.
