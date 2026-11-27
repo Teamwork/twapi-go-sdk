@@ -386,3 +386,124 @@ func TestFileVersionUploadedByAcceptsBothShapes(t *testing.T) {
 		}
 	}
 }
+
+func TestFileVersionCreate(t *testing.T) {
+	var method, path string
+	var body map[string]any
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		method, path = r.Method, r.URL.Path
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Errorf("failed to decode the request body: %s", err)
+		}
+		w.WriteHeader(http.StatusCreated)
+		_, _ = io.WriteString(w, `{"fileversion":{"fileVersionId":15,"fileId":10,"file":{"id":10,"type":"files"},`+
+			`"versionNo":3,"uploadedBy":{"id":1,"type":"users"}},"included":{}}`)
+	}))
+	t.Cleanup(server.Close)
+	testEngine := twapi.NewEngine(session.NewBearerToken("your_token", server.URL))
+
+	req := projects.NewFileVersionCreateRequest(10, "tf_12345.md")
+	req.Description = new("second draft")
+	resp, err := projects.FileVersionCreate(t.Context(), testEngine, req)
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
+	if method != http.MethodPost || path != "/projects/api/v3/files/10.json" {
+		t.Errorf("expected POST /projects/api/v3/files/10.json, got %s %s", method, path)
+	}
+	want := map[string]any{"fileversion": map[string]any{
+		"pendingFileRef": "tf_12345.md",
+		"description":    "second draft",
+	}}
+	if fmt.Sprint(body) != fmt.Sprint(want) {
+		t.Errorf("expected body %v, got %v", want, body)
+	}
+	if v := resp.FileVersion; v.ID != 15 || v.File.ID != 10 || v.VersionNo != 3 || v.UploadedBy != 1 {
+		t.Errorf("unexpected version %+v", v)
+	}
+}
+
+func TestFileVersionCreateRejectsMissingFields(t *testing.T) {
+	testEngine := twapi.NewEngine(session.NewBearerToken("your_token", "https://test.teamwork.com"))
+	for name, req := range map[string]projects.FileVersionCreateRequest{
+		"no file":      projects.NewFileVersionCreateRequest(0, "tf_12345.md"),
+		"no reference": projects.NewFileVersionCreateRequest(10, ""),
+	} {
+		if _, err := projects.FileVersionCreate(t.Context(), testEngine, req); err == nil {
+			t.Errorf("%s: expected an error", name)
+		}
+	}
+}
+
+func TestFileUpdate(t *testing.T) {
+	tests := []struct {
+		name     string
+		request  func(projects.FileUpdateRequest) projects.FileUpdateRequest
+		wantBody string
+	}{{
+		name: "rename and describe a version",
+		request: func(r projects.FileUpdateRequest) projects.FileUpdateRequest {
+			r.VersionID = new(int64(17))
+			r.Name = new("spec.md")
+			r.Description = new("second draft")
+			return r
+		},
+		wantBody: `{"file":{"versionId":17,"name":"spec.md","description":"second draft"}}`,
+	}, {
+		name: "replace tags, category and privacy",
+		request: func(r projects.FileUpdateRequest) projects.FileUpdateRequest {
+			r.TagIDs = &[]int64{1, 2}
+			r.CategoryID = new(int64(3))
+			r.Private = new(false)
+			return r
+		},
+		wantBody: `{"file":{"categoryId":3,"tagIds":[1,2],"private":false}}`,
+	}, {
+		name: "remove every tag",
+		request: func(r projects.FileUpdateRequest) projects.FileUpdateRequest {
+			r.TagIDs = &[]int64{}
+			return r
+		},
+		wantBody: `{"file":{"tagIds":[]}}`,
+	}, {
+		name:     "nothing set sends no field",
+		request:  func(r projects.FileUpdateRequest) projects.FileUpdateRequest { return r },
+		wantBody: `{"file":{}}`,
+	}}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var method, path, body string
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				raw, _ := io.ReadAll(r.Body)
+				method, path, body = r.Method, r.URL.Path, string(raw)
+				_, _ = io.WriteString(w, `{"file":{"id":10,"displayName":"spec.md","uploadedBy":1,`+
+					`"version":{"id":18,"type":"fileVersions"}},"included":{}}`)
+			}))
+			t.Cleanup(server.Close)
+			testEngine := twapi.NewEngine(session.NewBearerToken("your_token", server.URL))
+
+			resp, err := projects.FileUpdate(t.Context(), testEngine, tt.request(projects.NewFileUpdateRequest(10)))
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+			if method != http.MethodPatch || path != "/projects/api/v3/files/10.json" {
+				t.Errorf("expected PATCH /projects/api/v3/files/10.json, got %s %s", method, path)
+			}
+			if body != tt.wantBody+"\n" {
+				t.Errorf("expected body %s, got %s", tt.wantBody, body)
+			}
+			if resp.File.ID != 10 || resp.File.Version.ID != 18 {
+				t.Errorf("unexpected file %+v", resp.File)
+			}
+		})
+	}
+}
+
+func TestFileUpdateRejectsMissingFile(t *testing.T) {
+	testEngine := twapi.NewEngine(session.NewBearerToken("your_token", "https://test.teamwork.com"))
+	if _, err := projects.FileUpdate(t.Context(), testEngine, projects.NewFileUpdateRequest(0)); err == nil {
+		t.Error("expected an error")
+	}
+}
