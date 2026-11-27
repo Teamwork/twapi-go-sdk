@@ -2,15 +2,20 @@ package projects_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"math/rand"
+	"net/http"
+	"net/http/httptest"
+	"slices"
 	"strconv"
 	"testing"
 	"time"
 
 	twapi "github.com/teamwork/twapi-go-sdk"
 	"github.com/teamwork/twapi-go-sdk/projects"
+	"github.com/teamwork/twapi-go-sdk/session"
 )
 
 func TestFileCreate(t *testing.T) {
@@ -229,5 +234,155 @@ func TestFileDownload(t *testing.T) {
 	}
 	if download.Name == "" {
 		t.Error("expected the download to carry a file name")
+	}
+}
+
+func TestFileCreateAutoNewVersionResolvesTheFile(t *testing.T) {
+	// The create endpoint answers 8 in every case below: the file ID when it
+	// made a file, the version ID when it added a version.
+	const projectID, returnedID = 42, 8
+	const createPath, versionPath, filePath = "/projects/42/files.json",
+		"/projects/api/v3/fileversions/8.json", "/projects/api/v3/files/8.json"
+
+	version := func(fileID, versionNo, projectID int64) string {
+		return fmt.Sprintf(`{"fileversion":{"fileVersionId":8,"file":{"id":%d,"type":"files"},`+
+			`"versionNo":%d,"project":{"id":%d,"type":"projects"},"uploadedBy":{"id":1,"type":"users"}}}`,
+			fileID, versionNo, projectID)
+	}
+	file := func(latestVersionID int64) string {
+		return fmt.Sprintf(`{"file":{"id":8,"version":{"id":%d,"type":"fileVersions"}}}`, latestVersionID)
+	}
+
+	tests := []struct {
+		name           string
+		autoNewVersion *bool
+		versionStatus  int
+		versionBody    string
+		fileStatus     int
+		fileBody       string
+		wantID         int64
+		wantVersionID  int64
+		wantPaths      []string
+		wantErr        bool
+	}{{
+		name:           "new version of another file",
+		autoNewVersion: new(true),
+		versionStatus:  http.StatusOK,
+		versionBody:    version(7, 2, projectID),
+		fileStatus:     http.StatusNotFound,
+		wantID:         7,
+		wantVersionID:  8,
+		wantPaths:      []string{createPath, versionPath, filePath},
+	}, {
+		name:           "new version, and a file shares its number with an older version",
+		autoNewVersion: new(true),
+		versionStatus:  http.StatusOK,
+		versionBody:    version(7, 2, projectID),
+		fileStatus:     http.StatusOK,
+		fileBody:       file(5),
+		wantID:         7,
+		wantVersionID:  8,
+		wantPaths:      []string{createPath, versionPath, filePath},
+	}, {
+		name:           "new file, no version has its number",
+		autoNewVersion: new(true),
+		versionStatus:  http.StatusNotFound,
+		wantID:         8,
+		wantPaths:      []string{createPath, versionPath},
+	}, {
+		name:           "new file, the version with its number is a first version",
+		autoNewVersion: new(true),
+		versionStatus:  http.StatusOK,
+		versionBody:    version(3, 1, projectID),
+		wantID:         8,
+		wantPaths:      []string{createPath, versionPath},
+	}, {
+		name:           "new file, the version with its number is in another project",
+		autoNewVersion: new(true),
+		versionStatus:  http.StatusOK,
+		versionBody:    version(3, 4, 99),
+		wantID:         8,
+		wantPaths:      []string{createPath, versionPath},
+	}, {
+		name:           "new file, its own version is newer than the one with its number",
+		autoNewVersion: new(true),
+		versionStatus:  http.StatusOK,
+		versionBody:    version(3, 4, projectID),
+		fileStatus:     http.StatusOK,
+		fileBody:       file(12),
+		wantID:         8,
+		wantPaths:      []string{createPath, versionPath, filePath},
+	}, {
+		name:           "without auto new version",
+		autoNewVersion: new(false),
+		wantID:         8,
+		wantPaths:      []string{createPath},
+	}, {
+		name:      "auto new version omitted",
+		wantID:    8,
+		wantPaths: []string{createPath},
+	}, {
+		name:           "lookup fails after the upload is stored",
+		autoNewVersion: new(true),
+		versionStatus:  http.StatusInternalServerError,
+		wantID:         8,
+		wantPaths:      []string{createPath, versionPath},
+		wantErr:        true,
+	}}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var paths []string
+			mux := http.NewServeMux()
+			mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+				paths = append(paths, r.URL.Path)
+				switch r.URL.Path {
+				case createPath:
+					w.WriteHeader(http.StatusCreated)
+					_, _ = fmt.Fprintf(w, `{"STATUS":"OK","id":"%d","fileId":"%d"}`, returnedID, returnedID)
+				case versionPath:
+					w.WriteHeader(tt.versionStatus)
+					_, _ = io.WriteString(w, tt.versionBody)
+				case filePath:
+					w.WriteHeader(tt.fileStatus)
+					_, _ = io.WriteString(w, tt.fileBody)
+				default:
+					w.WriteHeader(http.StatusNotFound)
+				}
+			})
+			server := httptest.NewServer(mux)
+			t.Cleanup(server.Close)
+			testEngine := twapi.NewEngine(session.NewBearerToken("your_token", server.URL))
+
+			req := projects.NewFileCreateRequest(projectID, "tf_12345.md")
+			req.AutoNewVersion = tt.autoNewVersion
+
+			resp, err := projects.FileCreate(t.Context(), testEngine, req)
+			if tt.wantErr != (err != nil) {
+				t.Fatalf("expected error %t, got %v", tt.wantErr, err)
+			}
+			if resp == nil {
+				t.Fatal("expected a response")
+			}
+			if int64(resp.ID) != tt.wantID || resp.VersionID != tt.wantVersionID {
+				t.Errorf("expected file %d version %d, got file %d version %d",
+					tt.wantID, tt.wantVersionID, resp.ID, resp.VersionID)
+			}
+			if !slices.Equal(paths, tt.wantPaths) {
+				t.Errorf("expected requests %v, got %v", tt.wantPaths, paths)
+			}
+		})
+	}
+}
+
+func TestFileVersionUploadedByAcceptsBothShapes(t *testing.T) {
+	for _, body := range []string{`{"uploadedBy":1}`, `{"uploadedBy":{"id":1,"type":"users"}}`} {
+		var version projects.FileVersion
+		if err := json.Unmarshal([]byte(body), &version); err != nil {
+			t.Fatalf("%s: unexpected error: %s", body, err)
+		}
+		if version.UploadedBy != 1 {
+			t.Errorf("%s: expected uploader 1, got %d", body, version.UploadedBy)
+		}
 	}
 }
